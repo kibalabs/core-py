@@ -33,5 +33,12 @@ setup(
     test_suite='tests',
     include_package_data=True,
     extras_require={
+        'api': ['fastapi==0.52.0', 'uvicorn==0.13.4'],
+        'storage': ['boto3==1.12.49'],
+        'queues': ['boto3==1.12.49'],
+        # NOTE(krishan711): 1.4.0 fail with wierd asyncpg error
+        'database-py': ['databases[postgresql]==0.4.2', 'sqlalchemy==1.3.23'],
+        'requester': ['httpx==0.17.0'],
+        'web3': ['web3==5.17.0'],
     },
 )
