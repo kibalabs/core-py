@@ -1,0 +1,5 @@
+click==7.1.2
+simple_chalk==0.1.0
+pylint==2.6.2
+mypy==0.812
+wheel==0.36.2
