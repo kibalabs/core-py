@@ -51,7 +51,8 @@ class Retriever:
     def __init__(self, database: Database):
         self.database = database
 
-    def _apply_order(self, query: FromClause, table: Table, order: Order) -> FromClause:
+    @staticmethod
+    def _apply_order(query: FromClause, table: Table, order: Order) -> FromClause:
         if isinstance(order, RandomOrder):
             query = query.order_by(sqlalchemyfunc.random())
         else:
@@ -59,7 +60,8 @@ class Retriever:
             query = query.order_by(field.asc() if order.direction == Direction.ASCENDING else field.desc())
         return query
 
-    def _apply_string_field_filter(self, query: FromClause, table: Table, fieldFilter: StringFieldFilter) -> FromClause:
+    @staticmethod
+    def _apply_string_field_filter(query: FromClause, table: Table, fieldFilter: StringFieldFilter) -> FromClause:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -71,7 +73,8 @@ class Retriever:
             query = query.where(field.notin_(fieldFilter.notContainedIn))
         return query
 
-    def _apply_date_field_filter(self, query: FromClause, table: Table, fieldFilter: DateFieldFilter) -> FromClause:
+    @staticmethod
+    def _apply_date_field_filter(query: FromClause, table: Table, fieldFilter: DateFieldFilter) -> FromClause:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -94,9 +97,9 @@ class Retriever:
     def _apply_field_filter(self, query: FromClause, table: Table, fieldFilter: FieldFilter) -> FromClause:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.isNull:
-            query = query.where(field == None)
+            query = query.where(field is None)
         if fieldFilter.isNotNull:
-            query = query.where(field != None)
+            query = query.where(field is not None)
         if isinstance(fieldFilter, DateFieldFilter):
             query = self._apply_date_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         if isinstance(fieldFilter, StringFieldFilter):

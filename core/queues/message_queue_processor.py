@@ -2,8 +2,9 @@ import abc
 from abc import ABC
 import logging
 import time
+from typing import cast
 
-from core.sqs_message_queue import SqsMessageQueue
+from core.queues.sqs_message_queue import SqsMessageQueue
 from core.slack_client import SlackClient
 from core.exceptions import KibaException
 from core.queues.model import SqsMessage
@@ -35,8 +36,8 @@ class MessageQueueProcessor:
                 try:
                     await self.messageProcessor.process_message(message=message)
                     await self.queue.delete_message(message=message)
-                except Exception as exception:
-                    statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
+                except Exception as exception:  # pylint: disable=broad-except
+                    statusCode = cast(exception, KibaException).statusCode if isinstance(exception, KibaException) else 500  # pylint: disable=no-member
                     logging.error('Caught exception whilst processing message')
                     logging.exception(exception)
                     await self.slackClient.post(text=f'Error processing message: {message.command} {message.content}\n```{exception}```')

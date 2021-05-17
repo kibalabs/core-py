@@ -10,14 +10,17 @@ import httpx
 from core.util import file_util
 from core.util import dict_util
 
+KibaResponse = httpx.Response
+
 class ResponseException(Exception):
 
     def __init__(self, message: Optional[str] = None, statusCode: Optional[int] = None) -> None:
         super().__init__(message or self.__class__.__name__)
+        self.message = message or self.__class__.__name__
         self.statusCode = statusCode or 500
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(message={self.message!r}), statusCode={self.statusCode!r}'
+        return f'{self.__class__.__name__}(message={self.message!r}, statusCode={self.statusCode!r})'
 
 class Requester:
 
@@ -25,18 +28,18 @@ class Requester:
         self.headers = headers or {}
         self.client = httpx.AsyncClient()
 
-    async def get(self, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> httpx.Response:
+    async def get(self, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='GET', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def post(self, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> httpx.Response:
+    async def post(self, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='POST', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def post_json(self, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> httpx.Response:
+    async def post_json(self, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         headers = headers or httpx.Headers()
         headers.update({'Content-Type': 'application/json'})
         return await self.make_request(method='POST', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> httpx.Response:
+    async def make_request(self, method: str, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         if dataDict is not None:
             if data is not None:
                 logging.error('Error: dataDict and data should never both be provided to make_request. data will be overwritten by dataDict.')

@@ -6,7 +6,8 @@ import asyncpg
 from databases import Database
 from sqlalchemy.sql import ClauseElement
 
-from core.exceptions import *
+from core.exceptions import DuplicateValueException
+from core.exceptions import InternalServerErrorException
 
 class Saver:
 
@@ -17,7 +18,7 @@ class Saver:
         try:
             return await self.database.execute(query=query, values=values)
         except asyncpg.exceptions.UniqueViolationError as exception:
-            raise DuplicateValueException(message=str(exception))
+            raise DuplicateValueException(message=str(exception)) from exception
         except Exception as exception:
             logging.error(exception)
-            raise InternalServerErrorException(message='Error running save operation')
+            raise InternalServerErrorException(message='Error running save operation') from exception

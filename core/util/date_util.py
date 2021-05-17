@@ -1,6 +1,7 @@
-from core.exceptions import KibaException
 import datetime
 from typing import Optional
+
+from core.exceptions import KibaException
 
 JSON_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 
@@ -20,8 +21,8 @@ def datetime_from_now(days: int = 0, seconds: float = 0, milliseconds: int = 0, 
 def datetime_from_string(dateString: str, dateFormat: str = JSON_DATE_FORMAT) -> datetime.datetime:
     try:
         dt = datetime.datetime.strptime(dateString, dateFormat)
-    except (TypeError, ValueError):
-        raise DateConversionException(message=f'Invalid dateString passed to datetime_from_string: {dateString}')
+    except (TypeError, ValueError) as exception:
+        raise DateConversionException(message=f'Invalid dateString passed to datetime_from_string: {dateString}') from exception
     return dt
 
 def datetime_to_string(dt: datetime.datetime, dateFormat: str = JSON_DATE_FORMAT) -> str:

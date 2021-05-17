@@ -20,6 +20,7 @@ class SqsMessage(Message):
         )
 
 class MessageContent(BaseModel):
+    _COMMAND = 'UNKOWN_COMMAND'
 
     def to_message(self) -> Message:
         return Message(

@@ -1,6 +1,7 @@
 from typing import Optional
 
 from core.requester import Requester
+from core.requester import KibaResponse
 
 class SlackClient:
 
@@ -11,10 +12,11 @@ class SlackClient:
         self.defaultSender = defaultSender
         self.defaultIconEmoji = defaultIconEmoji
 
-    async def post(self, text: str):
+    async def post(self, text: str) -> KibaResponse:
         response = await self.requester.post_json(url=self.webhookUrl, dataDict={
             'text': text,
             'username': self.defaultSender,
             'channel': self.defaultChannel,
             'icon_emoji': self.defaultIconEmoji,
         })
+        return response

@@ -6,7 +6,7 @@ jobs:
   build-app:
     runs-on: ubuntu-latest
     env:
-      DOCKER_IMAGE: buildpy
+      DOCKER_IMAGE: core
     steps:
     - name: Check out the repo
       uses: actions/checkout@v2
@@ -14,7 +14,7 @@ jobs:
       run: docker build --tag $DOCKER_IMAGE .
     - name: Run linting
       run: |
-        docker run --name linting-build $DOCKER_IMAGE python buildpy/lint.py --directory buildpy --output-file linting-results.json --output-format annotations
+        docker run --name linting-build $DOCKER_IMAGE python core/lint.py --directory core --output-file linting-results.json --output-format annotations
         docker cp linting-build:/app/linting-results.json ./linting-results.json
     - name: Upload build linting results
       uses: kibalabs/github-action-create-annotations@main
@@ -25,7 +25,7 @@ jobs:
         fail-on-error: false
     - name: Run typing
       run: |
-        docker run --name typing-build $DOCKER_IMAGE python buildpy/type_check.py --directory buildpy --output-file typing-results.json --output-format annotations
+        docker run --name typing-build $DOCKER_IMAGE python core/type_check.py --directory core --output-file typing-results.json --output-format annotations
         docker cp typing-build:/app/typing-results.json ./typing-results.json
     - name: Upload build typing results
       uses: kibalabs/github-action-create-annotations@main

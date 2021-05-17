@@ -39,7 +39,8 @@ class S3Manager:
         paths = path.split('/')
         return paths[0], '/'.join(paths[1:]) if len(paths) > 0 else ''
 
-    def _get_extra_args(self, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, contentType: Optional[str] = None, shouldUseAesEncryption: bool = False) -> Dict[str, str]:
+    @staticmethod
+    def _get_extra_args(accessControl: Optional[str] = None, cacheControl: Optional[str] = None, contentType: Optional[str] = None, shouldUseAesEncryption: bool = False) -> Dict[str, str]:
         extraArgs = {}
         if accessControl is not None:
             extraArgs['ACL'] = accessControl
@@ -51,7 +52,8 @@ class S3Manager:
             extraArgs['ServerSideEncryption'] = 'AES256'
         return extraArgs
 
-    def _generate_random_filename(self):
+    @staticmethod
+    def _generate_random_filename():
         return f'random_file_{"".join(random.choice(ascii_letters) for _ in range(20))}'
 
     async def write_file(self, content: bytes, targetPath: str, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, contentType: Optional[str] = None) -> None:
@@ -109,7 +111,8 @@ class S3Manager:
                 return
             continuationToken = response['NextContinuationToken']
 
-    def _get_file_mimetype(self, fileName: str) -> str:
+    @staticmethod
+    def _get_file_mimetype(fileName: str) -> str:
         mimetype, _ = mimetypes.guess_type(fileName)
         return mimetype
 
@@ -132,7 +135,7 @@ class S3Manager:
                 targetKeyPath = f'{targetKey}/{localFilePath.replace(sourceDirectory, "", 1)}'
                 await self.upload_file(filePath=localFilePath, targetPath=f's3://{targetBucket}/{targetKeyPath}', accessControl=accessControl, cacheControl=cacheControl)
 
-    async def generate_presigned_upload(self, target: str, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, timeLimit: int = 60, sizeLimit: int = constants._MEGABYTE) -> str:
+    async def generate_presigned_upload(self, target: str, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, timeLimit: int = 60, sizeLimit: int = constants.MEGABYTE) -> str:
         targetBucket, targetKey = self._split_path_to_bucket_key(path=target)
         # fields and conditions cannot be merged https://github.com/boto/boto3/issues/1103
         fields = {}
