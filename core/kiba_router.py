@@ -18,6 +18,7 @@ class KibaRouter(APIRouter):
     def __init__(self) -> None:
         super().__init__(route_class=KibaRoute)
 
+
 class KibaRoute(APIRoute):
 
     @staticmethod

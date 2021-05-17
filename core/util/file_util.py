@@ -5,18 +5,18 @@ from typing import Optional
 import aiofiles
 import aiofiles.os
 
-async def remove_file(filePath: str):
+async def remove_file(filePath: str) -> None:
     await aiofiles.os.remove(filePath)
 
-async def remove_directory(directory: str):
+async def remove_directory(directory: str) -> None:
     shutil.rmtree(directory)
     # TODO(krish): fix this to be async, command below doesn't work if the directory is not empty
     # await aiofiles.os.rmdir(directory)
 
-def remove_file_sync(filePath: str):
+def remove_file_sync(filePath: str) -> None:
     os.remove(filePath)
 
-def remove_directory_sync(directory: str):
+def remove_directory_sync(directory: str) -> None:
     shutil.rmtree(directory)
 
 async def read_file(filePath: str) -> str:
@@ -35,18 +35,18 @@ def read_file_bytes_sync(filePath: str) -> bytes:
     with open(filePath, 'rb') as file:
         return file.read()
 
-async def write_file(filePath: str, content: str, shouldRaiseIfFileExists: Optional[bool] = False):
+async def write_file(filePath: str, content: str, shouldRaiseIfFileExists: Optional[bool] = False) -> None:
     async with aiofiles.open(filePath, 'x' if shouldRaiseIfFileExists else 'w') as file:
         await file.write(content)
 
-async def write_file_bytes(filePath: str, content: bytes, shouldRaiseIfFileExists: Optional[bool] = False):
+async def write_file_bytes(filePath: str, content: bytes, shouldRaiseIfFileExists: Optional[bool] = False) -> None:
     async with aiofiles.open(filePath, 'xb' if shouldRaiseIfFileExists else 'wb') as file:
         await file.write(content)
 
-def write_file_sync(filePath: str, content: str, shouldRaiseIfFileExists: Optional[bool] = False):
+def write_file_sync(filePath: str, content: str, shouldRaiseIfFileExists: Optional[bool] = False) -> None:
     with open(filePath, 'x' if shouldRaiseIfFileExists else 'w') as file:
         file.write(content)
 
-def write_file_bytes_sync(filePath: str, content: bytes, shouldRaiseIfFileExists: Optional[bool] = False):
+def write_file_bytes_sync(filePath: str, content: bytes, shouldRaiseIfFileExists: Optional[bool] = False) -> None:
     with open(filePath, 'xb' if shouldRaiseIfFileExists else 'wb') as file:
         file.write(content)

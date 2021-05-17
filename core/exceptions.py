@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Dict
 from typing import Optional
 
+from core.util.typing_util import JSON
+
 class KibaException(Exception):
 
     def __init__(self, message: Optional[str], statusCode: Optional[int] = None, exceptionType: Optional[str] = None) -> None:
@@ -17,7 +19,7 @@ class KibaException(Exception):
             return exception
         return KibaException(message=str(exception), statusCode=statusCode, exceptionType=exception.__class__.__name__)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> Dict[str, JSON]:
         return {
             'exceptionType': self.exceptionType,
             'message': self.message,

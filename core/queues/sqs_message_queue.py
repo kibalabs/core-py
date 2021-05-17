@@ -1,19 +1,21 @@
 from typing import Optional
 from typing import Sequence
 
+from mypy_boto3_sqs.client import SQSClient
+
 from core.queues.model import Message
 from core.queues.model import SqsMessage
 
 class SqsMessageQueue:
 
-    def __init__(self, sqsClient, queueUrl: str):
+    def __init__(self, sqsClient: SQSClient, queueUrl: str) -> None:
         self.sqsClient = sqsClient
         self.queueUrl = queueUrl
 
     async def send_message(self, message: Message, delaySeconds: int = 0) -> None:
         self.sqsClient.send_message(QueueUrl=self.queueUrl, DelaySeconds=delaySeconds, MessageAttributes={}, MessageBody=message.json())
 
-    async def get_message(self, expectedProcessingSeconds: Optional[int] = None, longPollSeconds: Optional[int] = 0) -> Optional[Message]:
+    async def get_message(self, expectedProcessingSeconds: Optional[int] = None, longPollSeconds: Optional[int] = 0) -> Optional[SqsMessage]:
         messages = await self.get_messages(limit=1, expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds)
         return messages[0] if messages else None
 

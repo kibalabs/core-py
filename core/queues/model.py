@@ -2,16 +2,17 @@ from __future__ import annotations
 from typing import Dict
 
 from pydantic import BaseModel
+from pydantic import Json
 
 class Message(BaseModel):
     command: str
-    content: dict
+    content: Json
 
 class SqsMessage(Message):
     receiptHandle: str
 
     @classmethod
-    def from_sqs_message(cls, sqsMessage: Dict) -> SqsMessage:
+    def from_sqs_message(cls, sqsMessage: Json) -> SqsMessage:
         message = Message.parse_raw(sqsMessage['Body'])
         return cls(
             command=message.command,
