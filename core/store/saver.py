@@ -6,7 +6,7 @@ import asyncpg
 from databases import Database
 from sqlalchemy.sql import ClauseElement
 
-from mdtp.core.exceptions import *
+from core.exceptions import *
 
 class Saver:
 

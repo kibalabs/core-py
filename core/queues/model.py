@@ -1,8 +1,7 @@
 from __future__ import annotations
-import abc
+from typing import Dict
 
 from pydantic import BaseModel
-from pydantic import Json
 
 class Message(BaseModel):
     command: str

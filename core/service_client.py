@@ -5,7 +5,7 @@ from typing import Type
 
 from pydantic import BaseModel
 
-from everypage.core.requester import Requester
+from core.requester import Requester
 
 class ServiceClient:
 

@@ -7,8 +7,8 @@ import logging
 
 import httpx
 
-from mdtp.core.util import file_util
-from mdtp.core.util import dict_util
+from core.util import file_util
+from core.util import dict_util
 
 class ResponseException(Exception):
 

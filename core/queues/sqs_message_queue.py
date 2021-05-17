@@ -1,8 +1,8 @@
 from typing import Optional
 from typing import Sequence
 
-from mdtp.core.model import Message
-from mdtp.core.model import SqsMessage
+from core.queues.model import Message
+from core.queues.model import SqsMessage
 
 class SqsMessageQueue:
 

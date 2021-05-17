@@ -11,7 +11,7 @@ from fastapi.responses import Response
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
-from mdtp.core.exceptions import *
+from core.exceptions import *
 
 class KibaRouter(APIRouter):
 

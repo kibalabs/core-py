@@ -3,10 +3,10 @@ from abc import ABC
 import logging
 import time
 
-from mdtp.core.model import SqsMessage
-from mdtp.core.sqs_message_queue import SqsMessageQueue
-from mdtp.core.slack_client import SlackClient
-from mdtp.core.exceptions import KibaException
+from core.sqs_message_queue import SqsMessageQueue
+from core.slack_client import SlackClient
+from core.exceptions import KibaException
+from core.queues.model import SqsMessage
 
 class MessageProcessor(ABC):
 

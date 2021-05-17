@@ -1,9 +1,6 @@
-import logging
 from typing import Optional
-import zipfile
 
-from mdtp.core.requester import Requester
-from mdtp.core.util import file_util
+from core.requester import Requester
 
 class SlackClient:
 

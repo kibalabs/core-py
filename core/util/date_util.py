@@ -1,7 +1,11 @@
+from core.exceptions import KibaException
 import datetime
 from typing import Optional
 
 JSON_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
+
+class DateConversionException(KibaException):
+    pass
 
 def start_of_day(dt: Optional[datetime.datetime] = None) -> datetime.datetime:
     dt = dt if dt is not None else datetime.datetime.utcnow()

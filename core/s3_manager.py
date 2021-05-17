@@ -9,8 +9,8 @@ from typing import Dict
 from typing import Tuple
 from typing import Sequence
 
-from mdtp.core.util import constants
-from mdtp.core.util import file_util
+from core.util import constants
+from core.util import file_util
 
 @dataclasses.dataclass
 class PresignedUploadField:
