@@ -1,13 +1,12 @@
 import abc
 from abc import ABC
-from core.queues.model import Message
 import logging
 import time
-from typing import cast
 
+from core.exceptions import KibaException
+from core.queues.model import Message
 from core.queues.sqs_message_queue import SqsMessageQueue
 from core.slack_client import SlackClient
-from core.exceptions import KibaException
 
 class MessageProcessor(ABC):
 

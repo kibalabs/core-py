@@ -9,7 +9,6 @@ from typing import Dict
 from typing import Tuple
 from typing import Sequence
 
-from core.util import constants
 from core.util import file_util
 
 @dataclasses.dataclass
@@ -135,7 +134,7 @@ class S3Manager:
                 targetKeyPath = f'{targetKey}/{localFilePath.replace(sourceDirectory, "", 1)}'
                 await self.upload_file(filePath=localFilePath, targetPath=f's3://{targetBucket}/{targetKeyPath}', accessControl=accessControl, cacheControl=cacheControl)
 
-    async def generate_presigned_upload(self, target: str, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, timeLimit: int = 60, sizeLimit: int = constants.MEGABYTE) -> str:
+    async def generate_presigned_upload(self, target: str, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, timeLimit: int = 60, sizeLimit: int = file_util.MEGABYTE) -> str:
         targetBucket, targetKey = self._split_path_to_bucket_key(path=target)
         # fields and conditions cannot be merged https://github.com/boto/boto3/issues/1103
         fields = {}
