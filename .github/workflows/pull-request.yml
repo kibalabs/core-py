@@ -23,14 +23,14 @@ jobs:
         json-file-path: ./linting-results.json
         check-name: lint-build-package
         fail-on-error: false
-    - name: Run typing
-      run: |
-        docker run --name typing-build $DOCKER_IMAGE python core/type_check.py --directory core --output-file typing-results.json --output-format annotations
-        docker cp typing-build:/app/typing-results.json ./typing-results.json
-    - name: Upload build typing results
-      uses: kibalabs/github-action-create-annotations@main
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        json-file-path: ./typing-results.json
-        check-name: type-build-package
-        fail-on-error: false
+    # - name: Run typing
+    #   run: |
+    #     docker run --name typing-build $DOCKER_IMAGE python core/type_check.py --directory core --output-file typing-results.json --output-format annotations
+    #     docker cp typing-build:/app/typing-results.json ./typing-results.json
+    # - name: Upload build typing results
+    #   uses: kibalabs/github-action-create-annotations@main
+    #   with:
+    #     github-token: ${{ secrets.GITHUB_TOKEN }}
+    #     json-file-path: ./typing-results.json
+    #     check-name: type-build-package
+    #     fail-on-error: false
