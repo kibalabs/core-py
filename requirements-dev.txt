@@ -9,4 +9,4 @@ web3==5.17.0
 mypy_boto3_sqs==1.17.73
 mypy_boto3_s3==1.17.73
 sqlalchemy-stubs==0.4
-git+ssh://git@github.com/kibalabs/build-py.git
+git+https://git@github.com/kibalabs/build-py.git
