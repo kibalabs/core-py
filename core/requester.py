@@ -29,13 +29,13 @@ class Requester:
         self.headers = headers or {}
         self.client = httpx.AsyncClient()
 
-    async def get(self, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def get(self, url: str, dataDict: Optional[Dict[JSON]] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='GET', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def post(self, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def post(self, url: str, dataDict: Optional[Dict[JSON]] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='POST', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def post_json(self, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def post_json(self, url: str, dataDict: Optional[Dict[JSON]] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         headers = headers or httpx.Headers()
         headers.update({'Content-Type': 'application/json'})
         return await self.make_request(method='POST', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
