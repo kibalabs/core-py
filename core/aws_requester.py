@@ -7,7 +7,9 @@ from typing import Dict
 from typing import Optional
 
 import httpx
+
 from core.util import date_util
+from core.util.typing_util import JSON
 from core.requester import Requester
 
 # NOTE(krishan711): mostly adapted from https://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
@@ -36,7 +38,7 @@ class AwsRequester(Requester):
         key5 = self._sign(key=key4, message='aws4_request')
         return self._sign_hex(key=key5, message=stringToSign)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[Dict] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> httpx.Response:
+    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> httpx.Response:
         canonicalQueryString = ''
         if data is None and dataDict is not None:
             if method == 'GET':
