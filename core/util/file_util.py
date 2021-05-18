@@ -5,6 +5,12 @@ from typing import Optional
 import aiofiles
 import aiofiles.os
 
+KILOBYTE = 1024
+MEGABYTE = KILOBYTE * 1024
+
+CACHE_CONTROL_TEMPORARY_FILE = 'public,max-age=1'
+CACHE_CONTROL_FINAL_FILE = 'public,max-age=31536000'
+
 async def remove_file(filePath: str) -> None:
     await aiofiles.os.remove(filePath)
 

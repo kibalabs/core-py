@@ -5,18 +5,12 @@ import uuid
 from typing import Callable
 
 from fastapi.routing import APIRoute
-from fastapi.routing import APIRouter
 from fastapi.requests import Request
 from fastapi.responses import Response
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
 from core.exceptions import KibaException
-
-class KibaRouter(APIRouter):
-
-    def __init__(self) -> None:
-        super().__init__(route_class=KibaRoute)
 
 
 class KibaRoute(APIRoute):
