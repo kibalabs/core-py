@@ -82,8 +82,7 @@ class Retriever:
             query = query.order_by(field.asc() if order.direction == Direction.ASCENDING else field.desc())
         return query
 
-    @staticmethod
-    def _apply_orders(query: FromClause, table: Table, orders: Sequence[Order]) -> FromClause:
+    def _apply_orders(self, query: FromClause, table: Table, orders: Sequence[Order]) -> FromClause:
         for order in orders:
             query = self._apply_order(query=query, table=table, order=order)
         return query
