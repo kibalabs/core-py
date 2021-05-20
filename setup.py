@@ -17,7 +17,7 @@ with open(os.path.join(setupDirectory, 'requirements-dev.txt'), 'r') as requirem
             devRequirements.append(requirement)
 
 setup(
-    name='kiba-code',
+    name='kiba-core',
     version='0.1.0',
     description='Kiba Labs\' python utilities',
     url='https://github.com/kibalabs/core-py',
@@ -37,7 +37,7 @@ setup(
         'storage': ['boto3==1.12.49'],
         'queues': ['boto3==1.12.49'],
         # NOTE(krishan711): 1.4.0 fail with wierd asyncpg error
-        'database-py': ['databases[postgresql]==0.4.2', 'sqlalchemy==1.3.23'],
+        'database-psql': ['databases[postgresql]==0.4.2', 'sqlalchemy==1.3.23'],
         'requester': ['httpx==0.17.0'],
         'web3': ['web3==5.17.0'],
     },
