@@ -83,6 +83,12 @@ class Retriever:
         return query
 
     @staticmethod
+    def _apply_orders(query: FromClause, table: Table, orders: Sequence[Order]) -> FromClause:
+        for order in orders:
+            query = self._apply_order(query=query, table=table, order=order)
+        return query
+
+    @staticmethod
     def _apply_string_field_filter(query: FromClause, table: Table, fieldFilter: StringFieldFilter) -> FromClause:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
