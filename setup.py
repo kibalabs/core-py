@@ -18,7 +18,7 @@ with open(os.path.join(setupDirectory, 'requirements-dev.txt'), 'r') as requirem
 
 setup(
     name='kiba-core',
-    version='0.1.0',
+    version='0.1.1',
     description='Kiba Labs\' python utilities',
     url='https://github.com/kibalabs/core-py',
     packages=find_packages(exclude=['tests*']),

@@ -46,6 +46,28 @@ class DateFieldFilter(FieldFilter):
     containedIn: Optional[Sequence[datetime.datetime]] = None
     notContainedIn: Optional[Sequence[datetime.datetime]] = None
 
+@dataclasses.dataclass
+class IntegerFieldFilter(FieldFilter):
+    eq: Optional[int] = None
+    ne: Optional[int] = None
+    lte: Optional[int] = None
+    lt: Optional[int] = None
+    gte: Optional[int] = None
+    gt: Optional[int] = None
+    containedIn: Optional[Sequence[int]] = None
+    notContainedIn: Optional[Sequence[int]] = None
+
+@dataclasses.dataclass
+class FloatFieldFilter(FieldFilter):
+    eq: Optional[float] = None
+    ne: Optional[float] = None
+    lte: Optional[float] = None
+    lt: Optional[float] = None
+    gte: Optional[float] = None
+    gt: Optional[float] = None
+    containedIn: Optional[Sequence[float]] = None
+    notContainedIn: Optional[Sequence[float]] = None
+
 class Retriever:
 
     def __init__(self, database: Database):
@@ -58,6 +80,11 @@ class Retriever:
         else:
             field = table.c[order.fieldName]
             query = query.order_by(field.asc() if order.direction == Direction.ASCENDING else field.desc())
+        return query
+
+    def _apply_orders(self, query: FromClause, table: Table, orders: Sequence[Order]) -> FromClause:
+        for order in orders:
+            query = self._apply_order(query=query, table=table, order=order)
         return query
 
     @staticmethod
@@ -94,16 +121,62 @@ class Retriever:
             query = query.where(field.notin_(fieldFilter.notContainedIn))
         return query
 
+    @staticmethod
+    def _apply_integer_field_filter(query: FromClause, table: Table, fieldFilter: IntegerFieldFilter) -> FromClause:
+        field = table.c[fieldFilter.fieldName]
+        if fieldFilter.eq is not None:
+            query = query.where(field == fieldFilter.eq)
+        if fieldFilter.ne is not None:
+            query = query.where(field != fieldFilter.ne)
+        if fieldFilter.lte is not None:
+            query = query.where(field <= fieldFilter.lte)
+        if fieldFilter.lt is not None:
+            query = query.where(field < fieldFilter.lt)
+        if fieldFilter.gte is not None:
+            query = query.where(field >= fieldFilter.gte)
+        if fieldFilter.gt is not None:
+            query = query.where(field > fieldFilter.gt)
+        if fieldFilter.containedIn is not None:
+            query = query.where(field.in_(fieldFilter.containedIn))
+        if fieldFilter.notContainedIn is not None:
+            query = query.where(field.notin_(fieldFilter.notContainedIn))
+        return query
+
+    @staticmethod
+    def _apply_float_field_filter(query: FromClause, table: Table, fieldFilter: FloatFieldFilter) -> FromClause:
+        field = table.c[fieldFilter.fieldName]
+        if fieldFilter.eq is not None:
+            query = query.where(field == fieldFilter.eq)
+        if fieldFilter.ne is not None:
+            query = query.where(field != fieldFilter.ne)
+        if fieldFilter.lte is not None:
+            query = query.where(field <= fieldFilter.lte)
+        if fieldFilter.lt is not None:
+            query = query.where(field < fieldFilter.lt)
+        if fieldFilter.gte is not None:
+            query = query.where(field >= fieldFilter.gte)
+        if fieldFilter.gt is not None:
+            query = query.where(field > fieldFilter.gt)
+        if fieldFilter.containedIn is not None:
+            query = query.where(field.in_(fieldFilter.containedIn))
+        if fieldFilter.notContainedIn is not None:
+            query = query.where(field.notin_(fieldFilter.notContainedIn))
+        return query
+
     def _apply_field_filter(self, query: FromClause, table: Table, fieldFilter: FieldFilter) -> FromClause:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.isNull:
             query = query.where(field is None)
         if fieldFilter.isNotNull:
             query = query.where(field is not None)
-        if isinstance(fieldFilter, DateFieldFilter):
-            query = self._apply_date_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         if isinstance(fieldFilter, StringFieldFilter):
             query = self._apply_string_field_filter(query=query, table=table, fieldFilter=fieldFilter)
+        if isinstance(fieldFilter, DateFieldFilter):
+            query = self._apply_date_field_filter(query=query, table=table, fieldFilter=fieldFilter)
+        if isinstance(fieldFilter, IntegerFieldFilter):
+            query = self._apply_integer_field_filter(query=query, table=table, fieldFilter=fieldFilter)
+        if isinstance(fieldFilter, FloatFieldFilter):
+            query = self._apply_float_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         return query
 
     def _apply_field_filters(self, query: FromClause, table: Table, fieldFilters: Sequence[FieldFilter]) -> FromClause:
