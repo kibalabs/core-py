@@ -1,10 +1,14 @@
 from typing import Optional
 from typing import Sequence
-
-from mypy_boto3_sqs.client import SQSClient
+from typing import TYPE_CHECKING
 
 from core.queues.model import Message
 from core.queues.model import SqsMessage
+
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.client import SQSClient
+else:
+    SQSClient = None  # pylint: disable=invalid-name
 
 class SqsMessageQueue:
 
