@@ -15,7 +15,6 @@ from web3.types import ABI
 from web3._utils import method_formatters
 from web3._utils.contracts import encode_transaction_data
 from web3._utils.abi import get_abi_output_types
-from hexbytes import HexBytes
 
 from core.requester import Requester
 from core.exceptions import BadRequestException
@@ -37,7 +36,7 @@ class EthClientInterface:
     async def get_log_entries(self, topics: List[str], startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
         raise NotImplementedError()
 
-    async def call_function(self, toAddress: str, contractAbi: ABI, functionName: str, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None, blockNumber: Optional[int] = None) -> List[Any]:
+    async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None, blockNumber: Optional[int] = None) -> List[Any]:
         raise NotImplementedError()
 
 class Web3EthClient(EthClientInterface):
@@ -69,6 +68,9 @@ class Web3EthClient(EthClientInterface):
         })
         return contractFilter.get_all_entries()
 
+    async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None, blockNumber: Optional[int] = None) -> List[Any]:
+        raise NotImplementedError()
+
 class RestEthClient(EthClientInterface):
 
     #NOTE(krishan711): find docs at https://eth.wiki/json-rpc/API
@@ -81,8 +83,8 @@ class RestEthClient(EthClientInterface):
     def _hex_to_int(value: str) -> int:
         return int(value, 16)
 
-    async def _make_request(self, method: str, params: List = []) -> Dict:
-        response = await self.requester.post_json(url=self.url, dataDict={'jsonrpc':'2.0', 'method': method, 'params': params, 'id': 0}, timeout=100)
+    async def _make_request(self, method: str, params: List = None) -> Dict:
+        response = await self.requester.post_json(url=self.url, dataDict={'jsonrpc':'2.0', 'method': method, 'params': params or [], 'id': 0}, timeout=100)
         jsonResponse = response.json()
         if jsonResponse.get('error'):
             raise BadRequestException(message=jsonResponse['error'].get('message') or jsonResponse['error'].get('details') or json.dumps(jsonResponse['error']))

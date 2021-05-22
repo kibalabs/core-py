@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [ '*' ]
 jobs:
-  build-app:
+  build-package:
     runs-on: ubuntu-latest
     env:
       DOCKER_IMAGE: core
