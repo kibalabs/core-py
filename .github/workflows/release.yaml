@@ -1,7 +1,9 @@
 name: Release
 on:
-  push:
-    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'main' ]
+  # push:
+  #   tags: [ 'v*' ]
 jobs:
   deploy-package:
     runs-on: ubuntu-latest
@@ -15,9 +17,9 @@ jobs:
       run: docker build --tag $DOCKER_IMAGE .
     # TODO(krishan711): check the version is the same as the tag
     - name: Create .pypirc file
-      run: echo "[pypi]\nusername=__token__\npassword=authToken=$PYPI_TOKEN" > .pypirc
+      run: echo "[pypi]\nusername=__token__\npassword=authToken=a$PYPI_TOKEN" > .pypirc
     - name: Publish package to pypi
-      run: docker run -v $(pwd)/.pypirc:/root/.pypirc $DOCKER_IMAGE python setup.py bdist_wheel && twine upload
+      run: docker run -v $(pwd)/.pypirc:/root/.pypirc $DOCKER_IMAGE python setup.py bdist_wheel && twine upload dist/*
   create-release:
     runs-on: ubuntu-latest
     env:
