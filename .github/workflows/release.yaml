@@ -19,7 +19,7 @@ jobs:
     - name: Create .pypirc file
       run: echo "[pypi]\nusername=__token__\npassword=authToken=a$PYPI_TOKEN" > .pypirc
     - name: Publish package to pypi
-      run: docker run -v $(pwd)/.pypirc:/root/.pypirc $DOCKER_IMAGE python setup.py bdist_wheel && twine upload dist/*
+      run: docker run -v $(pwd)/.pypirc:/root/.pypirc $DOCKER_IMAGE 'python setup.py bdist_wheel && twine upload dist/*'
   create-release:
     runs-on: ubuntu-latest
     env:
