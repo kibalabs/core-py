@@ -47,7 +47,7 @@ class Requester:
             if method == 'GET':
                 urlParts = urlparse.urlparse(url)
                 currentQuery = urlparse.parse_qs(urlParts.query)
-                queryString = urlparse.urlencode(dict_util.merge_dicts(currentQuery, data), doseq=True)
+                queryString = urlparse.urlencode(dict_util.merge_dicts(currentQuery, dataDict), doseq=True)
                 url = urlparse.urlunsplit(components=(urlParts.scheme, urlParts.netloc, urlParts.path, queryString, urlParts.fragment))
             if method == 'POST':
                 data = json.dumps(dataDict).encode()
