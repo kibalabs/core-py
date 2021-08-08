@@ -58,5 +58,8 @@ def write_file_bytes_sync(filePath: str, content: bytes, shouldRaiseIfFileExists
     with open(filePath, 'xb' if shouldRaiseIfFileExists else 'wb') as file:
         file.write(content)
 
-def create_directory(directory: str, shouldAllowExisting: bool = True) -> None:
+async def create_directory(directory: str, shouldAllowExisting: bool = True) -> None:
+    pathlib.Path(directory).mkdir(parents=True, exist_ok=shouldAllowExisting)
+
+async def create_directory_sync(directory: str, shouldAllowExisting: bool = True) -> None:
     pathlib.Path(directory).mkdir(parents=True, exist_ok=shouldAllowExisting)
