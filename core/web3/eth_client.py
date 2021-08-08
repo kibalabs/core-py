@@ -40,6 +40,9 @@ class EthClientInterface:
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None, blockNumber: Optional[int] = None) -> List[Any]:
         raise NotImplementedError()
 
+    async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, privateKey: str, gasPrice: int, gas: int, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None) -> str:
+        raise NotImplementedError()
+
 class Web3EthClient(EthClientInterface):
 
     def __init__(self, web3Connection: Web3, isTestnet: bool = False):
@@ -73,6 +76,9 @@ class Web3EthClient(EthClientInterface):
         return contractFilter.get_all_entries()
 
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None, blockNumber: Optional[int] = None) -> List[Any]:
+        raise NotImplementedError()
+
+    async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, privateKey: str, gasPrice: int, gas: int, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None) -> str:
         raise NotImplementedError()
 
 class RestEthClient(EthClientInterface):

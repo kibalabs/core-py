@@ -8,8 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `post_form` to `Requester`
+- [MINOR] Added `BasicAuthentication`
 
 ### Changed
+- [MAJOR] Updated `Requester.post_json` to not accept data
+- [MAJOR] Updated `file_util.create_directory` to be async
 
 ### Removed
 

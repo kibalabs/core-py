@@ -1,6 +1,7 @@
 import os
 import json
-from typing import Optional
+from io import IOBase
+from typing import IO, List, Mapping, Optional, Union
 from typing import Dict
 import urllib.parse as urlparse
 import logging
@@ -12,6 +13,8 @@ from core.util import dict_util
 from core.util.typing_util import JSON
 
 KibaResponse = httpx.Response
+
+FileContent = Union[IO[str], IO[bytes], str, bytes]
 
 class ResponseException(Exception):
 
@@ -35,12 +38,18 @@ class Requester:
     async def post(self, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='POST', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def post_json(self, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def post_json(self, url: str, dataDict: Optional[JSON] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         headers = headers or httpx.Headers()
         headers.update({'Content-Type': 'application/json'})
-        return await self.make_request(method='POST', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
+        return await self.make_request(method='POST', url=url, dataDict=dataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def post_form(self, url: str, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+        headers = headers or httpx.Headers()
+        # headers.update({'Content-Type': 'multipart/form-data'})
+        return await self.make_request(method='POST', url=url, formDataDict=formDataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
+
+    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+        files: List[Mapping[str, Union[FileContent, str]]] = None
         if dataDict is not None:
             if data is not None:
                 logging.error('Error: dataDict and data should never both be provided to make_request. data will be overwritten by dataDict.')
@@ -50,8 +59,20 @@ class Requester:
                 queryString = urlparse.urlencode(dict_util.merge_dicts(currentQuery, dataDict), doseq=True)
                 url = urlparse.urlunsplit(components=(urlParts.scheme, urlParts.netloc, urlParts.path, queryString, urlParts.fragment))
             if method == 'POST':
+                # TODO(krishan711): this should only happen if json is in the content headers
                 data = json.dumps(dataDict).encode()
-        request = httpx.Request(method=method, url=url, data=data, headers={**self.headers, **(headers or {})})
+        if formDataDict:
+            if method == 'POST':
+                files = {}
+                data = {}
+                for name, value in formDataDict.items():
+                    if isinstance(value, str):
+                        data[name] = value
+                    elif isinstance(value, IOBase):
+                        files[name] = value
+            else:
+                logging.error('Error: formDataDict should only be passed into POST requests.')
+        request = httpx.Request(method=method, url=url, data=data, files=files, headers={**self.headers, **(headers or {})})
         httpxResponse = await self.client.send(request=request, timeout=timeout)
         if 400 <= httpxResponse.status_code < 600:
             raise ResponseException(message=httpxResponse.text, statusCode=httpxResponse.status_code)

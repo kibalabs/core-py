@@ -3,14 +3,14 @@ import hashlib
 import hmac
 import datetime
 from urllib import parse as urlparse
-from typing import Dict
+from typing import Dict, Union
 from typing import Optional
 
 import httpx
 
 from core.util import date_util
 from core.util.typing_util import JSON
-from core.requester import Requester
+from core.requester import FileContent, Requester
 
 # NOTE(krishan711): mostly adapted from https://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
 class AwsRequester(Requester):
@@ -38,13 +38,15 @@ class AwsRequester(Requester):
         key5 = self._sign(key=key4, message='aws4_request')
         return self._sign_hex(key=key5, message=stringToSign)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> httpx.Response:
+    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> httpx.Response:
         canonicalQueryString = ''
         if data is None and dataDict is not None:
             if method == 'GET':
                 raise Exception('GET requests with parameters are not supported on AwsRequester yet.')
             if method == 'POST':
                 data = json.dumps(dataDict).encode()
+        if formDataDict:
+            raise Exception('formDataDict is not supported on AwsRequester yet.')
         parsedUrl = urlparse.urlparse(url=url)
         host = parsedUrl.netloc
         path = parsedUrl.path or '/'
