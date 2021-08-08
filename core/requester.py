@@ -1,12 +1,10 @@
 import os
 import json
-import dataclasses
 from io import IOBase
-from typing import IO, List, Optional, Union
+from typing import IO, List, Mapping, Optional, Union
 from typing import Dict
 import urllib.parse as urlparse
 import logging
-from asyncclick.core import Option
 
 import httpx
 
@@ -51,7 +49,7 @@ class Requester:
         return await self.make_request(method='POST', url=url, formDataDict=formDataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
     async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
-        files: List[httpx.RequestFiles] = None
+        files: List[Mapping[str, Union[FileContent, str]]] = None
         if dataDict is not None:
             if data is not None:
                 logging.error('Error: dataDict and data should never both be provided to make_request. data will be overwritten by dataDict.')

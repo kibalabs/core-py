@@ -14,8 +14,8 @@ class BasicAuthentication:
     def from_string(cls, basicAuthenticationString: str) -> BasicAuthentication:
         try:
             decodedString = base64.b64decode(s=basicAuthenticationString.encode('utf-8'))
-        except BinasciiError:
-            raise UnauthorizedException(message='Failed to decode BasicAuthentication value.')
+        except BinasciiError as exception:
+            raise UnauthorizedException(message='Failed to decode BasicAuthentication value.') from exception
         parts = decodedString.split(b':')
         return cls(username=parts[0].decode('latin1'), password=parts[1].decode('latin1'))
 
