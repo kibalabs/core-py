@@ -1,6 +1,6 @@
+from typing import TYPE_CHECKING
 from typing import Optional
 from typing import Sequence
-from typing import TYPE_CHECKING
 
 from core.queues.model import Message
 from core.queues.model import SqsMessage

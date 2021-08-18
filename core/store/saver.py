@@ -1,6 +1,6 @@
 import logging
-from typing import Optional
 from typing import Dict
+from typing import Optional
 
 import asyncpg
 from databases import Database
@@ -8,6 +8,7 @@ from sqlalchemy.sql import ClauseElement
 
 from core.exceptions import DuplicateValueException
 from core.exceptions import InternalServerErrorException
+
 
 class Saver:
 

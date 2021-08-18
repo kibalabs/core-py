@@ -1,8 +1,11 @@
 from __future__ import annotations
-from typing import Dict
+
+import logging
 from typing import Any
+from typing import Dict
 
 from pydantic import BaseModel
+
 
 class Message(BaseModel):
     command: str
@@ -21,10 +24,13 @@ class SqsMessage(Message):
         )
 
 class MessageContent(BaseModel):
-    _COMMAND = 'UNKOWN_COMMAND'
+    _COMMAND = None
+    COMMAND = 'UNKOWN_COMMAND'
 
     def to_message(self) -> Message:
+        if self._COMMAND:
+            logging.warning('Please use COMMAND instead of _COMMAND, which will be removed in 0.3.0')
         return Message(
-            command=self._COMMAND,
+            command=self._COMMAND or self.COMMAND,
             content=self.dict(),
         )

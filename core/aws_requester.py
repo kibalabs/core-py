@@ -1,16 +1,19 @@
-import json
+import datetime
 import hashlib
 import hmac
-import datetime
-from urllib import parse as urlparse
-from typing import Dict, Union
+import json
+from typing import Dict
 from typing import Optional
+from typing import Union
+from urllib import parse as urlparse
 
 import httpx
 
+from core.requester import FileContent
+from core.requester import Requester
 from core.util import date_util
 from core.util.typing_util import JSON
-from core.requester import FileContent, Requester
+
 
 # NOTE(krishan711): mostly adapted from https://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
 class AwsRequester(Requester):

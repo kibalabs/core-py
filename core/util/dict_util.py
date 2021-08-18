@@ -1,6 +1,6 @@
 from typing import Dict
-from typing import Union
 from typing import TypeVar
+from typing import Union
 
 DictKeyType = TypeVar('DictKeyType')
 DictValueType = TypeVar('DictValueType')

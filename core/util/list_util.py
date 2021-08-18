@@ -1,5 +1,5 @@
-from typing import List
 from typing import Iterator
+from typing import List
 from typing import TypeVar
 
 ListItemType = TypeVar('ListItemType')
