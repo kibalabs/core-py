@@ -1,7 +1,8 @@
 from typing import Optional
 
-from core.requester import Requester
 from core.requester import KibaResponse
+from core.requester import Requester
+
 
 class SlackClient:
 

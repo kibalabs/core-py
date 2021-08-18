@@ -1,24 +1,25 @@
 import json
+from typing import Any
+from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Dict
-from typing import Any
 
 from web3 import Web3
+from web3._utils import method_formatters
+from web3._utils.abi import get_abi_output_types
+from web3._utils.contracts import encode_transaction_data
 from web3.middleware import geth_poa_middleware
-from web3.types import LogReceipt
+from web3.types import ABI
+from web3.types import ABIFunction
 from web3.types import BlockData
+from web3.types import HexBytes
+from web3.types import LogReceipt
 from web3.types import TxData
 from web3.types import TxReceipt
-from web3.types import HexBytes
-from web3.types import ABIFunction
-from web3.types import ABI
-from web3._utils import method_formatters
-from web3._utils.contracts import encode_transaction_data
-from web3._utils.abi import get_abi_output_types
 
-from core.requester import Requester
 from core.exceptions import BadRequestException
+from core.requester import Requester
+
 
 class EthClientInterface:
 

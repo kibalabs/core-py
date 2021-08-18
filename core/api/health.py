@@ -2,6 +2,7 @@ from typing import Dict
 
 from core.api.kiba_router import KibaRouter
 
+
 def create_api(name: str, version: str) -> KibaRouter:
     router = KibaRouter()
 

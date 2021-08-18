@@ -1,6 +1,9 @@
 # NOTE(krishan711): waiting for JSON type to be defined in mypy: https://github.com/python/typing/issues/182
 # NOTE(krishan711): copied from https://gist.github.com/BMDan/ede923f733dfdf5ed3f6c9634a3e281f
-from typing import Any, List, Mapping, Union
+from typing import Any
+from typing import List
+from typing import Mapping
+from typing import Union
 
 JSONV = Union[str, int, float, bool, None]
 JSON5 = JSONV

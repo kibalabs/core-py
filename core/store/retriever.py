@@ -9,6 +9,7 @@ from sqlalchemy import Table
 from sqlalchemy.sql.expression import FromClause
 from sqlalchemy.sql.expression import func as sqlalchemyfunc
 
+
 class Direction(Enum):
     ASCENDING = 'ascending'
     DESCENDING = 'descending'

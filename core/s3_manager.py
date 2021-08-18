@@ -1,15 +1,16 @@
 import dataclasses
-import os
 import logging
-import random
 import mimetypes
+import os
+import random
 from string import ascii_letters
-from typing import Optional
 from typing import Dict
-from typing import Tuple
+from typing import Optional
 from typing import Sequence
+from typing import Tuple
 
 from core.util import file_util
+
 
 @dataclasses.dataclass
 class PresignedUploadField:

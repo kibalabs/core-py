@@ -5,6 +5,7 @@ from typing import Optional
 
 from core.util.typing_util import JSON
 
+
 class KibaException(Exception):
 
     def __init__(self, message: Optional[str], statusCode: Optional[int] = None, exceptionType: Optional[str] = None) -> None:
