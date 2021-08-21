@@ -24,13 +24,14 @@ class SqsMessage(Message):
         )
 
 class MessageContent(BaseModel):
-    _COMMAND = None
-    COMMAND = 'UNKOWN_COMMAND'
+    _COMMAND = 'UNKNOWN_COMMAND'
+
+    @classmethod
+    def get_command(cls) -> str:
+        return cls._COMMAND
 
     def to_message(self) -> Message:
-        if self._COMMAND:
-            logging.warning('Please use COMMAND instead of _COMMAND, which will be removed in 0.3.0')
         return Message(
-            command=self._COMMAND or self.COMMAND,
+            command=self.get_command(),
             content=self.dict(),
         )
