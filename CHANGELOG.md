@@ -13,10 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Removed
 
+## [0.2.2] - 2021-08-21
+
+### Changed
+- [MINOR] Reverted `Message.COMMAND` change from 0.2.1
+- [MINOR] Added `Message.get_command()` to prevent private access lint error
+
 ## [0.2.1] - 2021-08-18
 
 ### Changed
-- [MINOR] Added `Message.get_command()` to prevent private access lint errors
+- [MINOR] Added `Message.COMMAND` and deprecation note on `Message._COMMAND` to suit linters
 
 ## [0.2.0] - 2021-08-08
 
