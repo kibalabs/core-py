@@ -37,7 +37,7 @@ setup(
         'api': ['fastapi~=0.68.0', 'uvicorn~=0.15.0'],
         'storage': ['boto3~=1.12.49'],
         'queues': ['boto3~=1.12.49'],
-        'database-psql': ['databases[postgresql]~=0.4.3'],
+        'database-psql': ['databases[postgresql]~=0.5.1'],
         'requester': ['httpx~=0.18.2'],
         'web3': ['web3~=5.23.0'],
     },
