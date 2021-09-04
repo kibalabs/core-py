@@ -5,9 +5,11 @@ from typing import Optional
 from typing import Sequence
 
 from databases import Database
+from pydantic.dataclasses import dataclass
 from sqlalchemy import Table
-from sqlalchemy.sql.expression import FromClause
+from sqlalchemy.sql.expression import FromClause, or_
 from sqlalchemy.sql.expression import func as sqlalchemyfunc
+from core.exceptions import InternalServerErrorException
 
 
 class Direction(Enum):
@@ -24,7 +26,11 @@ class RandomOrder(Order):
     fieldName: str = '__KIBA_RANDOM'
 
 @dataclasses.dataclass
-class FieldFilter:
+class Filter:
+    pass
+
+@dataclasses.dataclass
+class FieldFilter(Filter):
     fieldName: str
     isNull: Optional[bool] = None
     isNotNull: Optional[bool] = None
@@ -68,6 +74,11 @@ class FloatFieldFilter(FieldFilter):
     gt: Optional[float] = None
     containedIn: Optional[Sequence[float]] = None
     notContainedIn: Optional[Sequence[float]] = None
+
+@dataclasses.dataclass
+class OneOfFilter(Filter):
+    filters: Sequence[Filter]
+
 
 class Retriever:
 
@@ -183,4 +194,22 @@ class Retriever:
     def _apply_field_filters(self, query: FromClause, table: Table, fieldFilters: Sequence[FieldFilter]) -> FromClause:
         for fieldFilter in fieldFilters:
             query = self._apply_field_filter(query=query, table=table, fieldFilter=fieldFilter)
+        return query
+    
+    
+    def _apply_filters(self, query: FromClause, table: Table, filters: Sequence[Filter]) -> FromClause:
+        print(filters)
+        if isinstance(filters,FieldFilter):
+            query = self._apply_field_filter(query=query, table=table, fieldFilter=filters)
+            query = query
+        else:
+            for filter in filters:
+                if isinstance(filter, FieldFilter):
+                    query = self._apply_field_filter(query=query, table=table, fieldFilter=filter)
+                elif isinstance(filter,OneOfFilter):
+                    for filter in filter.filters:
+                        query = self._apply_filters(query=query, table=table, filters=filter)
+                        
+                else:
+                    raise InternalServerErrorException(message='InvalidFilter Format')
         return query
