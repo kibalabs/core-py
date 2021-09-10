@@ -196,12 +196,12 @@ class Retriever:
             query = self._apply_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         return query
 
-    def _apply_filters(self, query: FromClause, table: Table, filters: Sequence[Filter], allQuery = []) -> FromClause:
-        for filter in filters:
+    def _apply_filters(self, query: FromClause, table: Table, filters: Sequence[Filter], allQuery = []) -> FromClause: # pylint: disable=dangerous-default-value
+        for filter in filters:                                          # pylint: disable=redifiend-builtin
             if isinstance(filter, FieldFilter):
                 query = self._apply_field_filter(query=query, table=table, fieldFilter=filter)
             elif isinstance(filter,OneOfFilter):
-                for i in range(len(filter.filters)):
+                for i in range(len(filter.filters)):                    # pylint: disable=invalid-name,consider-using-enumerate
                     if isinstance(filter.filters[i],FieldFilter):
                         query = self._apply_field_filter(query=query, table=table, fieldFilter= filter.filters[i])
                         allQuery.append(query)
