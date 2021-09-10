@@ -196,18 +196,18 @@ class Retriever:
             query = self._apply_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         return query
 
-    def _apply_filters(self, query: FromClause, table: Table, filters: Sequence[Filter], allQuery = []) -> FromClause: # pylint: disable=dangerous-default-value
-        for filter in filters:                                          # pylint: disable=redefined-builtin
-            if isinstance(filter, FieldFilter):
-                query = self._apply_field_filter(query=query, table=table, fieldFilter=filter)
-            elif isinstance(filter,OneOfFilter):
-                for i in range(len(filter.filters)):                    # pylint: disable=invalid-name,consider-using-enumerate
-                    if isinstance(filter.filters[i],FieldFilter):
-                        query = self._apply_field_filter(query=query, table=table, fieldFilter= filter.filters[i])
-                        allQuery.append(query)
+    def _apply_filters(self, query: FromClause, table: Table, filters: Sequence[Filter], oneOfQuery = []) -> FromClause: # pylint: disable=dangerous-default-value
+        for queryfilter in filters:
+            if isinstance(queryfilter, FieldFilter):
+                query = self._apply_field_filter(query=query, table=table, fieldFilter=queryfilter)
+            elif isinstance(queryfilter,OneOfFilter):
+                for i in range(len(queryfilter.filters)):                    # pylint: disable=invalid-name,consider-using-enumerate
+                    if isinstance(queryfilter.filters[i],FieldFilter):
+                        query = self._apply_field_filter(query=query, table=table, fieldFilter= queryfilter.filters[i])
+                        oneOfQuery.append(query)
                     else:
-                        query = self._apply_filters(query=query, table=table, filters=filter.filters[i])
-                query = union(*allQuery).alias('alias_name')
+                        query = self._apply_filters(query=query, table=table, filters=queryfilter.filters[i])
+                query = union(*oneOfQuery).alias('alias_name')
                 return query
             else:
                 raise InternalServerErrorException(message='ThrowException:InvalidFilterFormat, The Filter you have entered cannot be processed')
