@@ -1,12 +1,10 @@
 import dataclasses
 import datetime
 from enum import Enum
-from operator import or_
 from typing import Optional
 from typing import Sequence
 
 from databases import Database
-from pydantic.utils import path_type
 from sqlalchemy import Table
 from sqlalchemy.sql.expression import FromClause
 from sqlalchemy.sql.expression import func as sqlalchemyfunc
@@ -198,7 +196,7 @@ class Retriever:
             query = self._apply_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         return query
 
-    def _apply_filters(self, query: FromClause, table: Table, filters: Sequence[Filter], all_query=[]) -> FromClause:
+    def _apply_filters(self, query: FromClause, table: Table, filters: Sequence[Filter], allQuery = []) -> FromClause:
         for filter in filters:
             if isinstance(filter, FieldFilter):
                 query = self._apply_field_filter(query=query, table=table, fieldFilter=filter)
@@ -206,12 +204,11 @@ class Retriever:
                 for i in range(len(filter.filters)):
                     if isinstance(filter.filters[i],FieldFilter):
                         query = self._apply_field_filter(query=query, table=table, fieldFilter= filter.filters[i])
-                        all_query.append(query)
+                        allQuery.append(query)
                     else:
-                        query = self._apply_filters(query=query, table=table, filters=filter.filters[i])  
-                query = union(*all_query).alias('alias_name')
+                        query = self._apply_filters(query=query, table=table, filters=filter.filters[i])
+                query = union(*allQuery).alias('alias_name')
                 return query
             else:
-                raise InternalServerErrorException(message='InvalidFilter Format')
-
-        
+                raise InternalServerErrorException(message='ThrowException:InvalidFilterFormat, The Filter you have entered cannot be processed')
+        return query
