@@ -197,7 +197,7 @@ class Retriever:
         return query
 
     def _apply_filters(self, query: FromClause, table: Table, filters: Sequence[Filter], allQuery = []) -> FromClause: # pylint: disable=dangerous-default-value
-        for filter in filters:                                          # pylint: disable=redifiend-builtin
+        for filter in filters:                                          # pylint: disable=redefined-builtin
             if isinstance(filter, FieldFilter):
                 query = self._apply_field_filter(query=query, table=table, fieldFilter=filter)
             elif isinstance(filter,OneOfFilter):
