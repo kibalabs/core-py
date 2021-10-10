@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [Unreleased]
 
+### Changed
+- [MINOR] Made SlackClient Optional
+
 ### Added
 - [MINOR] Added `chain_util` with `normalize_address`
 
