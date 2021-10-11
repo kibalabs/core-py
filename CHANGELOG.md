@@ -7,18 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [Unreleased]
 
-### Changed
-- [MINOR] Made SlackClient Optional
-
 ### Added
-- [MINOR] Added `chain_util` with `normalize_address`
-
-### Added
-- [MINOR] Update to databases v0.5.1
 
 ### Changed
 
 ### Removed
+
+## [0.2.3] - 2021-10-11
+
+### Added
+- [MINOR] Added `chain_util` with `normalize_address`
+
+### Changed
+- [MINOR] Updated to databases v0.5.1
+- [MINOR] Updated `MessageQueueProcessor` to make `slackClient` optional
 
 ## [0.2.2] - 2021-08-21
 
