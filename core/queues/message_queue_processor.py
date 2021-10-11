@@ -19,7 +19,7 @@ class MessageProcessor(ABC):
 
 class MessageQueueProcessor:
 
-    def __init__(self, queue: SqsMessageQueue, messageProcessor: MessageProcessor, slackClient: Optional[SlackClient]):
+    def __init__(self, queue: SqsMessageQueue, messageProcessor: MessageProcessor, slackClient: Optional[SlackClient] = None):
         self.queue = queue
         self.messageProcessor = messageProcessor
         self.slackClient = slackClient
