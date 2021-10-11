@@ -2,6 +2,7 @@ import abc
 import logging
 import time
 from abc import ABC
+from typing import Optional
 
 from core.exceptions import KibaException
 from core.queues.model import Message
@@ -18,7 +19,7 @@ class MessageProcessor(ABC):
 
 class MessageQueueProcessor:
 
-    def __init__(self, queue: SqsMessageQueue, messageProcessor: MessageProcessor, slackClient: SlackClient):
+    def __init__(self, queue: SqsMessageQueue, messageProcessor: MessageProcessor, slackClient: Optional[SlackClient] = None):
         self.queue = queue
         self.messageProcessor = messageProcessor
         self.slackClient = slackClient
@@ -41,7 +42,8 @@ class MessageQueueProcessor:
                     statusCode = exception.statusCode if isinstance(exception, KibaException) else 500  # pylint: disable=no-member
                     logging.error('Caught exception whilst processing message')
                     logging.exception(exception)
-                    await self.slackClient.post(text=f'Error processing message: {message.command} {message.content}\n```{exception}```')
+                    if self.slackClient:
+                        await self.slackClient.post(text=f'Error processing message: {message.command} {message.content}\n```{exception}```')
                     # TODO(krish): should possibly reset the visibility timeout
                 duration = time.time() - startTime
                 logging.info(f'MESSAGE - {message.command} {message.content} - {statusCode} - {duration}')
