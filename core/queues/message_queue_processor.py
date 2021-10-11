@@ -42,7 +42,7 @@ class MessageQueueProcessor:
                     statusCode = exception.statusCode if isinstance(exception, KibaException) else 500  # pylint: disable=no-member
                     logging.error('Caught exception whilst processing message')
                     logging.exception(exception)
-                    if self.slackClient is not None:
+                    if self.slackClient:
                         await self.slackClient.post(text=f'Error processing message: {message.command} {message.content}\n```{exception}```')
                     # TODO(krish): should possibly reset the visibility timeout
                 duration = time.time() - startTime
