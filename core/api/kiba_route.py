@@ -10,7 +10,8 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import Response
 from fastapi.routing import APIRoute
 
-from core.exceptions import KibaException, RedirectException
+from core.exceptions import KibaException
+from core.exceptions import RedirectException
 
 
 class KibaRoute(APIRoute):
