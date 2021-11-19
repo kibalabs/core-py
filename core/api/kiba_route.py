@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import Response
 from fastapi.routing import APIRoute
 
-from core.exceptions import KibaException
+from core.exceptions import KibaException, RedirectException
 
 
 class KibaRoute(APIRoute):
@@ -28,6 +28,10 @@ class KibaRoute(APIRoute):
             logging.info(f'{requestId} - {request.method} - {request.url.path}')
             try:
                 response = await original_route_handler(request)
+            except RedirectException as exception:
+                print(exception)
+                response = Response(status_code=exception.statusCode)
+                response.headers['Location'] = exception.location
             except KibaException as exception:
                 logging.exception(exception)
                 response = self._convert_exception(exception=exception)

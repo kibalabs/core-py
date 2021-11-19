@@ -85,3 +85,32 @@ class InternalServerErrorException(ServerException):
 
 class DuplicateValueException(BadRequestException):
     pass
+
+
+class RedirectException(KibaException):
+
+    def __init__(self, location: str, message: Optional[str] = None, statusCode: Optional[int] = None) -> None:
+        message = message if message else 'RedirectException'
+        super().__init__(message=message, statusCode=statusCode)
+        self.location = location
+
+
+class MovedPermanentlyRedirectException(RedirectException):
+
+    def __init__(self, location: str, message: Optional[str] = None) -> None:
+        message = message if message else 'Moved Permanently'
+        super().__init__(location=location, message=message, statusCode=301)
+
+
+class FoundRedirectException(RedirectException):
+
+    def __init__(self, location: str, message: Optional[str] = None) -> None:
+        message = message if message else 'Found Redirect'
+        super().__init__(location=location, message=message, statusCode=302)
+
+
+class PermanentRedirectException(RedirectException):
+
+    def __init__(self, location: str, message: Optional[str] = None) -> None:
+        message = message if message else 'Permanent Redirect'
+        super().__init__(location=location, message=message, statusCode=308)
