@@ -35,7 +35,6 @@ class SqsMessageQueue:
     async def get_queue_attributes(self,queue) -> dict:
         sqsResponse = self.sqsClient.get_queue_attributes(QueueUrl=queue,AttributeNames=['ApproximateNumberOfMessages',])
         return sqsResponse
-    
 
     async def delete_message(self, message: SqsMessage) -> None:
         self.sqsClient.delete_message(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle)
