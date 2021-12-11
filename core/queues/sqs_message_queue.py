@@ -27,11 +27,11 @@ class SqsMessageQueue:
         sqsResponse = self.sqsClient.receive_message(QueueUrl=self.queueUrl, VisibilityTimeout=expectedProcessingSeconds, MaxNumberOfMessages=limit, WaitTimeSeconds=longPollSeconds)
         sqsMessages = [SqsMessage.from_sqs_message(sqsMessage=sqsMessage) for sqsMessage in sqsResponse.get('Messages', [])]
         return sqsMessages
-    
+
     async def get_queues(self) -> dict:
         sqsResponse = self.sqsClient.list_queues()
         return sqsResponse
-    
+
     async def get_queue_attributes(self,queue) -> dict:
         sqsResponse = self.sqsClient.get_queue_attributes(QueueUrl=queue,AttributeNames=['ApproximateNumberOfMessages',])
         return sqsResponse
