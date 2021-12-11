@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `get_queue_attributes` to SqsMessageQueue 
+- [MINOR] Added `get_queues` to SqsMessageQueue 
+
 
 ### Changed
 
