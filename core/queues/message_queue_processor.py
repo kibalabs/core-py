@@ -54,7 +54,7 @@ class MessageQueueProcessor:
 
     async def run_batches(self, batchSize: int, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, sleepTime: int = 30, totalMessageLimit: Optional[int] = None) -> int:
         processedMessageCount = 0
-        while processedMessageCount < totalMessageLimit:
+        while totalMessageLimit is None or processedMessageCount < totalMessageLimit:
             innerProcessedMessageCount = await self.execute_batch(expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds, batchSize=batchSize)
             if innerProcessedMessageCount == 0:
                 logging.info('No message received.. sleeping')
