@@ -13,6 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Removed
 
+## [0.2.6] - 2022-01-06
+
+### Changed
+-[PATCH] Fixed `MessageQueueProcessor` to allow limitless processing
+
 ## [0.2.5] - 2022-01-06
 
 ### Added
