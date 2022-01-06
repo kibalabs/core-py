@@ -8,12 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
--[MINOR] Added batch processing to `MessageQueueProcessor`
--[MINOR] Added one-off processing to `MessageQueueProcessor`
 
 ### Changed
 
 ### Removed
+
+## [0.2.5] - 2022-01-06
+
+### Added
+-[MINOR] Added batch processing to `MessageQueueProcessor`
+-[MINOR] Added one-off processing to `MessageQueueProcessor`
 
 ## [0.2.4] - 2021-11-19
 
