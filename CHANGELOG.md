@@ -8,11 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
--[MINOR] Added parallel processing to `MessageQueueProcessor` 
 
 ### Changed
 
 ### Removed
+
+## [0.2.7] - 2022-01-15
+
+### Added
+-[MINOR] Added parallel processing to `MessageQueueProcessor.execute_batch`
 
 ## [0.2.6] - 2022-01-06
 
