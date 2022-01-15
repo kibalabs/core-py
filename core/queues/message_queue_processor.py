@@ -1,4 +1,5 @@
 import abc
+import asyncio
 import logging
 import time
 from abc import ABC
@@ -41,11 +42,14 @@ class MessageQueueProcessor:
         duration = time.time() - startTime
         logging.info(f'MESSAGE - {message.command} {message.content} - {statusCode} - {duration}')
 
-    async def execute_batch(self, batchSize: int, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20) -> int:
+    async def execute_batch(self, batchSize: int, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, shouldProcessInParallel: bool = False) -> int:
         logging.info('Retrieving messages...')
         messages = await self.queue.get_messages(expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds, limit=batchSize)
-        for message in messages:
-            await self._process_message(message=message)
+        if shouldProcessInParallel:
+            await asyncio.gather(*[self._process_message(message=message) for message in messages])
+        else:
+            for message in messages:
+                await self._process_message(message=message)
         return len(messages)
 
     async def execute(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20) -> bool:
