@@ -17,7 +17,7 @@ class SqsMessageQueue:
         self.queueUrl = queueUrl
 
     async def send_message(self, message: Message, delaySeconds: int = 0) -> None:
-        self.sqsClient.send_message(QueueUrl=self.queueUrl, DelaySeconds=delaySeconds, MessageAttributes={}, MessageBody=message.json())
+        self.sqsClient.send_message(QueueUrl=self.queueUrl, DelaySeconds=delaySeconds, MessageAttributes={}, MessageBody=f'{message.json()},postDate:{message.set_post_date()}')
 
     async def get_message(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> Optional[SqsMessage]:
         messages = await self.get_messages(limit=1, expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds)

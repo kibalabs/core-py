@@ -11,7 +11,10 @@ from util import date_util
 class Message(BaseModel):
     command: str
     content: Dict[str, Any]
-    postDate: Optional[datetime.datetime]
+
+    @classmethod
+    def set_post_date():
+        return date_util.datetime_from_now()
 
 class SqsMessage(Message):
     receiptHandle: str
@@ -33,9 +36,7 @@ class MessageContent(BaseModel):
         return cls._COMMAND
 
     def to_message(self) -> Message:
-        postDate =date_util.datetime_from_now()
         return Message(
             command=self.get_command(),
             content=self.dict(),
-            postDate=postDate,
         )
