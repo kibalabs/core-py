@@ -1,15 +1,10 @@
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 from __future__ import annotations
 
 from typing import Any
 from typing import Dict
 
 from pydantic import BaseModel
-from util import date_util
+from core.util import date_util
 
 
 class Message(BaseModel):
