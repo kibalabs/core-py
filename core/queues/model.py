@@ -1,20 +1,19 @@
 from __future__ import annotations
-
-from typing import Any
+import datetime
+from typing import Any, Optional
 from typing import Dict
 
 from pydantic import BaseModel
 from core.util import date_util
 
 
+
 class Message(BaseModel):
     command: str
     content: Dict[str, Any]
+    postDate: Optional[datetime.datetime]
 
-    @staticmethod
-    def set_post_date():
-        return date_util.datetime_from_now()
-
+    
 class SqsMessage(Message):
     receiptHandle: str
 
@@ -24,6 +23,7 @@ class SqsMessage(Message):
         return cls(
             command=message.command,
             content=message.content,
+            postDate=message.postDate,
             receiptHandle=sqsMessage['ReceiptHandle'],
         )
 
@@ -33,9 +33,14 @@ class MessageContent(BaseModel):
     @classmethod
     def get_command(cls) -> str:
         return cls._COMMAND
+    
+    @staticmethod
+    def set_post_date():
+        return date_util.datetime_from_now()
 
     def to_message(self) -> Message:
         return Message(
             command=self.get_command(),
             content=self.dict(),
+            postDate=self.set_post_date()
         )
