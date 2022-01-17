@@ -23,7 +23,6 @@ class SqsMessage(Message):
 
     @classmethod
     def from_sqs_message(cls, sqsMessage: Dict[str, Any]) -> SqsMessage:
-        print(sqsMessage['Body'])
         message = Message.parse_raw(sqsMessage['Body'])
         return cls(
             command=message.command,
