@@ -8,8 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+-[MINOR] Added `postDate` to `Message`
 
 ### Changed
+-[MINOR] Set `Message.postDate` in `SqsMessageQueue` when posting to queue
 
 ### Removed
 
