@@ -13,12 +13,15 @@ class Message(BaseModel):
     content: Dict[str, Any]
     postDate: Optional[datetime.datetime]
 
+    def set_post_date(self):
+        self.postDate = date_util.datetime_from_now()
 
 class SqsMessage(Message):
     receiptHandle: str
 
     @classmethod
     def from_sqs_message(cls, sqsMessage: Dict[str, Any]) -> SqsMessage:
+        print(sqsMessage['Body'])
         message = Message.parse_raw(sqsMessage['Body'])
         return cls(
             command=message.command,
@@ -34,13 +37,9 @@ class MessageContent(BaseModel):
     def get_command(cls) -> str:
         return cls._COMMAND
 
-    @staticmethod
-    def set_post_date():
-        return date_util.datetime_from_now()
-
     def to_message(self) -> Message:
         return Message(
             command=self.get_command(),
             content=self.dict(),
-            postDate=self.set_post_date()
+            postDate=None
         )
