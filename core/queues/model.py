@@ -1,7 +1,11 @@
-from __future__ import annotations
-import datetime
+import os
+import sys
 
-from typing import Any, Optional
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from __future__ import annotations
+
+from typing import Any
 from typing import Dict
 
 from pydantic import BaseModel
@@ -12,7 +16,7 @@ class Message(BaseModel):
     command: str
     content: Dict[str, Any]
 
-    @classmethod
+    @staticmethod
     def set_post_date():
         return date_util.datetime_from_now()
 
