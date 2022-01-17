@@ -8,12 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Removed
+
+## [0.2.8] - 2022-01-17
+
+### Added
 -[MINOR] Added `postDate` to `Message`
 
 ### Changed
 -[MINOR] Set `Message.postDate` in `SqsMessageQueue` when posting to queue
-
-### Removed
 
 ## [0.2.7] - 2022-01-15
 
