@@ -13,7 +13,7 @@ class Message(BaseModel):
     content: Dict[str, Any]
     postDate: Optional[datetime.datetime]
 
-    
+
 class SqsMessage(Message):
     receiptHandle: str
 
@@ -33,7 +33,7 @@ class MessageContent(BaseModel):
     @classmethod
     def get_command(cls) -> str:
         return cls._COMMAND
-    
+
     @staticmethod
     def set_post_date():
         return date_util.datetime_from_now()
