@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 import datetime
-from typing import Any, Optional
+from typing import Any
 from typing import Dict
+from typing import Optional
 
 from pydantic import BaseModel
-from core.util import date_util
 
+from core.util import date_util
 
 
 class Message(BaseModel):
