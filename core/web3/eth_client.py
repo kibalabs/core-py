@@ -26,7 +26,7 @@ class EthClientInterface:
     async def get_latest_block_number(self) -> int:
         raise NotImplementedError()
 
-    async def get_block(self, blockNumber: int) -> BlockData:
+    async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
         raise NotImplementedError()
 
     async def get_transaction(self, transactionHash: str) -> TxData:
@@ -55,8 +55,8 @@ class Web3EthClient(EthClientInterface):
     async def get_latest_block_number(self) -> int:
         return self.w3.eth.block_number
 
-    async def get_block(self, blockNumber: int) -> BlockData:
-        return self.w3.eth.get_block(blockNumber)
+    async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
+        return self.w3.eth.get_block(blockNumber, shouldHydrateTransactions)
 
     async def get_transaction_count(self, address: str) -> int:
         return self.w3.eth.get_transaction_count(address)
@@ -106,8 +106,8 @@ class RestEthClient(EthClientInterface):
         response = await self._make_request(method='eth_blockNumber')
         return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_blockNumber'](response['result'])
 
-    async def get_block(self, blockNumber: int) -> BlockData:
-        response = await self._make_request(method='eth_getBlockByNumber', params=[hex(blockNumber), False])
+    async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
+        response = await self._make_request(method='eth_getBlockByNumber', params=[hex(blockNumber), shouldHydrateTransactions])
         if self.isTestnet:
             # NOTE(krishan711): In testnet strip out the extra data as done by web3
             # https://web3py.readthedocs.io/en/stable/middleware.html#why-is-geth-poa-middleware-necessary
