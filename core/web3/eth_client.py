@@ -39,9 +39,6 @@ class EthClientInterface:
     async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
         raise NotImplementedError()
 
-    async def get_block_receipts(self, blockNumber: int) -> List[TxReceipt]:
-        raise NotImplementedError()
-
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None, blockNumber: Optional[int] = None) -> List[Any]:
         raise NotImplementedError()
 
@@ -129,11 +126,6 @@ class RestEthClient(EthClientInterface):
     async def get_transaction_receipt(self, transactionHash: str) -> TxReceipt:
         response = await self._make_request(method='eth_getTransactionReceipt', params=[transactionHash])
         return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionReceipt'](response['result'])
-
-    async def get_block_receipts(self, blockNumber: int) -> List[TxReceipt]:
-        response = await self._make_request(method='eth_getBlockReceipts', params=[blockNumber])
-        print(response)
-        # return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionReceipt'](response['result'])
 
     async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
         params = {
