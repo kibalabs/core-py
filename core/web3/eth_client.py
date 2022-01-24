@@ -154,7 +154,9 @@ class RestEthClient(EthClientInterface):
         try:
             outputData = self.w3.codec.decode_abi(types=outputTypes, data=HexBytes(response['result']))
         except InsufficientDataBytes as exception:
-            raise BadRequestException(f'Malformed response: {str(exception)}')
+            if response['result'] == '0x':
+                raise BadRequestException(f'Empty response: {str(exception)}. Maybe the method does not exist on this contract.')
+            raise exception
         return list(outputData)
 
     def get_transaction_params(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, gasPrice: int = 2000000000000, gas: int = 90000, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None) -> Dict[str, str]:

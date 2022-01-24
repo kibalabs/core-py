@@ -39,6 +39,6 @@ setup(
         'queues': ['boto3~=1.12.49'],
         'database-psql': ['databases[postgresql]~=0.5.1'],
         'requester': ['httpx~=0.18.2'],
-        'web3': ['web3~=5.23.0'],
+        'web3': ['web3~=5.26.0'],
     },
 )
