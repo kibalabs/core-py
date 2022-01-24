@@ -16,6 +16,7 @@ from web3.types import HexBytes
 from web3.types import LogReceipt
 from web3.types import TxData
 from web3.types import TxReceipt
+from eth_abi.exceptions import InsufficientDataBytes
 
 from core.exceptions import BadRequestException
 from core.requester import Requester
@@ -36,6 +37,9 @@ class EthClientInterface:
         raise NotImplementedError()
 
     async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
+        raise NotImplementedError()
+
+    async def get_block_receipts(self, blockNumber: int) -> List[TxReceipt]:
         raise NotImplementedError()
 
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None, blockNumber: Optional[int] = None) -> List[Any]:
@@ -126,6 +130,11 @@ class RestEthClient(EthClientInterface):
         response = await self._make_request(method='eth_getTransactionReceipt', params=[transactionHash])
         return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionReceipt'](response['result'])
 
+    async def get_block_receipts(self, blockNumber: int) -> List[TxReceipt]:
+        response = await self._make_request(method='eth_getBlockReceipts', params=[blockNumber])
+        print(response)
+        # return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionReceipt'](response['result'])
+
     async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
         params = {
             'fromBlock': 'earliest',
@@ -150,7 +159,10 @@ class RestEthClient(EthClientInterface):
         }
         response = await self._make_request(method='eth_call', params=[params, blockNumber or 'latest'])
         outputTypes = get_abi_output_types(abi=functionAbi)
-        outputData = self.w3.codec.decode_abi(types=outputTypes, data=HexBytes(response['result']))
+        try:
+            outputData = self.w3.codec.decode_abi(types=outputTypes, data=HexBytes(response['result']))
+        except InsufficientDataBytes as exception:
+            raise BadRequestException(f'Malformed response: {str(exception)}')
         return list(outputData)
 
     def get_transaction_params(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, gasPrice: int = 2000000000000, gas: int = 90000, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
