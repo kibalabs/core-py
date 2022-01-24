@@ -10,9 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ### Added
 
 ### Changed
--[MINOR] Updated `RestEthClient` to throw `BadRequestException` for malformed responses
 
 ### Removed
+
+## [0.2.10] - 2022-01-24
+
+### Changed
+-[MINOR] Updated `RestEthClient` to throw `BadRequestException` for malformed responses
 
 ## [0.2.9] - 2022-01-20
 
