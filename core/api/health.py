@@ -7,7 +7,7 @@ def create_api(name: str, version: str) -> KibaRouter:
     router = KibaRouter()
 
     @router.get('/')
-    async def root() -> Dict[str, str]:  # pylint: disable=unused-variable
+    async def root() -> Dict[str, str]:
         return {'server': name, 'version': version}
 
     return router
