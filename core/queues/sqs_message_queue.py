@@ -30,9 +30,7 @@ class SqsMessageQueue:
                 message.set_post_date()
                 requests.append({'Id': str(index), 'DelaySeconds': delaySeconds, 'MessageAttributes': {}, 'MessageBody': message.json()})
             response = self.sqsClient.send_message_batch(QueueUrl=self.queueUrl, Entries=requests)
-            if 'Failed' in response:
-                for failure in response['Failed']:
-                    failures.append(failure)
+            failures += response.get('Failed', [])
         if len(failures) > 0:
             message = ''
             for failure in failures:
