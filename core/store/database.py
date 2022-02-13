@@ -1,5 +1,4 @@
 import contextlib
-import contextvars
 from typing import ContextManager
 from typing import Optional
 
