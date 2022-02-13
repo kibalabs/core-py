@@ -1,8 +1,6 @@
 import contextlib
 import contextvars
-import logging
 from typing import ContextManager
-from typing import Dict
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -24,19 +22,24 @@ class Database:
         return Database.create_connection_string(engine='postgresql+asyncpg', username=username, password=password, host=host, port=port, name=name)
 
     def __init__(self, connectionString: str):
-        self._engine = create_async_engine(connectionString, future=True)
-        self._connection_context = contextvars.ContextVar("connection_context")
+        self.connectionString = connectionString
+        self._engine = None
         self._connection = None
 
     async def connect(self):
-        if self._connection:
-            return
-        self._connection = await self._engine.connect()
+        if not self._engine:
+            self._engine = create_async_engine(self.connectionString, future=True)
+        if not self._connection:
+            self._connection = self._engine.connect()
+            await self._connection.start()
 
     async def disconnect(self):
-        if not self._connection:
-            return
-        await self._connection.close()
+        if self._connection:
+            await self._connection.close()
+            self._connection = None
+        if self._engine:
+            await self._engine.dispose()
+            self._engine = None
 
     @contextlib.asynccontextmanager
     async def create_transaction(self) -> ContextManager[DatabaseConnection]:
