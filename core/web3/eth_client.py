@@ -4,6 +4,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+from eth_abi.exceptions import InsufficientDataBytes
 from web3 import Web3
 from web3._utils import method_formatters
 from web3._utils.abi import get_abi_output_types
@@ -16,7 +17,6 @@ from web3.types import HexBytes
 from web3.types import LogReceipt
 from web3.types import TxData
 from web3.types import TxReceipt
-from eth_abi.exceptions import InsufficientDataBytes
 
 from core.exceptions import BadRequestException
 from core.requester import Requester

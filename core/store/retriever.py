@@ -4,10 +4,11 @@ from enum import Enum
 from typing import Optional
 from typing import Sequence
 
-from databases import Database
 from sqlalchemy import Table
 from sqlalchemy.sql.expression import FromClause
 from sqlalchemy.sql.expression import func as sqlalchemyfunc
+
+from core.store.database import Database
 
 
 class Direction(Enum):

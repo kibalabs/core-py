@@ -76,8 +76,8 @@ class Requester:
                         files[name] = value
             else:
                 logging.error('Error: formDataDict should only be passed into POST requests.')
-        request = httpx.Request(method=method, url=url, data=data, files=files, headers={**self.headers, **(headers or {})})
-        httpxResponse = await self.client.send(request=request, timeout=timeout)
+        request = self.client.build_request(method=method, url=url, data=data, files=files, timeout=timeout, headers={**self.headers, **(headers or {})})
+        httpxResponse = await self.client.send(request=request)
         if 400 <= httpxResponse.status_code < 600:
             raise ResponseException(message=httpxResponse.text, statusCode=httpxResponse.status_code)
         # TODO(krishan711): this would be more efficient if streamed
