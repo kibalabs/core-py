@@ -1,9 +1,9 @@
+import contextlib
 import logging
-from typing import Dict
 from typing import Optional
 
 import asyncpg
-from databases import Database
+from core.store.database import Database, DatabaseConnection
 from sqlalchemy.sql import ClauseElement
 
 from core.exceptions import DuplicateValueException
@@ -15,9 +15,14 @@ class Saver:
     def __init__(self, database: Database):
         self.database = database
 
-    async def _execute(self, query: ClauseElement, values: Optional[Dict]):
+    @contextlib.asynccontextmanager
+    async def create_transaction(self):
+        async with self.database.create_transaction() as connection:
+            yield connection
+
+    async def _execute(self, query: ClauseElement, connection: Optional[DatabaseConnection] = None):
         try:
-            return await self.database.execute(query=query, values=values)
+            return await self.database.execute(query=query, connection=connection)
         except asyncpg.exceptions.UniqueViolationError as exception:
             raise DuplicateValueException(message=str(exception)) from exception
         except Exception as exception:

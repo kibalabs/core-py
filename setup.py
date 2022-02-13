@@ -34,11 +34,11 @@ setup(
     test_suite='tests',
     include_package_data=True,
     extras_require={
-        'api': ['fastapi~=0.68.0', 'uvicorn~=0.15.0'],
-        'storage': ['boto3~=1.12.49'],
-        'queues': ['boto3~=1.12.49'],
-        'database-psql': ['databases[postgresql]~=0.5.1'],
-        'requester': ['httpx~=0.18.2'],
-        'web3': ['web3~=5.26.0'],
+        'api': ['fastapi~=0.73.0', 'uvicorn~=0.17.4'],
+        'storage': ['boto3~=1.20.54'],
+        'queues': ['boto3~=1.20.54'],
+        'database-psql': ['sqlalchemy[asyncio]~=1.4.31', 'asyncpg~=0.25.0'],
+        'requester': ['httpx~=0.22.0'],
+        'web3': ['web3~=5.28.0'],
     },
 )

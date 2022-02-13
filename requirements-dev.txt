@@ -1,9 +1,10 @@
-fastapi==0.68.0
-uvicorn==0.15.0
-boto3==1.12.49
-boto3-stubs[sqs, s3]==1.17.73
-databases[postgresql]==0.5.1
-httpx==0.18.2
-web3==5.23.0
+fastapi==0.73.0
+uvicorn==0.17.4
+boto3==1.20.54
+boto3-stubs[sqs, s3]==1.20.54
+sqlalchemy[asyncio]==1.4.31
+asyncpg==0.25.0
+httpx==0.22.0
+web3==5.28.0
 sqlalchemy-stubs==0.4
 kiba-build==0.1.4

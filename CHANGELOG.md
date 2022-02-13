@@ -9,8 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Added
 -[MINOR] Added `send_messages` to `SqsMessageQueue` for sending multiple messages in one request
+-[MINOR] Added `Database` to make facilitate easy migration from databases package
 
 ### Changed
+-[MAJOR] Replaced use of databases package in `Saver` and `Retriever`
 
 ### Removed
 
