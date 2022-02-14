@@ -30,6 +30,9 @@ class EthClientInterface:
     async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
         raise NotImplementedError()
 
+    async def get_block_uncle_count(self, blockNumber: int) -> int:
+        raise NotImplementedError()
+
     async def get_transaction(self, transactionHash: str) -> TxData:
         raise NotImplementedError()
 
@@ -58,6 +61,9 @@ class Web3EthClient(EthClientInterface):
 
     async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
         return self.w3.eth.get_block(blockNumber, shouldHydrateTransactions)
+
+    async def get_block_uncle_count(self, blockNumber: int) -> int:
+        return self.w3.eth.get_uncle_count(blockNumber)
 
     async def get_transaction_count(self, address: str) -> int:
         return self.w3.eth.get_transaction_count(address)
@@ -114,6 +120,10 @@ class RestEthClient(EthClientInterface):
             # https://web3py.readthedocs.io/en/stable/middleware.html#why-is-geth-poa-middleware-necessary
             response['result']['extraData'] = HexBytes('0').hex()
         return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getBlockByNumber'](response['result'])
+
+    async def get_block_uncle_count(self, blockNumber: int) -> int:
+        response = await self._make_request(method='eth_getUncleCountByBlockNumber', params=[hex(blockNumber)])
+        return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getUncleCountByBlockNumber'](response['result'])
 
     async def get_transaction_count(self, address: str) -> TxData:
         response = await self._make_request(method='eth_getTransactionCount', params=[address, 'latest'])
