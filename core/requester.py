@@ -32,9 +32,9 @@ class ResponseException(Exception):
 
 class Requester:
 
-    def __init__(self, headers: Optional[Dict[str, str]] = None):
+    def __init__(self, headers: Optional[Dict[str, str]] = None, shouldFollowRedirects: bool = True):
         self.headers = headers or {}
-        self.client = httpx.AsyncClient()
+        self.client = httpx.AsyncClient(follow_redirects=shouldFollowRedirects)
 
     async def get(self, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='GET', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
