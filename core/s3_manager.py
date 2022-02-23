@@ -5,7 +5,7 @@ import mimetypes
 import os
 import random
 from string import ascii_letters
-from typing import TYPE_CHECKING, Dict
+from typing import Dict
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -13,11 +13,6 @@ from typing import Tuple
 from aiobotocore.session import get_session as get_botocore_session
 
 from core.util import file_util
-
-if TYPE_CHECKING:
-    from mypy_boto3_s3.client import S3Client
-else:
-    S3Client = None  # pylint: disable=invalid-name
 
 
 @dataclasses.dataclass
