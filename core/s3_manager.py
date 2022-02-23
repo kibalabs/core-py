@@ -32,13 +32,16 @@ class S3File:
 
 class S3Manager:
 
-    def __init__(self):
+    def __init__(self, region: str, accessKeyId: str, accessKeySecret: str):
+        self.region = region
+        self._accessKeyId = accessKeyId
+        self._accessKeySecret = accessKeySecret
         self._exitStack = AsyncExitStack()
         self._s3Client = None
 
-    async def connect(self, region: str, accessKeyId: str, accessKeySecret: str):
+    async def connect(self):
         session = get_botocore_session()
-        self._s3Client = await self._exitStack.enter_async_context(session.create_client('s3', region_name=region, aws_access_key_id=accessKeyId, aws_secret_access_key=accessKeySecret))
+        self._s3Client = await self._exitStack.enter_async_context(session.create_client('s3', region_name=self.region, aws_access_key_id=self._accessKeyId, aws_secret_access_key=self._accessKeySecret))
 
     async def disconnect(self):
         await self._exitStack.aclose()
