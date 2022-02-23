@@ -36,7 +36,7 @@ setup(
     extras_require={
         'api': ['fastapi~=0.74.1', 'uvicorn~=0.17.5'],
         'storage': ['aiobotocore~=2.1.1'],
-        'queues': ['aiobotocore~=2.1.1', 'boto3~=1.20.24'],
+        'queues': ['aiobotocore~=2.1.1'],
         'database-psql': ['sqlalchemy[asyncio]~=1.4.31', 'asyncpg~=0.25.0'],
         'requester': ['httpx~=0.22.0'],
         'web3': ['web3~=5.28.0'],
