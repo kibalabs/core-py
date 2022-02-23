@@ -1,7 +1,8 @@
-fastapi==0.73.0
-uvicorn==0.17.4
-boto3==1.20.54
-boto3-stubs[sqs, s3]==1.20.54
+fastapi==0.74.1
+uvicorn==0.17.5
+aiobotocore==2.1.1
+boto3==1.20.24
+boto3-stubs[sqs, s3]==1.20.24
 sqlalchemy[asyncio]==1.4.31
 asyncpg==0.25.0
 httpx==0.22.0

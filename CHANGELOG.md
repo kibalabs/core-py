@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ### Changed
 -[MAJOR] Replaced use of databases package in `Saver` and `Retriever`
 -[MINOR] Update `Requester` to follow redirects by default
+-[MAJOR] Replaced use of `boto3` with `aiobotocore` for S3Manager
 
 ### Removed
 
