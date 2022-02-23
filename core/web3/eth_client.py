@@ -5,6 +5,7 @@ from typing import List
 from typing import Optional
 
 from eth_abi.exceptions import InsufficientDataBytes
+from eth_abi.exceptions import DecodingError
 from web3 import Web3
 from web3._utils import method_formatters
 from web3._utils.abi import get_abi_output_types
@@ -165,8 +166,10 @@ class RestEthClient(EthClientInterface):
             outputData = self.w3.codec.decode_abi(types=outputTypes, data=HexBytes(response['result']))
         except InsufficientDataBytes as exception:
             if response['result'] == '0x':
-                raise BadRequestException(f'Empty response: {str(exception)}. Maybe the method does not exist on this contract.')
+                raise BadRequestException(message=f'Empty response: {str(exception)}. Maybe the method does not exist on this contract.')
             raise exception
+        except DecodingError as exception:
+            raise BadRequestException(message=str(exception))
         return list(outputData)
 
     def get_transaction_params(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, gasPrice: int = 2000000000000, gas: int = 90000, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None) -> Dict[str, str]:

@@ -1,15 +1,23 @@
+from contextlib import AsyncExitStack
 import dataclasses
 import logging
 import mimetypes
 import os
 import random
 from string import ascii_letters
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
+from aiobotocore.session import get_session as get_botocore_session
+
 from core.util import file_util
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3.client import S3Client
+else:
+    S3Client = None  # pylint: disable=invalid-name
 
 
 @dataclasses.dataclass
@@ -29,8 +37,17 @@ class S3File:
 
 class S3Manager:
 
-    def __init__(self, s3Client):
-        self.s3Client = s3Client
+    def __init__(self):
+        self._exit_stack = AsyncExitStack()
+        self._s3Client = None
+
+    async def connect(self, region: str, accessKeyId: str, accessKeySecret: str):
+        session = get_botocore_session()
+        self._s3Client = await self._exit_stack.enter_async_context(session.create_client('s3', region_name=region, aws_access_key_id=accessKeyId, aws_secret_access_key=accessKeySecret))
+
+    async def disconnect(self):
+        await self._exit_stack.aclose()
+        self._s3Client = None
 
     @staticmethod
     def _split_path_to_bucket_key(path: str) -> Tuple[str, str]:
@@ -57,41 +74,39 @@ class S3Manager:
         return f'random_file_{"".join(random.choice(ascii_letters) for _ in range(20))}'
 
     async def write_file(self, content: bytes, targetPath: str, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, contentType: Optional[str] = None) -> None:
-        randomFilePath = self._generate_random_filename()
-        await file_util.write_file_bytes(filePath=randomFilePath, content=content, shouldRaiseIfFileExists=True)
-        await self.upload_file(filePath=randomFilePath, targetPath=targetPath, accessControl=accessControl, cacheControl=cacheControl, contentType=contentType)
-        await file_util.remove_file(filePath=randomFilePath)
-
-    async def read_file(self, sourcePath: str) -> bytes:
-        randomFilePath = self._generate_random_filename()
-        await self.download_file(filePath=randomFilePath, sourcePath=sourcePath)
-        content = await file_util.read_file_bytes(filePath=randomFilePath)
-        await file_util.remove_file(filePath=randomFilePath)
-        return content
-
-    async def upload_file(self, filePath: str, targetPath: str, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, contentType: Optional[str] = None) -> None:
         targetBucket, targetKey = self._split_path_to_bucket_key(path=targetPath)
         extraArgs = self._get_extra_args(accessControl=accessControl, cacheControl=cacheControl, contentType=contentType or self._get_file_mimetype(fileName=targetKey))
-        self.s3Client.upload_file(Filename=filePath, Bucket=targetBucket, Key=targetKey, ExtraArgs=extraArgs)
+        await self._s3Client.put_object(Body=content, Bucket=targetBucket, Key=targetKey, **extraArgs)
+
+    async def upload_file(self, filePath: str, targetPath: str, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, contentType: Optional[str] = None) -> None:
+        content = await file_util.read_file_bytes(filePath=filePath)
+        await self.write_file(content=content, targetPath=targetPath, accessControl=accessControl, cacheControl=cacheControl, contentType=contentType)
+
+    async def read_file(self, sourcePath: str) -> bytes:
+        bucket, key = self._split_path_to_bucket_key(path=sourcePath)
+        response = await self._s3Client.get_object(Bucket=bucket, Key=key)
+        async with response['Body'] as stream:
+            output = await stream.read()
+        return output
 
     async def download_file(self, sourcePath: str, filePath: str) -> None:
-        sourceBucket, sourceKey = self._split_path_to_bucket_key(path=sourcePath)
-        self.s3Client.download_file(Filename=filePath, Bucket=sourceBucket, Key=sourceKey)
+        content = await self.read_file(sourcePath=sourcePath)
+        await file_util.write_file_bytes(filePath=filePath, content=content)
 
     async def copy_file(self, source: str, target: str, accessControl: Optional[str] = None, cacheControl: Optional[str] = None, contentType: Optional[str] = None):
         logging.info(f'Copying file from {source} to {target}')
         sourceBucket, sourceKey = self._split_path_to_bucket_key(path=source)
         targetBucket, targetKey = self._split_path_to_bucket_key(path=target)
         extraArgs = self._get_extra_args(accessControl=accessControl, cacheControl=cacheControl, contentType=contentType or self._get_file_mimetype(fileName=targetKey))
-        self.s3Client.copy_object(CopySource=dict(Bucket=sourceBucket, Key=sourceKey), Bucket=targetBucket, Key=targetKey, MetadataDirective='REPLACE', **extraArgs)
+        await self._s3Client.copy_object(CopySource=dict(Bucket=sourceBucket, Key=sourceKey), Bucket=targetBucket, Key=targetKey, MetadataDirective='REPLACE', **extraArgs)
 
     async def delete_file(self, filePath: str):
         bucket, key = self._split_path_to_bucket_key(path=filePath)
-        self.s3Client.delete_object(Bucket=bucket, Key=key)
+        await self._s3Client.delete_object(Bucket=bucket, Key=key)
 
     async def check_file_exists(self, filePath: str):
         bucket, key = self._split_path_to_bucket_key(path=filePath)
-        self.s3Client.get_object(Bucket=bucket, Key=key)
+        await self._s3Client.get_object(Bucket=bucket, Key=key)
 
     async def list_directory_files(self, s3Directory: str) -> Sequence[S3File]:
         return [s3File async for s3File in self.generate_directory_files(s3Directory=s3Directory)]
@@ -102,9 +117,9 @@ class S3Manager:
         continuationToken = None
         while True:
             if not continuationToken:
-                response = self.s3Client.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=100)
+                response = await self._s3Client.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=100)
             else:
-                response = self.s3Client.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=100, ContinuationToken=continuationToken)
+                response = await self._s3Client.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=100, ContinuationToken=continuationToken)
             for item in response.get('Contents', []):
                 yield S3File(path=item['Key'], bucket=bucket)
             if not response['IsTruncated']:
@@ -149,5 +164,5 @@ class S3Manager:
         if cacheControl:
             fields['Cache-Control'] = cacheControl
             conditions.append({'Cache-Control': cacheControl})
-        response = self.s3Client.generate_presigned_post(Bucket=targetBucket, Key=targetKey, Fields=fields, Conditions=conditions, ExpiresIn=timeLimit)
+        response = await self._s3Client.generate_presigned_post(Bucket=targetBucket, Key=targetKey, Fields=fields, Conditions=conditions, ExpiresIn=timeLimit)
         return S3PresignedUpload(url=response['url'], fields=[PresignedUploadField(name=name, value=value) for name, value in response['fields'].items()])
