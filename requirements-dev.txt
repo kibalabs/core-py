@@ -1,5 +1,5 @@
-fastapi==0.73.0
-uvicorn==0.17.4
+fastapi==0.74.1
+uvicorn==0.17.5
 aiobotocore==2.1.1
 boto3==1.20.24
 boto3-stubs[sqs, s3]==1.20.24
