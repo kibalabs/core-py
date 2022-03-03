@@ -1,4 +1,5 @@
 import contextlib
+import contextvars
 from typing import ContextManager
 from typing import Optional
 
@@ -23,19 +24,20 @@ class Database:
     def __init__(self, connectionString: str):
         self.connectionString = connectionString
         self._engine = None
-        self._connection = None
+        self._connectionContext = contextvars.ContextVar("_connectionContext")
+        # self._connection = None
 
     async def connect(self):
         if not self._engine:
             self._engine = create_async_engine(self.connectionString, future=True)
-        if not self._connection:
-            self._connection = self._engine.connect()
-            await self._connection.start()
+        # if not self._connection:
+        #     self._connection = self._engine.connect()
+        #     await self._connection.start()
 
     async def disconnect(self):
-        if self._connection:
-            await self._connection.close()
-            self._connection = None
+        # if self._connection:
+        #     await self._connection.close()
+        #     self._connection = None
         if self._engine:
             await self._engine.dispose()
             self._engine = None
@@ -45,7 +47,28 @@ class Database:
         async with self._engine.begin() as connection:
             yield connection
 
+    def _get_connection(self) -> Optional[DatabaseConnection]:
+        try:
+            connection = self._connectionContext.get()
+            if not connection.closed:
+                return connection
+        except LookupError:
+            pass
+        return None
+
+    @contextlib.asynccontextmanager
+    async def create_context_connection(self) -> ContextManager[DatabaseConnection]:
+        if self._get_connection() is not None:
+            raise Exception
+        async with self._engine.begin() as connection:
+            self._connectionContext.set(connection)
+            yield connection
+
     async def execute(self, query: ClauseElement, connection: Optional[DatabaseConnection] = None):
-        connection = connection or self._connection
-        result = await connection.execute(statement=query)
-        return result
+        if connection:
+            return await connection.execute(statement=query)
+        connection = self._get_connection()
+        if connection:
+            return await connection.execute(statement=query)
+        async with self._engine.connect() as connection:
+            return await connection.execute(statement=query)
