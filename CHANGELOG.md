@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 -[MINOR] Added `Database` to make facilitate easy migration from databases package
 -[MINOR] Added `get_block_uncle_count` to `EthClient`
 -[MINOR] Added `shouldFollowRedirects` to `Requester`
+-[MINOR] Added `DatabaseConnectionMiddleware` to manage api database connections
 
 ### Changed
 -[MAJOR] Replaced use of databases package in `Saver` and `Retriever`
