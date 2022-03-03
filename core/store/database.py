@@ -25,19 +25,12 @@ class Database:
         self.connectionString = connectionString
         self._engine = None
         self._connectionContext = contextvars.ContextVar("_connectionContext")
-        # self._connection = None
 
     async def connect(self):
         if not self._engine:
             self._engine = create_async_engine(self.connectionString, future=True)
-        # if not self._connection:
-        #     self._connection = self._engine.connect()
-        #     await self._connection.start()
 
     async def disconnect(self):
-        # if self._connection:
-        #     await self._connection.close()
-        #     self._connection = None
         if self._engine:
             await self._engine.dispose()
             self._engine = None
