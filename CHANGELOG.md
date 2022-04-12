@@ -13,7 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 -[MINOR] Added `get_block_uncle_count` to `EthClient`
 -[MINOR] Added `shouldFollowRedirects` to `Requester`
 -[MINOR] Added `DatabaseConnectionMiddleware` to manage api database connections
--[MAJOR] Added `logging` for custom kiba log formatting
+-[MAJOR] Added `logging` module for custom kiba log formatting
+-[MAJOR] Added `ExceptionHandlingMiddleware` to replace KibaRoute
+-[MAJOR] Added `ServerHeadersMiddleware` to replace KibaRoute
+-[MAJOR] Added `LoggingMiddleware` to replace KibaRoute
 
 ### Changed
 -[MAJOR] Replaced use of databases package in `Saver` and `Retriever`
@@ -22,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 -[MAJOR] Replaced use of `boto3` with `aiobotocore` for SqsMessageQueue
 
 ### Removed
+-[MAJOR] Removed `KibaRouter` and `KibaRoute` - Use middlewares instead
 
 ## [0.2.10] - 2022-01-24
 
