@@ -4,8 +4,8 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
-from eth_abi.exceptions import InsufficientDataBytes
 from eth_abi.exceptions import DecodingError
+from eth_abi.exceptions import InsufficientDataBytes
 from web3 import Web3
 from web3._utils import method_formatters
 from web3._utils.abi import get_abi_output_types

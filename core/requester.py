@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import urllib.parse as urlparse
 from io import IOBase
@@ -12,6 +11,7 @@ from typing import Union
 
 import httpx
 
+from core import logging
 from core.util import dict_util
 from core.util import file_util
 from core.util.typing_util import JSON

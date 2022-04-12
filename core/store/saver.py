@@ -1,10 +1,10 @@
 import contextlib
-import logging
 from typing import Optional
 
 import asyncpg
 from sqlalchemy.sql import ClauseElement
 
+from core import logging
 from core.exceptions import DuplicateValueException
 from core.exceptions import InternalServerErrorException
 from core.store.database import Database
