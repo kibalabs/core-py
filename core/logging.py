@@ -74,18 +74,47 @@ def init_basic_logging(showDebug: bool = False) -> None:
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
 
 
+def _serialize_numeric_value(value: Union[None, float, int]) -> str:
+    if value is None or value == '':  # type: ignore[comparison-overlap]
+        return ''
+    roundedNumber = round(value, 6)
+    return f'{roundedNumber:f}'.rstrip('0').rstrip('.')
+
+
+def _serialize_string_value(value: str) -> str:
+    return value.replace(':', '__')
+
+
+def stat(name: str, key: str, value: float) -> None:
+    if STAT_LOGGER.isEnabledFor(level=logging.INFO):
+        nameValue = _serialize_string_value(value=str(name))
+        keyValue = _serialize_string_value(value=str(key))
+        statValue = _serialize_numeric_value(value=value)
+        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'name': nameValue, 'key': keyValue, 'value': statValue}))
+
+
+def api(action: str, path: str, query: str, response: Optional[int] = None, duration: Optional[float] = None) -> None:
+    if API_LOGGER.isEnabledFor(level=logging.INFO):
+        actionString = _serialize_string_value(value=action)
+        pathString = _serialize_string_value(value=path)
+        queryString = _serialize_string_value(value=query)
+        responseString = _serialize_numeric_value(value=response)
+        durationString = _serialize_numeric_value(value=duration)
+        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'action': actionString, 'path': pathString, 'query': queryString, 'response': responseString or '', 'duration': durationString or ''}))
+
+
 # Wrappers around common python logging functions which go straight to the root logger
-def _log(level: int, msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
-    if ROOT_LOGGER.isEnabledFor(level=level):
-        ROOT_LOGGER._log(level=level, msg=msg, args=args, **kwargs)  # type: ignore[attr-defined, misc]  # pylint: disable=protected-access
-
-
 CRITICAL = logging.CRITICAL
 ERROR = logging.ERROR
 ERROR = logging.ERROR
 WARNING = logging.WARNING
 INFO = logging.INFO
 DEBUG = logging.DEBUG
+
+
+def _log(level: int, msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+    if ROOT_LOGGER.isEnabledFor(level=level):
+        ROOT_LOGGER._log(level=level, msg=msg, args=args, **kwargs)  # type: ignore[attr-defined, misc]  # pylint: disable=protected-access
 
 
 def critical(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
@@ -118,32 +147,3 @@ def basicConfig(**kwargs: JSON) -> None:  # pylint: disable=invalid-name
 
 def getLogger(name: str = Optional[None]) -> Logger:  # pylint: disable=invalid-name
     return logging.getLogger(name=name)
-
-
-def _serialize_numeric_value(value: Union[None, float, int]) -> str:
-    if value is None or value == '':  # type: ignore[comparison-overlap]
-        return ''
-    roundedNumber = round(value, 6)
-    return f'{roundedNumber:f}'.rstrip('0').rstrip('.')
-
-
-def _serialize_string_value(value: str) -> str:
-    return value.replace(':', '__')
-
-
-def stat(name: str, key: str, value: float) -> None:
-    if STAT_LOGGER.isEnabledFor(level=logging.INFO):
-        nameValue = _serialize_string_value(value=str(name))
-        keyValue = _serialize_string_value(value=str(key))
-        statValue = _serialize_numeric_value(value=value)
-        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'name': nameValue, 'key': keyValue, 'value': statValue}))
-
-
-def api(action: str, path: str, query: str, response: Optional[int] = None, duration: Optional[float] = None) -> None:
-    if API_LOGGER.isEnabledFor(level=logging.INFO):
-        actionString = _serialize_string_value(value=action)
-        pathString = _serialize_string_value(value=path)
-        queryString = _serialize_string_value(value=query)
-        responseString = _serialize_numeric_value(value=response)
-        durationString = _serialize_numeric_value(value=duration)
-        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'action': actionString, 'path': pathString, 'query': queryString, 'response': responseString or '', 'duration': durationString or ''}))
