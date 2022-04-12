@@ -104,6 +104,7 @@ def api(action: str, path: str, query: str, response: Optional[int] = None, dura
 
 
 # Wrappers around common python logging functions which go straight to the root logger
+
 CRITICAL = logging.CRITICAL
 ERROR = logging.ERROR
 ERROR = logging.ERROR
