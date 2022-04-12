@@ -1,8 +1,8 @@
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
+from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.middleware.base import RequestResponseEndpoint
+from starlette.types import ASGIApp
 
 from core.store.database import Database
 

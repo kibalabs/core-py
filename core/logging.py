@@ -1,14 +1,17 @@
+import dataclasses
 import logging
 import os
 import re
 import sys
-from logging import Formatter, LogRecord
-from logging import Logger
-from logging import StreamHandler
-from typing import Any, Dict, Optional
-from typing import Union
-import dataclasses
 import typing
+from logging import Formatter
+from logging import Logger
+from logging import LogRecord
+from logging import StreamHandler
+from typing import Any
+from typing import Dict
+from typing import Optional
+from typing import Union
 
 from core.util.typing_util import JSON
 from core.util.value_holder import RequestIdHolder
@@ -133,7 +136,7 @@ def stat(name: str, key: str, value: float) -> None:
         nameValue = _serialize_string_value(value=str(name))
         keyValue = _serialize_string_value(value=str(key))
         statValue = _serialize_numeric_value(value=value)
-        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'name': nameValue, 'key': keyValue, 'value': statValue}))  # pylint: disable=protected-access
+        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'name': nameValue, 'key': keyValue, 'value': statValue}))
 
 
 def api(action: str, path: str, query: str, response: Optional[int] = None, duration: Optional[float] = None) -> None:
@@ -143,4 +146,4 @@ def api(action: str, path: str, query: str, response: Optional[int] = None, dura
         queryString = _serialize_string_value(value=query)
         responseString = _serialize_numeric_value(value=response)
         durationString = _serialize_numeric_value(value=duration)
-        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'action': actionString, 'path': pathString, 'query': queryString, 'response': responseString or '', 'duration': durationString or ''}))  # pylint: disable=protected-access
+        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'action': actionString, 'path': pathString, 'query': queryString, 'response': responseString or '', 'duration': durationString or ''}))
