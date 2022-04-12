@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 -[MINOR] Added `get_block_uncle_count` to `EthClient`
 -[MINOR] Added `shouldFollowRedirects` to `Requester`
 -[MINOR] Added `DatabaseConnectionMiddleware` to manage api database connections
+-[MAJOR] Added `logging` for custom kiba log formatting
 
 ### Changed
 -[MAJOR] Replaced use of databases package in `Saver` and `Retriever`

@@ -1,18 +1,14 @@
 import time
-from typing import Optional
 import uuid
+from typing import Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
-from core import logging
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
-
-from core.util.value_holder import RequestIdHolder
-import time
-import uuid
+from starlette.types import ASGIApp
 
 from core import logging
+from core.util.value_holder import RequestIdHolder
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):

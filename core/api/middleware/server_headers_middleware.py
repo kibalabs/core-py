@@ -1,9 +1,9 @@
 from typing import Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
+from starlette.types import ASGIApp
 
 
 class ServerHeadersMiddleware(BaseHTTPMiddleware):
