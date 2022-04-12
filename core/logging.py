@@ -26,8 +26,8 @@ class LogFormat:
 
 _LOGGING_FORMAT_VERSION = 1
 ROOT_FORMAT = LogFormat(loggerType="", loggerName=f"KIBA_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(message)s")
-STAT_FORMAT = LogFormat(loggerType="stat", loggerName=f"KIBA_STAT_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(name)s:%(key)s:%(value)s")
-API_FORMAT = LogFormat(loggerType="api", loggerName=f"KIBA_API_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(action)s:%(path)s:%(query)s:%(response)s:%(duration)s")
+STAT_FORMAT = LogFormat(loggerType="stat", loggerName=f"KIBA_STAT_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(statName)s:%(statKey)s:%(statValue)s")
+API_FORMAT = LogFormat(loggerType="api", loggerName=f"KIBA_API_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(apiAction)s:%(apiPath)s:%(apiQuery)s:%(apiResponse)s:%(apiDuration)s")
 ALL_LOGGER_FORMATS = [ROOT_FORMAT, STAT_FORMAT, API_FORMAT]
 
 ROOT_LOGGER = logging.getLogger(ROOT_FORMAT.loggerType)
@@ -90,7 +90,7 @@ def stat(name: str, key: str, value: float) -> None:
         nameValue = _serialize_string_value(value=str(name))
         keyValue = _serialize_string_value(value=str(key))
         statValue = _serialize_numeric_value(value=value)
-        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'name': nameValue, 'key': keyValue, 'value': statValue}))
+        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'statName': nameValue, 'statKey': keyValue, 'statValue': statValue}))
 
 
 def api(action: str, path: str, query: str, response: Optional[int] = None, duration: Optional[float] = None) -> None:
@@ -100,7 +100,7 @@ def api(action: str, path: str, query: str, response: Optional[int] = None, dura
         queryString = _serialize_string_value(value=query)
         responseString = _serialize_numeric_value(value=response)
         durationString = _serialize_numeric_value(value=duration)
-        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'action': actionString, 'path': pathString, 'query': queryString, 'response': responseString or '', 'duration': durationString or ''}))
+        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'apiAction': actionString, 'apiPath': pathString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''}))
 
 
 # Wrappers around common python logging functions which go straight to the root logger
