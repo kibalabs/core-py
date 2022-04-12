@@ -14,7 +14,7 @@ from core.util.value_holder import RequestIdHolder
 class LoggingMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app: ASGIApp, requestIdHolder: Optional[RequestIdHolder] = None):
-        super().__init__(app)
+        super().__init__(app=app)
         self.requestIdHolder = requestIdHolder
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):

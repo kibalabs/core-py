@@ -9,7 +9,7 @@ from starlette.types import ASGIApp
 class ServerHeadersMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app: ASGIApp, name: Optional[str] = None, version: Optional[str] = None, environment: Optional[str] = None):
-        super().__init__(app)
+        super().__init__(app=app)
         self.name = name
         self.version = version
         self.environment = environment
