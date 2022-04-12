@@ -1,9 +1,8 @@
-from contextlib import AsyncExitStack
 import dataclasses
-import logging
 import mimetypes
 import os
 import random
+from contextlib import AsyncExitStack
 from string import ascii_letters
 from typing import Dict
 from typing import Optional
@@ -12,6 +11,7 @@ from typing import Tuple
 
 from aiobotocore.session import get_session as get_botocore_session
 
+from core import logging
 from core.util import file_util
 
 

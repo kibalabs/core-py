@@ -1,10 +1,10 @@
 import abc
 import asyncio
-import logging
 import time
 from abc import ABC
 from typing import Optional
 
+from core import logging
 from core.exceptions import KibaException
 from core.queues.model import Message
 from core.queues.sqs_message_queue import SqsMessageQueue
