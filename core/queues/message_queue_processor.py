@@ -3,12 +3,15 @@ import asyncio
 import time
 from abc import ABC
 from typing import Optional
+import urllib.parse as urlparse
+import uuid
 
 from core import logging
 from core.exceptions import KibaException
 from core.queues.model import Message
 from core.queues.sqs_message_queue import SqsMessageQueue
 from core.slack_client import SlackClient
+from core.util.value_holder import RequestIdHolder
 
 
 class MessageProcessor(ABC):
@@ -20,13 +23,17 @@ class MessageProcessor(ABC):
 
 class MessageQueueProcessor:
 
-    def __init__(self, queue: SqsMessageQueue, messageProcessor: MessageProcessor, slackClient: Optional[SlackClient] = None):
+    def __init__(self, queue: SqsMessageQueue, messageProcessor: MessageProcessor, slackClient: Optional[SlackClient] = None, requestIdHolder: Optional[RequestIdHolder] = None):
         self.queue = queue
         self.messageProcessor = messageProcessor
         self.slackClient = slackClient
+        self.requestIdHolder = requestIdHolder
 
     async def _process_message(self, message: Message) -> None:
-        logging.info(f'MESSAGE - {message.command} {message.content}')
+        requestId = str(uuid.uuid4()).replace('-', '')
+        if self.requestIdHolder:
+            self.requestIdHolder.set_value(value=requestId)
+        logging.api(action='MESSAGE', path=message.command, query=urlparse.urlencode(message.content, doseq=True))
         startTime = time.time()
         statusCode = 200
         try:
@@ -40,7 +47,9 @@ class MessageQueueProcessor:
                 await self.slackClient.post(text=f'Error processing message: {message.command} {message.content}\n```{exception}```')
             # TODO(krish): should possibly reset the visibility timeout
         duration = time.time() - startTime
-        logging.info(f'MESSAGE - {message.command} {message.content} - {statusCode} - {duration}')
+        logging.api(action='MESSAGE', path=message.command, query=urlparse.urlencode(message.content, doseq=True), response=statusCode, duration=duration)
+        if self.requestIdHolder:
+            self.requestIdHolder.set_value(value=None)
 
     async def execute_batch(self, batchSize: int, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, shouldProcessInParallel: bool = False) -> int:
         logging.info('Retrieving messages...')

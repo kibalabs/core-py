@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 -[MAJOR] Added `ExceptionHandlingMiddleware` to replace KibaRoute
 -[MAJOR] Added `ServerHeadersMiddleware` to replace KibaRoute
 -[MAJOR] Added `LoggingMiddleware` to replace KibaRoute
+-[MAJOR] Added `requestIdHolder` to `MessageQueueProcessor`
 
 ### Changed
 -[MAJOR] Replaced use of databases package in `Saver` and `Retriever`
