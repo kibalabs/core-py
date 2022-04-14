@@ -1,10 +1,10 @@
 import abc
 import asyncio
 import time
-from abc import ABC
-from typing import Optional
 import urllib.parse as urlparse
 import uuid
+from abc import ABC
+from typing import Optional
 
 from core import logging
 from core.exceptions import KibaException
@@ -44,7 +44,7 @@ class MessageQueueProcessor:
             logging.error('Caught exception whilst processing message')
             logging.exception(exception)
             if self.slackClient:
-                await self.slackClient.post(text=f'Error processing message: {message.command} {message.content}\n```{exception}```')
+                await self.slackClient.post(text=f'Error processing message: {message.command}\n```{requestId}\n{message.content}\n{exception}```')
             # TODO(krish): should possibly reset the visibility timeout
         duration = time.time() - startTime
         logging.api(action='MESSAGE', path=message.command, query=urlparse.urlencode(message.content, doseq=True), response=statusCode, duration=duration)
