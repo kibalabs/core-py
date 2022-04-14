@@ -19,7 +19,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
         requestId = str(uuid.uuid4()).replace('-', '')
-        self.requestIdHolder.set_value(value=requestId)
+        if self.requestIdHolder:
+            self.requestIdHolder.set_value(value=requestId)
         startTime = time.time()
         logging.api(action=request.method, path=request.url.path, query=request.url.query)
         response = await call_next(request)
@@ -27,5 +28,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         response.headers['X-Response-Time'] = str(duration)
         response.headers['X-Request-Id'] = requestId
         logging.api(action=request.method, path=request.url.path, query=request.url.query, response=response.status_code, duration=duration)
-        self.requestIdHolder.set_value(value=None)
+        if self.requestIdHolder:
+            self.requestIdHolder.set_value(value=None)
         return response
