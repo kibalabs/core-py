@@ -1,4 +1,5 @@
 import dataclasses
+import json
 import logging
 import os
 import re
@@ -10,6 +11,7 @@ from logging import LogRecord
 from logging import StreamHandler
 from typing import Any
 from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Union
 
@@ -22,12 +24,13 @@ class LogFormat:
     loggerType: str
     loggerName: str
     loggerFormat: str
+    fieldNames: List[str]
 
 
 _LOGGING_FORMAT_VERSION = 1
-ROOT_FORMAT = LogFormat(loggerType="", loggerName=f"KIBA_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(message)s")
-STAT_FORMAT = LogFormat(loggerType="stat", loggerName=f"KIBA_STAT_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(statName)s:%(statKey)s:%(statValue)s")
-API_FORMAT = LogFormat(loggerType="api", loggerName=f"KIBA_API_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(apiAction)s:%(apiPath)s:%(apiQuery)s:%(apiResponse)s:%(apiDuration)s")
+ROOT_FORMAT = LogFormat(loggerType="", loggerName=f"KIBA_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(message)s", fieldNames=[])
+STAT_FORMAT = LogFormat(loggerType="stat", loggerName=f"KIBA_STAT_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(statName)s:%(statKey)s:%(statValue)s", fieldNames=['statName', 'statKey', 'statValue'])
+API_FORMAT = LogFormat(loggerType="api", loggerName=f"KIBA_API_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(apiAction)s:%(apiPath)s:%(apiQuery)s:%(apiResponse)s:%(apiDuration)s", fieldNames=['apiAction', 'apiPath', 'apiQuery', 'apiResponse', 'apiDuration'])
 ALL_LOGGER_FORMATS = [ROOT_FORMAT, STAT_FORMAT, API_FORMAT]
 
 ROOT_LOGGER = logging.getLogger(ROOT_FORMAT.loggerType)
@@ -42,12 +45,39 @@ class KibaLoggingFormatter(Formatter):
     def __init__(self, logFormat: LogFormat, name: str, version: str, environment: str, requestIdHolder: Optional[RequestIdHolder]) -> None:
         formatString = self._BASE_FORMAT_STRING.format(format=logFormat.loggerName, name=name, version=version, environment=environment, logMessage=logFormat.loggerFormat)
         super().__init__(fmt=formatString)
+        self.logFormat = logFormat
+        self.name = name
+        self.version = version
+        self.environment = environment
         self.requestIdHolder = requestIdHolder
 
     def format(self, record: LogRecord) -> str:
         record.pathname = re.sub(os.getcwd() + '.', '', record.pathname).replace('/', '.')
         setattr(record, 'requestId', self.requestIdHolder.get_value() if self.requestIdHolder is not None else '')
         return super().format(record=record)
+
+
+class KibaJsonLoggingFormatter(KibaLoggingFormatter):
+
+    def format(self, record: LogRecord) -> str:
+        message = self.formatException(record.exc_info) if record.exc_info else str(record.msg)
+        recordDict = {
+            'dateMillis': int(record.created * 1000),
+            'path': record.pathname,
+            'function': record.funcName,
+            'line': record.lineno,
+            'message': message,
+            'level': record.levelname,
+            'logger': record.name,
+            'format': self.logFormat.loggerName,
+            'name': self.name,
+            'version': self.version,
+            'environment': self.environment,
+            'requestId': self.requestIdHolder.get_value() if self.requestIdHolder is not None else '',
+        }
+        for fieldName in self.logFormat.fieldNames:
+            recordDict[fieldName] = record.__dict__[fieldName]
+        return json.dumps(recordDict)
 
 
 def init_logger(logger: Logger, loggingLevel: int, handler: StreamHandler) -> None:
@@ -62,6 +92,15 @@ def init_logging(name: str, version: str, environment: str, showDebug: bool = Fa
         logger = logging.getLogger(name=logFormat.loggerType)
         handler = StreamHandler(stream=sys.stdout)
         handler.setFormatter(fmt=KibaLoggingFormatter(logFormat=logFormat, name=name, version=version, environment=environment, requestIdHolder=requestIdHolder))
+        init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
+
+
+def init_json_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: Optional[RequestIdHolder] = None) -> None:
+    loggingLevel = logging.DEBUG if showDebug else logging.INFO
+    for logFormat in ALL_LOGGER_FORMATS:
+        logger = logging.getLogger(name=logFormat.loggerType)
+        handler = StreamHandler(stream=sys.stdout)
+        handler.setFormatter(fmt=KibaJsonLoggingFormatter(logFormat=logFormat, name=name, version=version, environment=environment, requestIdHolder=requestIdHolder))
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
 
 
