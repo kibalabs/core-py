@@ -195,8 +195,6 @@ def warning(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
 
 
 def info(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
-    print(args)
-    print(kwargs)
     _log(level=INFO, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
