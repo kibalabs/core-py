@@ -10,7 +10,7 @@ from logging import Formatter
 from logging import Logger
 from logging import LogRecord
 from logging import StreamHandler
-from typing import Any
+from typing import Any, Callable
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -25,13 +25,29 @@ class LogFormat:
     loggerType: str
     loggerName: str
     loggerFormat: str
-    fieldNames: List[str]
+    jsonFieldFormatters: Dict[str, Callable[[str], Union[str, int, float, None]]]
+
+
+def json_parse_string_value(value: str) -> Union[str, None]:
+    if value == '':
+        return None
+    return str(value)
+
+def json_parse_int_value(value: str) -> Union[int, None]:
+    if value == '':
+        return None
+    return int(value)
+
+def json_parse_float_value(value: str) -> Union[float, None]:
+    if value == '':
+        return None
+    return float(value)
 
 
 _LOGGING_FORMAT_VERSION = 1
-ROOT_FORMAT = LogFormat(loggerType="", loggerName=f"KIBA_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(message)s", fieldNames=[])
-STAT_FORMAT = LogFormat(loggerType="stat", loggerName=f"KIBA_STAT_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(statName)s:%(statKey)s:%(statValue)s", fieldNames=['statName', 'statKey', 'statValue'])
-API_FORMAT = LogFormat(loggerType="api", loggerName=f"KIBA_API_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(apiAction)s:%(apiPath)s:%(apiQuery)s:%(apiResponse)s:%(apiDuration)s", fieldNames=['apiAction', 'apiPath', 'apiQuery', 'apiResponse', 'apiDuration'])
+ROOT_FORMAT = LogFormat(loggerType="", loggerName=f"KIBA_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(message)s", jsonFieldFormatters={})
+STAT_FORMAT = LogFormat(loggerType="stat", loggerName=f"KIBA_STAT_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(statName)s:%(statKey)s:%(statValue)s", jsonFieldFormatters={'statName': json_parse_string_value, 'statKey': json_parse_string_value, 'statValue': json_parse_float_value})
+API_FORMAT = LogFormat(loggerType="api", loggerName=f"KIBA_API_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(apiAction)s:%(apiPath)s:%(apiQuery)s:%(apiResponse)s:%(apiDuration)s", jsonFieldFormatters={'apiAction': json_parse_string_value, 'apiPath': json_parse_string_value, 'apiQuery': json_parse_string_value, 'apiResponse': json_parse_int_value, 'apiDuration': json_parse_float_value})
 ALL_LOGGER_FORMATS = [ROOT_FORMAT, STAT_FORMAT, API_FORMAT]
 
 ROOT_LOGGER = logging.getLogger(ROOT_FORMAT.loggerType)
@@ -79,8 +95,8 @@ class KibaJsonLoggingFormatter(KibaLoggingFormatter):
             'environment': self.environment,
             'requestId': self.requestIdHolder.get_value() if self.requestIdHolder is not None else '',
         }
-        for fieldName in self.logFormat.fieldNames:
-            recordDict[fieldName] = record.__dict__[fieldName]
+        for fieldName, formatter in self.logFormat.jsonFieldFormatters.items():
+            recordDict[fieldName] = formatter(record.__dict__[fieldName])
         return json.dumps(recordDict)
 
 
@@ -128,7 +144,7 @@ def _serialize_string_value(value: str) -> str:
     return value.replace(':', '__')
 
 
-def stat(name: str, key: str, value: float) -> None:
+def stat(name: str, key: str, value: Union[float, int] = 1) -> None:
     if STAT_LOGGER.isEnabledFor(level=logging.INFO):
         nameValue = _serialize_string_value(value=str(name))
         keyValue = _serialize_string_value(value=str(key))
