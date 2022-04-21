@@ -83,9 +83,10 @@ class KibaJsonLoggingFormatter(KibaLoggingFormatter):
         message = self.formatException(record.exc_info) if record.exc_info else str(record.msg)
         recordDict = {
             'date': self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%f"),
-            'path': record.pathname,
-            'function': record.funcName,
-            'line': record.lineno,
+            # NOTE(krishan711): for some reason these constantly report this file instead of original
+            # 'path': record.pathname,
+            # 'function': record.funcName,
+            # 'line': record.lineno,
             'message': message,
             'level': record.levelname,
             'logger': record.name,
@@ -194,6 +195,8 @@ def warning(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
 
 
 def info(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+    print(args)
+    print(kwargs)
     _log(level=INFO, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
