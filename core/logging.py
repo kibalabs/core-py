@@ -10,7 +10,8 @@ from logging import Formatter
 from logging import Logger
 from logging import LogRecord
 from logging import StreamHandler
-from typing import Any, Callable
+from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
