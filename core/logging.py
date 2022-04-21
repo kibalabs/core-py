@@ -87,14 +87,14 @@ class KibaJsonLoggingFormatter(KibaLoggingFormatter):
             # 'path': record.pathname,
             # 'function': record.funcName,
             # 'line': record.lineno,
-            'message': message,
+            'message': message or None,
             'level': record.levelname,
             'logger': record.name,
             'format': self.logFormat.loggerName,
             'name': self.name,
             'version': self.version,
             'environment': self.environment,
-            'requestId': self.requestIdHolder.get_value() if self.requestIdHolder is not None else '',
+            'requestId': self.requestIdHolder.get_value() if self.requestIdHolder is not None else None,
         }
         for fieldName, formatter in self.logFormat.jsonFieldFormatters.items():
             recordDict[fieldName] = formatter(record.__dict__[fieldName])
