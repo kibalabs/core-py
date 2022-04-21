@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import json
 import logging
 import os
@@ -56,13 +57,16 @@ class KibaLoggingFormatter(Formatter):
         setattr(record, 'requestId', self.requestIdHolder.get_value() if self.requestIdHolder is not None else '')
         return super().format(record=record)
 
+    def formatTime(self, record: LogRecord, datefmt: Optional[str] = None):
+        logDate = datetime.datetime.fromtimestamp(record.created)
+        return logDate.strftime(datefmt or "%Y-%m-%dT%H:%M:%S.%f")
 
 class KibaJsonLoggingFormatter(KibaLoggingFormatter):
 
     def format(self, record: LogRecord) -> str:
         message = self.formatException(record.exc_info) if record.exc_info else str(record.msg)
         recordDict = {
-            'dateMillis': int(record.created * 1000),
+            'date': self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%f"),
             'path': record.pathname,
             'function': record.funcName,
             'line': record.lineno,
