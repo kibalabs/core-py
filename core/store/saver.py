@@ -23,7 +23,10 @@ class Saver:
 
     async def _execute(self, query: ClauseElement, connection: Optional[DatabaseConnection] = None):
         try:
-            return await self.database.execute(query=query, connection=connection)
+            if connection:
+                return await self.database.execute(query=query, connection=connection)
+            async with self.create_transaction() as connection:
+                return await self.database.execute(query=query, connection=connection)
         except asyncpg.exceptions.UniqueViolationError as exception:
             raise DuplicateValueException(message=str(exception)) from exception
         except Exception as exception:
