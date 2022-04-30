@@ -10,6 +10,7 @@ from typing import Union
 from urllib import parse as urlparse
 
 from core.requester import FileContent
+from core.requester import KibaResponse
 from core.requester import Requester
 from core.util import date_util
 from core.util.typing_util import JSON
