@@ -1,13 +1,14 @@
-import collections
 import json
 import os
 import urllib.parse as urlparse
 from io import IOBase
-from typing import IO, Sequence, Tuple
+from typing import IO
 from typing import Dict
 from typing import List
 from typing import Mapping
 from typing import Optional
+from typing import Sequence
+from typing import Tuple
 from typing import Union
 
 import httpx
