@@ -74,10 +74,10 @@ class Requester:
                 data = {}
                 files = []
                 for name, value in formDataDict.items():
-                    if isinstance(value, (str, bool, int, float)):
-                        data[name] = value
-                    elif isinstance(value, IOBase):
+                    if isinstance(value, IOBase):
                         files.append((name, value))
+                    else:
+                        data[name] = value
             else:
                 logging.error('Error: formDataDict should only be passed into POST requests.')
         if formFiles:
