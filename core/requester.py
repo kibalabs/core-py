@@ -1,8 +1,9 @@
+import collections
 import json
 import os
 import urllib.parse as urlparse
 from io import IOBase
-from typing import IO
+from typing import IO, Sequence, Tuple
 from typing import Dict
 from typing import List
 from typing import Mapping
@@ -19,6 +20,7 @@ from core.util.typing_util import JSON
 KibaResponse = httpx.Response
 
 FileContent = Union[IO[str], IO[bytes], str, bytes]
+File = Union[FileContent, Tuple[Optional[str], FileContent]]
 
 class ResponseException(Exception):
 
@@ -47,12 +49,12 @@ class Requester:
         headers.update({'Content-Type': 'application/json'})
         return await self.make_request(method='POST', url=url, dataDict=dataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def post_form(self, url: str, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def post_form(self, url: str, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, File]]] = None, timeout: Optional[int] = 10, headers: Optional[httpx.Headers] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         headers = headers or httpx.Headers()
         # headers.update({'Content-Type': 'multipart/form-data'})
-        return await self.make_request(method='POST', url=url, formDataDict=formDataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
+        return await self.make_request(method='POST', url=url, formDataDict=formDataDict, formFiles=formFiles, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Dict[str, FileContent]] = None, formFiles: Optional[Sequence[Tuple[str, Tuple[str, FileContent]]]] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         files: List[Mapping[str, Union[FileContent, str]]] = None
         if dataDict is not None:
             if data is not None:
@@ -65,15 +67,22 @@ class Requester:
             if method == 'POST':
                 # TODO(krishan711): this should only happen if json is in the content headers
                 data = json.dumps(dataDict).encode()
+        files = None
         if formDataDict:
             if method == 'POST':
-                files = {}
                 data = {}
+                files = []
                 for name, value in formDataDict.items():
-                    if isinstance(value, str):
+                    if isinstance(value, (str, bool, int, float)):
                         data[name] = value
                     elif isinstance(value, IOBase):
-                        files[name] = value
+                        files.append((name, value))
+            else:
+                logging.error('Error: formDataDict should only be passed into POST requests.')
+        if formFiles:
+            if method == 'POST':
+                files = files or []
+                files += formFiles
             else:
                 logging.error('Error: formDataDict should only be passed into POST requests.')
         request = self.client.build_request(method=method, url=url, data=data, files=files, timeout=timeout, headers={**self.headers, **(headers or {})})
