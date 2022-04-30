@@ -4,6 +4,8 @@ import hmac
 import json
 from typing import Dict
 from typing import Optional
+from typing import Sequence
+from typing import Tuple
 from typing import Union
 from urllib import parse as urlparse
 
@@ -41,7 +43,7 @@ class AwsRequester(Requester):
         key5 = self._sign(key=key4, message='aws4_request')
         return self._sign_hex(key=key5, message=stringToSign)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> httpx.Response:
+    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Dict[str, Union[str, Union[str, FileContent]]]] = None, formFiles: Optional[Sequence[Tuple[str, Tuple[str, FileContent]]]] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         canonicalQueryString = ''
         if data is None and dataDict is not None:
             if method == 'GET':
