@@ -9,8 +9,8 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
-from botocore.exceptions import ClientError
 from aiobotocore.session import get_session as get_botocore_session
+from botocore.exceptions import ClientError
 
 from core import logging
 from core.util import file_util
