@@ -9,6 +9,7 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
+from botocore.exceptions import ClientError
 from aiobotocore.session import get_session as get_botocore_session
 
 from core import logging
@@ -98,13 +99,17 @@ class S3Manager:
         extraArgs = self._get_extra_args(accessControl=accessControl, cacheControl=cacheControl, contentType=contentType or self._get_file_mimetype(fileName=targetKey))
         await self._s3Client.copy_object(CopySource=dict(Bucket=sourceBucket, Key=sourceKey), Bucket=targetBucket, Key=targetKey, MetadataDirective='REPLACE', **extraArgs)
 
-    async def delete_file(self, filePath: str):
+    async def delete_file(self, filePath: str) -> None:
         bucket, key = self._split_path_to_bucket_key(path=filePath)
         await self._s3Client.delete_object(Bucket=bucket, Key=key)
 
-    async def check_file_exists(self, filePath: str):
+    async def check_file_exists(self, filePath: str) -> bool:
         bucket, key = self._split_path_to_bucket_key(path=filePath)
-        await self._s3Client.get_object(Bucket=bucket, Key=key)
+        try:
+            await self._s3Client.head_object(Bucket=bucket, Key=key)
+        except ClientError:
+            return False
+        return True
 
     async def list_directory_files(self, s3Directory: str) -> Sequence[S3File]:
         return [s3File async for s3File in self.generate_directory_files(s3Directory=s3Directory)]
