@@ -9,9 +9,9 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
-from httpx import Headers
 from aiobotocore.session import get_session as get_botocore_session
 from botocore.exceptions import ClientError
+from httpx import Headers
 
 from core import logging
 from core.exceptions import NotFoundException
