@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Added
 -[MINOR] Added `formFiles` to `Requester.post_form` and `Requester.make_request`
+-[MINOR] Added `head_file` to `S3Manager`
 
 ### Changed
 

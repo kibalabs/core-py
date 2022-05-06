@@ -11,8 +11,10 @@ from typing import Tuple
 
 from aiobotocore.session import get_session as get_botocore_session
 from botocore.exceptions import ClientError
+from httpx import Headers
 
 from core import logging
+from core.exceptions import NotFoundException
 from core.util import file_util
 
 
@@ -102,6 +104,14 @@ class S3Manager:
     async def delete_file(self, filePath: str) -> None:
         bucket, key = self._split_path_to_bucket_key(path=filePath)
         await self._s3Client.delete_object(Bucket=bucket, Key=key)
+
+    async def head_file(self, filePath: str) -> Headers:
+        bucket, key = self._split_path_to_bucket_key(path=filePath)
+        try:
+            response = await self._s3Client.head_object(Bucket=bucket, Key=key)
+        except ClientError:
+            raise NotFoundException()
+        return Headers(response['ResponseMetadata'].get('HTTPHeaders', {}))
 
     async def check_file_exists(self, filePath: str) -> bool:
         bucket, key = self._split_path_to_bucket_key(path=filePath)
