@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Type, Union
 
-from typing import Dict 
+from typing import Dict
 from typing import Mapping
 from typing import Optional
 
