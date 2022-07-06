@@ -8,16 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
--[MINOR] Added `send_messages` to `SqsMessageQueue` for sending multiple messages in one request
--[MINOR] Added `Database` to make facilitate easy migration from databases package
--[MINOR] Added `get_block_uncle_count` to `EthClient`
--[MINOR] Added `shouldFollowRedirects` to `Requester`
+- [MINOR] Added `CLIENT_EXCEPTIONS` to `exceptions`
+- [MINOR] Added `SERVER_EXCEPTIONS` to `exceptions`
+- [MINOR] Added `CLIENT_EXCEPTIONS_MAP` to `exceptions`
+- [MINOR] Added `SERVER_EXCEPTIONS_MAP` to `exceptions`
+- [MINOR] Added `HTTP_EXCEPTIONS` to `exceptions`
+- [MINOR] Added `HTTP_EXCEPTIONS_MAP` to `exceptions`
+- [MINOR] Added `ALL_EXCEPTION_CLASSES` to `exceptions`
+- [MINOR] Added `send_messages` to `SqsMessageQueue` for sending multiple messages in one request
+- [MINOR] Added `Database` to make facilitate easy migration from databases package
+- [MINOR] Added `get_block_uncle_count` to `EthClient`
+- [MINOR] Added `shouldFollowRedirects` to `Requester`
+
 
 ### Changed
--[MAJOR] Replaced use of databases package in `Saver` and `Retriever`
--[MINOR] Update `Requester` to follow redirects by default
--[MAJOR] Replaced use of `boto3` with `aiobotocore` for S3Manager
--[MAJOR] Replaced use of `boto3` with `aiobotocore` for SqsMessageQueue
+- [MINOR] Updated requester to use `HTTP_EXCEPTIONS_MAP` 
+- [MAJOR] Replaced use of databases package in `Saver` and `Retriever`
+- [MINOR] Update `Requester` to follow redirects by default
+- [MAJOR] Replaced use of `boto3` with `aiobotocore` for S3Manager
+- [MAJOR] Replaced use of `boto3` with `aiobotocore` for SqsMessageQueue
 
 ### Removed
 
