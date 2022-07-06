@@ -21,16 +21,6 @@ KibaResponse = httpx.Response
 
 FileContent = Union[IO[str], IO[bytes], str, bytes]
 
-class ResponseException(Exception):
-
-    def __init__(self, message: Optional[str] = None, statusCode: Optional[int] = None) -> None:
-        super().__init__(message or self.__class__.__name__)
-        self.message = message or self.__class__.__name__
-        self.statusCode = statusCode or 500
-
-    def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(message={self.message!r}, statusCode={self.statusCode!r})'
-
 class Requester:
 
     def __init__(self, headers: Optional[Dict[str, str]] = None, shouldFollowRedirects: bool = True):
