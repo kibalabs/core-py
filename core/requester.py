@@ -12,7 +12,8 @@ from typing import Tuple
 from typing import Union
 
 import httpx
-from core.exceptions import HTTP_EXCEPTIONS_MAP, KibaException
+from core.exceptions import KibaException
+from core.exceptions import HTTP_EXCEPTIONS_MAP
 
 from core import logging
 from core.util import dict_util
