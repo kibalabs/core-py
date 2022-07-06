@@ -8,20 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
-- [MINOR] Added `CLIENT_EXCEPTIONS` to `exceptions`
-- [MINOR] Added `SERVER_EXCEPTIONS` to `exceptions`
-- [MINOR] Added `CLIENT_EXCEPTIONS_MAP` to `exceptions`
-- [MINOR] Added `SERVER_EXCEPTIONS_MAP` to `exceptions`
-- [MINOR] Added `HTTP_EXCEPTIONS` to `exceptions`
-- [MINOR] Added `HTTP_EXCEPTIONS_MAP` to `exceptions`
-- [MINOR] Added `ALL_EXCEPTION_CLASSES` to `exceptions`
-
 - [MINOR] Added `formFiles` to `Requester.post_form` and `Requester.make_request`
 - [MINOR] Added `head_file` to `S3Manager`
+- [MAJOR] Added list of exceptions to `exceptions`
 
 ### Changed
 - [MINOR] Update `DatabaseConnectionMiddleware` to only create a transaction for non-GET requests
-- [MINOR] Update `requester` to use `HTTP_EXCEPTIONS_MAP`
+- [MAJOR] Update `requester` to throw specific exception types
 
 
 ### Removed

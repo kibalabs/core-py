@@ -25,6 +25,16 @@ KibaResponse = httpx.Response
 FileContent = Union[IO[str], IO[bytes], str, bytes]
 File = Union[FileContent, Tuple[Optional[str], FileContent]]
 
+class ResponseException(Exception):
+
+    def __init__(self, message: Optional[str] = None, statusCode: Optional[int] = None) -> None:
+        super().__init__(message or self.__class__.__name__)
+        self.message = message or self.__class__.__name__
+        self.statusCode = statusCode or 500
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(message={self.message!r}, statusCode={self.statusCode!r})'
+
 class Requester:
 
     def __init__(self, headers: Optional[Dict[str, str]] = None, shouldFollowRedirects: bool = True):
@@ -85,7 +95,7 @@ class Requester:
                 exceptionCls = HTTP_EXCEPTIONS_MAP[httpxResponse.status_code]
                 exception = exceptionCls(message=httpxResponse.text)
             else:
-                exception = KibaException(message=httpxResponse.text, statusCode=httpxResponse.status_code)
+                exception = ResponseException(message=httpxResponse.text, statusCode=httpxResponse.status_code)
             raise exception
         # TODO(krishan711): this would be more efficient if streamed
         if outputFilePath is not None:
