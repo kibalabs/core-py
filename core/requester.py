@@ -12,6 +12,7 @@ from typing import Tuple
 from typing import Union
 
 import httpx
+from core.exceptions import HTTP_EXCEPTIONS_MAP
 
 from core import logging
 from core.util import dict_util
@@ -89,7 +90,12 @@ class Requester:
         request = self.client.build_request(method=method, url=url, data=data, files=files, timeout=timeout, headers={**self.headers, **(headers or {})})
         httpxResponse = await self.client.send(request=request)
         if 400 <= httpxResponse.status_code < 600:
-            raise ResponseException(message=httpxResponse.text, statusCode=httpxResponse.status_code)
+            if HTTP_EXCEPTIONS_MAP.get(httpxResponse.status_code) is not None:
+                exceptionCls = HTTP_EXCEPTIONS_MAP[httpxResponse.status_code]
+                exception = exceptionCls(message=httpxResponse.text)
+            else:
+                exception = ResponseException(message=httpxResponse.text, statusCode=httpxResponse.status_code)
+            raise exception
         # TODO(krishan711): this would be more efficient if streamed
         if outputFilePath is not None:
             if os.path.dirname(outputFilePath):
