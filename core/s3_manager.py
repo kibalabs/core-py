@@ -1,9 +1,8 @@
-from contextlib import AsyncExitStack
 import dataclasses
-import logging
 import mimetypes
 import os
 import random
+from contextlib import AsyncExitStack
 from string import ascii_letters
 from typing import Dict
 from typing import Optional
@@ -11,7 +10,11 @@ from typing import Sequence
 from typing import Tuple
 
 from aiobotocore.session import get_session as get_botocore_session
+from botocore.exceptions import ClientError
+from httpx import Headers
 
+from core import logging
+from core.exceptions import NotFoundException
 from core.util import file_util
 
 
@@ -98,13 +101,25 @@ class S3Manager:
         extraArgs = self._get_extra_args(accessControl=accessControl, cacheControl=cacheControl, contentType=contentType or self._get_file_mimetype(fileName=targetKey))
         await self._s3Client.copy_object(CopySource=dict(Bucket=sourceBucket, Key=sourceKey), Bucket=targetBucket, Key=targetKey, MetadataDirective='REPLACE', **extraArgs)
 
-    async def delete_file(self, filePath: str):
+    async def delete_file(self, filePath: str) -> None:
         bucket, key = self._split_path_to_bucket_key(path=filePath)
         await self._s3Client.delete_object(Bucket=bucket, Key=key)
 
-    async def check_file_exists(self, filePath: str):
+    async def head_file(self, filePath: str) -> Headers:
         bucket, key = self._split_path_to_bucket_key(path=filePath)
-        await self._s3Client.get_object(Bucket=bucket, Key=key)
+        try:
+            response = await self._s3Client.head_object(Bucket=bucket, Key=key)
+        except ClientError:
+            raise NotFoundException()
+        return Headers(response['ResponseMetadata'].get('HTTPHeaders', {}))
+
+    async def check_file_exists(self, filePath: str) -> bool:
+        bucket, key = self._split_path_to_bucket_key(path=filePath)
+        try:
+            await self._s3Client.head_object(Bucket=bucket, Key=key)
+        except ClientError:
+            return False
+        return True
 
     async def list_directory_files(self, s3Directory: str) -> Sequence[S3File]:
         return [s3File async for s3File in self.generate_directory_files(s3Directory=s3Directory)]

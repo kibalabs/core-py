@@ -15,11 +15,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `HTTP_EXCEPTIONS` to `exceptions`
 - [MINOR] Added `HTTP_EXCEPTIONS_MAP` to `exceptions`
 - [MINOR] Added `ALL_EXCEPTION_CLASSES` to `exceptions`
-- [MINOR] Added `send_messages` to `SqsMessageQueue` for sending multiple messages in one request
-- [MINOR] Added `Database` to make facilitate easy migration from databases package
-- [MINOR] Added `get_block_uncle_count` to `EthClient`
-- [MINOR] Added `shouldFollowRedirects` to `Requester`
 
+- [MINOR] Added `formFiles` to `Requester.post_form` and `Requester.make_request`
+- [MINOR] Added `head_file` to `S3Manager`
+
+### Changed
+- [MINOR] Update `DatabaseConnectionMiddleware` to only create a transaction for non-GET requests
+- [MINOR] Update `requester` to use `HTTP_EXCEPTIONS_MAP`
+
+
+### Removed
+
+## [0.3.0] - 2022-04-23
+
+### Added
+-[MINOR] Added `send_messages` to `SqsMessageQueue` for sending multiple messages in one request
+-[MINOR] Added `Database` to make facilitate easy migration from databases package
+-[MINOR] Added `get_block_uncle_count` to `EthClient`
+-[MINOR] Added `shouldFollowRedirects` to `Requester`
+-[MINOR] Added `DatabaseConnectionMiddleware` to manage api database connections
+-[MAJOR] Added `logging` module for custom kiba log formatting
+-[MAJOR] Added `ExceptionHandlingMiddleware` to replace KibaRoute
+-[MAJOR] Added `ServerHeadersMiddleware` to replace KibaRoute
+-[MAJOR] Added `LoggingMiddleware` to replace KibaRoute
+-[MAJOR] Added `requestIdHolder` to `MessageQueueProcessor`
 
 ### Changed
 - [MINOR] Updated requester to use `HTTP_EXCEPTIONS_MAP` 
@@ -29,6 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MAJOR] Replaced use of `boto3` with `aiobotocore` for SqsMessageQueue
 
 ### Removed
+-[MAJOR] Removed `KibaRouter` and `KibaRoute` - Use middlewares instead
 
 ## [0.2.10] - 2022-01-24
 
