@@ -7,6 +7,8 @@ from typing import Sequence
 from sqlalchemy import Table
 from sqlalchemy.sql.expression import FromClause
 from sqlalchemy.sql.expression import func as sqlalchemyfunc
+from sqlalchemy import union
+from core.exceptions import InternalServerErrorException
 
 from core.store.database import Database
 
@@ -25,7 +27,11 @@ class RandomOrder(Order):
     fieldName: str = '__KIBA_RANDOM'
 
 @dataclasses.dataclass
-class FieldFilter:
+class Filter:
+    pass
+
+@dataclasses.dataclass
+class FieldFilter(Filter):
     fieldName: str
     isNull: Optional[bool] = None
     isNotNull: Optional[bool] = None
@@ -69,6 +75,11 @@ class FloatFieldFilter(FieldFilter):
     gt: Optional[float] = None
     containedIn: Optional[Sequence[float]] = None
     notContainedIn: Optional[Sequence[float]] = None
+
+@dataclasses.dataclass
+class OneOfFilter(Filter):
+    filters: Sequence[Filter]
+
 
 class Retriever:
 
@@ -184,4 +195,21 @@ class Retriever:
     def _apply_field_filters(self, query: FromClause, table: Table, fieldFilters: Sequence[FieldFilter]) -> FromClause:
         for fieldFilter in fieldFilters:
             query = self._apply_field_filter(query=query, table=table, fieldFilter=fieldFilter)
+        return query
+
+    def _apply_filters(self, query: FromClause, table: Table, filters: Sequence[Filter], oneOfQuery = []) -> FromClause: # pylint: disable=dangerous-default-value
+        for queryfilter in filters:
+            if isinstance(queryfilter, FieldFilter):
+                query = self._apply_field_filter(query=query, table=table, fieldFilter=queryfilter)
+            elif isinstance(queryfilter,OneOfFilter):
+                for i in range(len(queryfilter.filters)):                    # pylint: disable=invalid-name,consider-using-enumerate
+                    if isinstance(queryfilter.filters[i],FieldFilter):
+                        query = self._apply_field_filter(query=query, table=table, fieldFilter= queryfilter.filters[i])
+                        oneOfQuery.append(query)
+                    else:
+                        query = self._apply_filters(query=query, table=table, filters=queryfilter.filters[i])
+                query = union(*oneOfQuery).alias('alias_name')
+                return query
+            else:
+                raise InternalServerErrorException(message='ThrowException:InvalidFilterFormat, The Filter you have entered cannot be processed')
         return query
