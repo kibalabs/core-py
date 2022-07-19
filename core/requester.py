@@ -12,27 +12,25 @@ from typing import Tuple
 from typing import Union
 
 import httpx
-from core.exceptions import HTTP_EXCEPTIONS_MAP
+from core.exceptions import HTTP_EXCEPTIONS_MAP, KibaException
 
 from core import logging
 from core.util import dict_util
 from core.util import file_util
 from core.util.typing_util import JSON
 
+
 KibaResponse = httpx.Response
 
 FileContent = Union[IO[str], IO[bytes], str, bytes]
 File = Union[FileContent, Tuple[Optional[str], FileContent]]
 
-class ResponseException(Exception):
+
+class ResponseException(KibaException):
 
     def __init__(self, message: Optional[str] = None, statusCode: Optional[int] = None) -> None:
-        super().__init__(message or self.__class__.__name__)
-        self.message = message or self.__class__.__name__
-        self.statusCode = statusCode or 500
+        super().__init__(message=message, statusCode=statusCode, exceptionType=None)
 
-    def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(message={self.message!r}, statusCode={self.statusCode!r})'
 
 class Requester:
 
