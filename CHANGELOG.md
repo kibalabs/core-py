@@ -8,16 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
--[MINOR] Added `formFiles` to `Requester.post_form` and `Requester.make_request`
+
+### Changed
+
+### Removed
+
+## [0.4.0] - 2022-07-19
+
+### Added
 -[MINOR] Added `head_file` to `S3Manager`
--[MAJOR] Added list of exceptions to `exceptions`
+-[MAJOR] Added exception lists to `exceptions`
 -[MINOR] Added `generate_clock_hour_intervals`, `generate_hourly_intervals`, `generate_datetime_intervals`, `generate_dates_in_range` to `date_util`
 
 ### Changed
--[MINOR] Update `DatabaseConnectionMiddleware` to only create a transaction for non-GET requests
--[MAJOR] Update `requester` to throw specific exception types
-
-### Removed
+-[MINOR] Updated `DatabaseConnectionMiddleware` to only create a transaction for non-GET requests
+-[MAJOR] Updated `Requester` to throw specific exception types
+-[MINOR] Updated `Requester.post_form` and `Requester.make_request` to accept `formFiles` parameter
 
 ## [0.3.0] - 2022-04-23
 
