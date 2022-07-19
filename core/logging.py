@@ -186,7 +186,7 @@ def error(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
     _log(level=ERROR, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
-def exception(msg: str, *args: Any, exc_info: bool = True, **kwargs: Any) -> None:  # type: ignore[misc]  # pylint: disable=invalid-name
+def exception(msg: str, *args: Any, exc_info: bool = True, **kwargs: Any) -> None:  # type: ignore[misc]
     _log(level=ERROR, msg=msg, exc_info=exc_info, *args, **kwargs)  # type: ignore[misc]
 
 

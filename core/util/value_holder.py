@@ -3,7 +3,7 @@ from typing import Generic
 from typing import Optional
 from typing import TypeVar
 
-T = TypeVar('T')  # pylint: disable=invalid-name
+T = TypeVar('T')
 
 
 class ValueHolder(Generic[T]):

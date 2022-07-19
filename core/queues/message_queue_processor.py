@@ -40,7 +40,7 @@ class MessageQueueProcessor:
             await self.messageProcessor.process_message(message=message)
             await self.queue.delete_message(message=message)
         except Exception as exception:  # pylint: disable=broad-except
-            statusCode = exception.statusCode if isinstance(exception, KibaException) else 500  # pylint: disable=no-member
+            statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
             logging.error('Caught exception whilst processing message')
             logging.exception(exception)
             if self.slackClient:

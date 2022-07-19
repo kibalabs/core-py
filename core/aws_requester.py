@@ -61,7 +61,7 @@ class AwsRequester(Requester):
         region = hostParts[-3]
         requestDate = date_util.datetime_from_now()
         amazonFormattedDate = requestDate.strftime('%Y%m%dT%H%M%SZ')
-        headers = headers or dict()
+        headers = headers or {}
         headers['x-amz-date'] = amazonFormattedDate
         headers['host'] = host
 
