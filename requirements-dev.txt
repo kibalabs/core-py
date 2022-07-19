@@ -6,4 +6,4 @@ asyncpg==0.26.0
 httpx==0.23.0
 web3==5.30.0
 sqlalchemy-stubs==0.4
-kiba-build==0.1.5.dev2
+kiba-build==0.1.5
