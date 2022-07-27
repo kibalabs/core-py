@@ -91,31 +91,32 @@ class DuplicateValueException(BadRequestException):
 
 class RedirectException(KibaException):
 
-    def __init__(self, location: str, message: Optional[str] = None, statusCode: Optional[int] = None) -> None:
+    def __init__(self, location: str, statusCode: int, message: Optional[str] = None, shouldAddCacheHeader: Optional[bool] = True) -> None:
         message = message if message else 'RedirectException'
         super().__init__(message=message, statusCode=statusCode)
         self.location = location
+        self.shouldAddCacheHeader = shouldAddCacheHeader
 
 
 class MovedPermanentlyRedirectException(RedirectException):
 
-    def __init__(self, location: str, message: Optional[str] = None) -> None:
+    def __init__(self, location: str, message: Optional[str] = None, shouldAddCacheHeader: Optional[bool] = True) -> None:
         message = message if message else 'Moved Permanently'
-        super().__init__(location=location, message=message, statusCode=301)
+        super().__init__(location=location, message=message, statusCode=301, shouldAddCacheHeader=shouldAddCacheHeader)
 
 
 class FoundRedirectException(RedirectException):
 
     def __init__(self, location: str, message: Optional[str] = None) -> None:
         message = message if message else 'Found Redirect'
-        super().__init__(location=location, message=message, statusCode=302)
+        super().__init__(location=location, message=message, statusCode=302, shouldAddCacheHeader=False)
 
 
 class PermanentRedirectException(RedirectException):
 
-    def __init__(self, location: str, message: Optional[str] = None) -> None:
+    def __init__(self, location: str, message: Optional[str] = None, shouldAddCacheHeader: Optional[bool] = True) -> None:
         message = message if message else 'Permanent Redirect'
-        super().__init__(location=location, message=message, statusCode=308)
+        super().__init__(location=location, message=message, statusCode=308, shouldAddCacheHeader=shouldAddCacheHeader)
 
 
 CLIENT_EXCEPTIONS = [

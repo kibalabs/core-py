@@ -23,6 +23,9 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
         except RedirectException as exception:
             response = Response(status_code=exception.statusCode)
             response.headers['Location'] = exception.location
+            # TODO(krishan711): clean this up after major version bump (since shouldAddCacheHeader field will always exist)
+            if not hasattr(exception, 'shouldAddCacheHeader') or exception.shouldAddCacheHeader:
+                response.headers['Cache-Control'] = f'max-age={60 * 60 * 24 * 365}'
         except KibaException as exception:
             logging.exception(exception)
             response = self._convert_exception(exception=exception)
