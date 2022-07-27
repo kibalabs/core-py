@@ -23,7 +23,11 @@ jobs:
       - name: Create .pypirc file
         run: echo -e "[pypi]\nusername=__token__\npassword=$PYPI_TOKEN" > .pypirc
       - name: Publish package to pypi
-        run: docker run -v $(pwd)/.pypirc:/root/.pypirc $DOCKER_IMAGE /bin/bash -c "python setup.py bdist_wheel && twine upload --non-interactive --disable-progress-bar dist/*"
+        run: |
+          docker run -v $(pwd)/.pypirc:/root/.pypirc $DOCKER_IMAGE /bin/bash -c " \
+            python setup.py bdist_wheel \
+            && twine upload --non-interactive --disable-progress-bar dist/* \
+          "
   create-release:
     needs: deploy-package
     runs-on: ubuntu-latest

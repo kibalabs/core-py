@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 -[MINOR] Updated `DatabaseConnectionMiddleware` to only create a transaction for non-GET requests
 -[MAJOR] Updated `Requester` to throw specific exception types
 -[MINOR] Updated `Requester.post_form` and `Requester.make_request` to accept `formFiles` parameter
+-[MINOR] Added `shouldAddCacheHeader` to relevant `RedirectException`s
 
 ## [0.3.0] - 2022-04-23
 
