@@ -1,14 +1,15 @@
 import contextlib
 from typing import Optional
 
-import asyncpg
 from sqlalchemy.sql import ClauseElement
 
-from core import logging
-from core.exceptions import DuplicateValueException
 from core.exceptions import InternalServerErrorException
 from core.store.database import Database
 from core.store.database import DatabaseConnection
+
+
+class SavingException(InternalServerErrorException):
+    pass
 
 
 class Saver:
@@ -27,8 +28,6 @@ class Saver:
                 return await self.database.execute(query=query, connection=connection)
             async with self.create_transaction() as connection:
                 return await self.database.execute(query=query, connection=connection)
-        except asyncpg.exceptions.UniqueViolationError as exception:
-            raise DuplicateValueException(message=str(exception)) from exception
+        # NOTE(krishan711): this could probs be more specific e.g. sqlalchemy.dialects.postgresql.asyncpg.IntegrityError
         except Exception as exception:
-            logging.error(exception)
-            raise InternalServerErrorException(message='Error running save operation') from exception
+            raise SavingException(message=f'Error running save operation: {str(exception)}') from exception
