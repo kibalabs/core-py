@@ -1,6 +1,6 @@
 import datetime
-from typing import Optional
 from typing import Iterator
+from typing import Optional
 from typing import Tuple
 
 from core.exceptions import KibaException
