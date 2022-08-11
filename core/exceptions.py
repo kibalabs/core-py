@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import Type, Union
 
 from typing import Dict
 from typing import Mapping
 from typing import Optional
+from typing import Type
+from typing import Union
 
 from core.util.typing_util import JSON
 
