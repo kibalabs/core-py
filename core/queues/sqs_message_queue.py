@@ -29,7 +29,7 @@ class SqsMessageQueue:
         self._sqsClient = None
 
     async def send_message(self, message: Message, delaySeconds: int = 0) -> None:
-        message.set_post_date()
+        message.prepare_for_send()
         await self._sqsClient.send_message(QueueUrl=self.queueUrl, DelaySeconds=delaySeconds, MessageAttributes={}, MessageBody=message.json())
 
     async def send_messages(self, messages: Sequence[Message], delaySeconds: int = 0) -> None:
@@ -37,7 +37,7 @@ class SqsMessageQueue:
         for messageChunk in list_util.generate_chunks(lst=messages, chunkSize=10):
             requests = []
             for index, message in enumerate(messageChunk):
-                message.set_post_date()
+                message.prepare_for_send()
                 requests.append({'Id': str(index), 'DelaySeconds': delaySeconds, 'MessageAttributes': {}, 'MessageBody': message.json()})
             response = await self._sqsClient.send_message_batch(QueueUrl=self.queueUrl, Entries=requests)
             failures += response.get('Failed', [])

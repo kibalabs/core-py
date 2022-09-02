@@ -7,6 +7,7 @@ from abc import ABC
 from typing import Optional
 
 from core import logging
+from core.exceptions import InternalServerErrorException
 from core.exceptions import KibaException
 from core.queues.model import Message
 from core.queues.sqs_message_queue import SqsMessageQueue
@@ -21,6 +22,15 @@ class MessageProcessor(ABC):
         pass
 
 
+class MessageNeedsReprocessingException(InternalServerErrorException):
+
+    def __init__(self, maxRetryCount: int = 3, delaySeconds: int = 60, originalException: Optional[KibaException] = None) -> None:
+        super().__init__(message='MessageNeedsReprocessingException')
+        self.maxRetryCount = maxRetryCount
+        self.delaySeconds = delaySeconds
+        self.originalException = originalException
+
+
 class MessageQueueProcessor:
 
     def __init__(self, queue: SqsMessageQueue, messageProcessor: MessageProcessor, slackClient: Optional[SlackClient] = None, requestIdHolder: Optional[RequestIdHolder] = None):
@@ -30,7 +40,7 @@ class MessageQueueProcessor:
         self.requestIdHolder = requestIdHolder
 
     async def _process_message(self, message: Message) -> None:
-        requestId = str(uuid.uuid4()).replace('-', '')
+        requestId = message.requestId or str(uuid.uuid4()).replace('-', '')
         if self.requestIdHolder:
             self.requestIdHolder.set_value(value=requestId)
         logging.api(action='MESSAGE', path=message.command, query=urlparse.urlencode(message.content, doseq=True))
@@ -39,6 +49,9 @@ class MessageQueueProcessor:
         try:
             await self.messageProcessor.process_message(message=message)
             await self.queue.delete_message(message=message)
+        except MessageNeedsReprocessingException as exception:
+            logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {str(exception.originalException)}')
+            await self.queue.send_message(message=message, delay=(message.postCount or 0) * exception.delaySeconds)
         except Exception as exception:  # pylint: disable=broad-except
             statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
             logging.error('Caught exception whilst processing message')
