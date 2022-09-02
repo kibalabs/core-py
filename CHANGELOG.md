@@ -8,9 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+-[MINOR] Added `requestId` to `Message`
 
 ### Changed
 -[MINOR] Updated `Saver` to throw `SavingException` when saving fails
+-[MINOR] Added `MessageNeedsReprocessingException` to `MessageQueueProcessor` to support rescheduling a message
 
 ### Removed
 

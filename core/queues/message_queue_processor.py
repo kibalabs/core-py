@@ -51,7 +51,7 @@ class MessageQueueProcessor:
             await self.queue.delete_message(message=message)
         except MessageNeedsReprocessingException as exception:
             logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {str(exception.originalException)}')
-            await self.queue.send_message(message=message, delay=(message.postCount or 0) * exception.delaySeconds)
+            await self.queue.send_message(message=message, delay=int((message.postCount or 0) * exception.delaySeconds))
         except Exception as exception:  # pylint: disable=broad-except
             statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
             logging.error('Caught exception whilst processing message')
