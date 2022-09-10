@@ -154,7 +154,7 @@ class RestEthClient(EthClientInterface):
         return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getLogs'](response['result'])
 
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None, blockNumber: Optional[int] = None) -> List[Any]:
-        data = encode_transaction_data(web3=self.w3, fn_identifier=functionAbi['name'], contract_abi=contractAbi, fn_abi=functionAbi, kwargs=(arguments or {}))
+        data = encode_transaction_data(w3=self.w3, fn_identifier=functionAbi['name'], contract_abi=contractAbi, fn_abi=functionAbi, kwargs=(arguments or {}))
         params = {
             'from': fromAddress or '0x0000000000000000000000000000000000000000',
             'to': toAddress,
@@ -173,7 +173,7 @@ class RestEthClient(EthClientInterface):
         return list(outputData)
 
     def get_transaction_params(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, gasPrice: int = 2000000000000, gas: int = 90000, fromAddress: Optional[str] = None, arguments: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
-        data = encode_transaction_data(web3=self.w3, fn_identifier=functionAbi['name'], contract_abi=contractAbi, fn_abi=functionAbi, kwargs=(arguments or {}))
+        data = encode_transaction_data(w3=self.w3, fn_identifier=functionAbi['name'], contract_abi=contractAbi, fn_abi=functionAbi, kwargs=(arguments or {}))
         params = {
             'from': fromAddress or '0x0000000000000000000000000000000000000000',
             'to': toAddress,
