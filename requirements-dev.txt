@@ -1,9 +1,9 @@
-fastapi==0.79.0
-uvicorn==0.18.0
-aiobotocore==2.3.4
-sqlalchemy[asyncio]==1.4.39
+fastapi==0.82.0
+uvicorn[standard]==0.18.0
+aiobotocore==2.4.0
+sqlalchemy[asyncio]==1.4.41
 asyncpg==0.26.0
 httpx==0.23.0
-web3==5.30.0
+web3==6.0.0-beta.4
 sqlalchemy-stubs==0.4
 kiba-build==0.1.5

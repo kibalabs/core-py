@@ -39,6 +39,6 @@ setup(
         'queues': ['aiobotocore~=2.4.0'],
         'database-psql': ['sqlalchemy[asyncio]~=1.4.41', 'asyncpg~=0.26.0'],
         'requester': ['httpx~=0.23.0'],
-        'web3': ['web3~=5.30.0'],
+        'web3': ['web3==6.0.0-beta.4'],
     },
 )
