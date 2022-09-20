@@ -28,8 +28,9 @@ File = Union[FileContent, Tuple[Optional[str], FileContent]]
 
 class ResponseException(KibaException):
 
-    def __init__(self, message: Optional[str] = None, statusCode: Optional[int] = None) -> None:
+    def __init__(self, message: Optional[str] = None, statusCode: Optional[int] = None, headers: Optional[httpx.Headers] = None) -> None:
         super().__init__(message=message, statusCode=statusCode, exceptionType=None)
+        self.headers = headers
 
 
 class Requester:
@@ -88,11 +89,14 @@ class Requester:
         request = self.client.build_request(method=method, url=url, data=data, files=files, timeout=timeout, headers={**self.headers, **(headers or {})})
         httpxResponse = await self.client.send(request=request)
         if 400 <= httpxResponse.status_code < 600:
+            message = httpxResponse.text
+            if not message and httpxResponse.status_code == 401 and httpxResponse.headers.get('www-authenticate'):
+                message = httpxResponse.headers['www-authenticate']
             if HTTP_EXCEPTIONS_MAP.get(httpxResponse.status_code) is not None:
                 exceptionCls = HTTP_EXCEPTIONS_MAP[httpxResponse.status_code]
-                exception = exceptionCls(message=httpxResponse.text)
+                exception = exceptionCls(message=message)
             else:
-                exception = ResponseException(message=httpxResponse.text, statusCode=httpxResponse.status_code)
+                exception = ResponseException(message=message, statusCode=httpxResponse.status_code, headers=httpxResponse.headers)
             raise exception
         # TODO(krishan711): this would be more efficient if streamed
         if outputFilePath is not None:
