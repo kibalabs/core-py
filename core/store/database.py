@@ -1,11 +1,16 @@
 import contextlib
 import contextvars
-from typing import ContextManager
+from typing import AsyncIterator
 from typing import Optional
+import typing
 
 from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.sql import ClauseElement
+from sqlalchemy.engine import ResultProxy
+
+from core.exceptions import InternalServerErrorException
 
 
 class DatabaseConnection(AsyncConnection):
@@ -23,20 +28,22 @@ class Database:
 
     def __init__(self, connectionString: str):
         self.connectionString = connectionString
-        self._engine = None
-        self._connectionContext = contextvars.ContextVar("_connectionContext")
+        self._engine: Optional[AsyncEngine] = None
+        self._connectionContext = contextvars.ContextVar[DatabaseConnection]("_connectionContext")
 
-    async def connect(self):
+    async def connect(self) -> None:
         if not self._engine:
             self._engine = create_async_engine(self.connectionString, future=True)
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         if self._engine:
             await self._engine.dispose()
             self._engine = None
 
     @contextlib.asynccontextmanager
-    async def create_transaction(self) -> ContextManager[DatabaseConnection]:
+    async def create_transaction(self) -> AsyncIterator[DatabaseConnection]:
+        if not self._engine:
+            raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
         async with self._engine.begin() as connection:
             yield connection
 
@@ -50,18 +57,22 @@ class Database:
         return None
 
     @contextlib.asynccontextmanager
-    async def create_context_connection(self) -> ContextManager[DatabaseConnection]:
+    async def create_context_connection(self) -> AsyncIterator[DatabaseConnection]:
+        if not self._engine:
+            raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
         if self._get_connection() is not None:
-            raise Exception
+            raise InternalServerErrorException(message='Connection has already been established in this context.')
         async with self._engine.begin() as connection:
             self._connectionContext.set(connection)
             yield connection
 
-    async def execute(self, query: ClauseElement, connection: Optional[DatabaseConnection] = None):
+    async def execute(self, query: ClauseElement, connection: Optional[DatabaseConnection] = None) -> ResultProxy:
+        if not self._engine:
+            raise InternalServerErrorException(message='Connection has not been established. Please called collect() first.')
         if connection:
-            return await connection.execute(statement=query)
-        connection = self._get_connection()
-        if connection:
-            return await connection.execute(statement=query)
-        async with self._engine.connect() as connection:
-            return await connection.execute(statement=query)
+            return typing.cast(ResultProxy, await connection.execute(statement=query))
+        newConnection = self._get_connection()
+        if newConnection:
+            return typing.cast(ResultProxy, await newConnection.execute(statement=query))
+        async with self._engine.connect() as temporaryConnection:
+            return typing.cast(ResultProxy, await temporaryConnection.execute(statement=query))

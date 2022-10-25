@@ -90,4 +90,4 @@ class MessageQueueProcessor:
 
     async def run(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, sleepTime: int = 30, totalMessageLimit: Optional[int] = None) -> bool:
         processedMessageCount = await self.run_batches(batchSize=1, sleepTime=sleepTime, totalMessageLimit=totalMessageLimit, expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds)
-        return processedMessageCount > totalMessageLimit
+        return processedMessageCount > 0

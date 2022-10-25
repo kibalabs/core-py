@@ -1,7 +1,8 @@
 import contextlib
-from typing import Optional
+from typing import AsyncIterator, Optional
 
 from sqlalchemy.sql import ClauseElement
+from sqlalchemy.engine import ResultProxy
 
 from core.exceptions import InternalServerErrorException
 from core.store.database import Database
@@ -18,11 +19,11 @@ class Saver:
         self.database = database
 
     @contextlib.asynccontextmanager
-    async def create_transaction(self):
+    async def create_transaction(self) -> AsyncIterator[DatabaseConnection]:
         async with self.database.create_transaction() as connection:
             yield connection
 
-    async def _execute(self, query: ClauseElement, connection: Optional[DatabaseConnection] = None):
+    async def _execute(self, query: ClauseElement, connection: Optional[DatabaseConnection] = None) -> ResultProxy:
         try:
             if connection:
                 return await self.database.execute(query=query, connection=connection)

@@ -1,9 +1,9 @@
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from fastapi.responses import Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.responses import Response
 
 from core import logging
 from core.exceptions import KibaException
@@ -17,7 +17,7 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
         response = JSONResponse(status_code=exception.statusCode, content=exception.to_dict())
         return response
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         try:
             response = await call_next(request)
         except RedirectException as exception:
