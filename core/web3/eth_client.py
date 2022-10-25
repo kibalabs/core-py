@@ -124,19 +124,19 @@ class RestEthClient(EthClientInterface):
 
     async def get_block_uncle_count(self, blockNumber: int) -> int:
         response = await self._make_request(method='eth_getUncleCountByBlockNumber', params=[hex(blockNumber)])
-        return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getUncleCountByBlockNumber'](response['result'])
+        return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getUncleCountByBlockNumber'](response['result']))
 
     async def get_transaction_count(self, address: str) -> TxData:
         response = await self._make_request(method='eth_getTransactionCount', params=[address, 'latest'])
-        return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionCount'](response['result'])
+        return typing.cast(TxData, method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionCount'](response['result']))
 
     async def get_transaction(self, transactionHash: str) -> TxData:
         response = await self._make_request(method='eth_getTransactionByHash', params=[transactionHash])
-        return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionByHash'](response['result'])
+        return typing.cast(TxData, method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionByHash'](response['result']))
 
     async def get_transaction_receipt(self, transactionHash: str) -> TxReceipt:
         response = await self._make_request(method='eth_getTransactionReceipt', params=[transactionHash])
-        return method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionReceipt'](response['result'])
+        return typing.cast(TxReceipt, method_formatters.PYTHONIC_RESULT_FORMATTERS['eth_getTransactionReceipt'](response['result']))
 
     async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
         params = {
