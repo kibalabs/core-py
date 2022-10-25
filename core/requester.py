@@ -3,10 +3,12 @@ import os
 import typing
 import urllib.parse as urlparse
 from io import IOBase
-from typing import IO, Any, MutableMapping
+from typing import IO
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Mapping
+from typing import MutableMapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -86,10 +88,10 @@ class Requester:
         innerData: Optional[Dict[Any, Any]] = None  # type: ignore[misc]
         if formDataDict:
             if method == 'POST':
-                formDataDictCleaned: Dict[str, str] = dict()
+                formDataDictCleaned: Dict[str, str] = {}
                 files = []
                 for name, value in formDataDict.items():
-                    if isinstance(value, bytes) or isinstance(value, IO):
+                    if isinstance(value, (IO, bytes, IOBase)):
                         files.append((name, value))
                     else:
                         formDataDictCleaned[name] = value

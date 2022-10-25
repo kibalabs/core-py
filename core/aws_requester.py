@@ -2,7 +2,9 @@ import datetime
 import hashlib
 import hmac
 import json
-from typing import Dict, Mapping, MutableMapping
+from typing import Dict
+from typing import Mapping
+from typing import MutableMapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -10,7 +12,8 @@ from typing import Union
 from urllib import parse as urlparse
 
 from core.exceptions import InternalServerErrorException
-from core.requester import FileContent, HttpxFileTypes
+from core.requester import FileContent
+from core.requester import HttpxFileTypes
 from core.requester import KibaResponse
 from core.requester import Requester
 from core.util import date_util
