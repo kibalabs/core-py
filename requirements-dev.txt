@@ -8,4 +8,5 @@ web3==6.0.0-beta.7
 sqlalchemy-stubs==0.4
 sqlalchemy2-stubs==0.0.2a29
 types-aiofiles==22.1.0
+types-aiobotocore[essential]==2.4.0.post1
 kiba-build==0.1.6.dev3

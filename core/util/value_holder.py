@@ -29,7 +29,7 @@ class ContextSettableValueHolder(ValueHolder[T]):
 
     def __init__(self, defaultValue: T) -> None:
         super().__init__(value=defaultValue)
-        self._valueContext = contextvars.ContextVar("_valueContext")
+        self._valueContext = contextvars.ContextVar[T]("_valueContext")
 
     def set_value(self, value: T) -> None:
         self._valueContext.set(value)
@@ -47,7 +47,7 @@ class RequestIdHolder(ContextSettableValueHolder[Optional[str]]):
     def __init__(self, defaultValue: Optional[str] = None, separator: str = '-') -> None:
         super().__init__(defaultValue=defaultValue)
         self.separator = separator
-        self._requestCounterContext = contextvars.ContextVar("_requestCounterContext")
+        self._requestCounterContext = contextvars.ContextVar[int]("_requestCounterContext")
 
     def set_value(self, value: Optional[str]) -> None:
         super().set_value(value=value)
