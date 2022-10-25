@@ -22,9 +22,10 @@ from core.util.typing_util import JSON
 from core.util.value_holder import RequestIdHolder
 
 if TYPE_CHECKING:
-    _StreamHandler = logging.StreamHandler[TextIO]  # this is only processed by mypy
+    # NOTE(krishan711): this is only processed by mypy
+    StreamHandler = logging.StreamHandler[TextIO]
 else:
-    _StreamHandler = logging.StreamHandler
+    from logging import StreamHandler
 
 
 
@@ -109,7 +110,7 @@ class KibaJsonLoggingFormatter(KibaLoggingFormatter):
         return json.dumps(recordDict)
 
 
-def init_logger(logger: Logger, loggingLevel: int, handler: _StreamHandler) -> None:
+def init_logger(logger: Logger, loggingLevel: int, handler: StreamHandler) -> None:
     logger.propagate = False
     logger.handlers = [handler]
     logger.setLevel(level=loggingLevel)
@@ -119,7 +120,7 @@ def init_logging(name: str, version: str, environment: str, showDebug: bool = Fa
     loggingLevel = logging.DEBUG if showDebug else logging.INFO
     for logFormat in ALL_LOGGER_FORMATS:
         logger = logging.getLogger(name=logFormat.loggerType)
-        handler = _StreamHandler(stream=sys.stdout)
+        handler = StreamHandler(stream=sys.stdout)
         handler.setFormatter(fmt=KibaLoggingFormatter(logFormat=logFormat, name=name, version=version, environment=environment, requestIdHolder=requestIdHolder))
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
 
@@ -128,7 +129,7 @@ def init_json_logging(name: str, version: str, environment: str, showDebug: bool
     loggingLevel = logging.DEBUG if showDebug else logging.INFO
     for logFormat in ALL_LOGGER_FORMATS:
         logger = logging.getLogger(name=logFormat.loggerType)
-        handler = _StreamHandler(stream=sys.stdout)
+        handler = StreamHandler(stream=sys.stdout)
         handler.setFormatter(fmt=KibaJsonLoggingFormatter(logFormat=logFormat, name=name, version=version, environment=environment, requestIdHolder=requestIdHolder))
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
 
@@ -137,7 +138,7 @@ def init_basic_logging(showDebug: bool = False) -> None:
     loggingLevel = logging.DEBUG if showDebug else logging.INFO
     for logFormat in ALL_LOGGER_FORMATS:
         logger = logging.getLogger(name=logFormat.loggerType)
-        handler = _StreamHandler(stream=sys.stdout)
+        handler = StreamHandler(stream=sys.stdout)
         handler.setFormatter(fmt=Formatter(fmt=logFormat.loggerFormat))
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
 
