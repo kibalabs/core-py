@@ -18,7 +18,6 @@ from typing import TextIO
 from typing import Union
 
 from core.exceptions import KibaException
-from core.util.typing_util import JSON
 from core.util.value_holder import RequestIdHolder
 
 if TYPE_CHECKING:
@@ -217,8 +216,8 @@ def debug(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
     _log(level=DEBUG, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
-def basicConfig(**kwargs: JSON) -> None:  # pylint: disable=invalid-name
-    logging.basicConfig(*kwargs)
+def basicConfig(**kwargs: Any) -> None:  # type: ignore[misc]  # pylint: disable=invalid-name
+    logging.basicConfig(**kwargs)
 
 
 def getLogger(name: Optional[str] = None) -> Logger:  # pylint: disable=invalid-name
