@@ -1,8 +1,9 @@
 import contextlib
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator
+from typing import Optional
 
-from sqlalchemy.sql import ClauseElement
 from sqlalchemy.engine import ResultProxy
+from sqlalchemy.sql import ClauseElement
 
 from core.exceptions import InternalServerErrorException
 from core.store.database import Database
