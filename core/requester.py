@@ -56,7 +56,6 @@ class Requester:
         return await self.make_request(method='POST', url=url, formDataDict=formDataDict, formFiles=formFiles, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
     async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, Tuple[str, FileContent]]]] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
-        files: List[Mapping[str, Union[FileContent, str]]] = None
         if dataDict is not None:
             if data is not None:
                 logging.error('Error: dataDict and data should never both be provided to make_request. data will be overwritten by dataDict.')
@@ -68,7 +67,7 @@ class Requester:
             if method == 'POST':
                 # TODO(krishan711): this should only happen if json is in the content headers
                 data = json.dumps(dataDict).encode()
-        files = None
+        files: Optional[List[Mapping[str, Union[FileContent, str]]]] = None
         if formDataDict:
             if method == 'POST':
                 data = {}

@@ -9,7 +9,8 @@ from typing import Optional
 from core import logging
 from core.exceptions import InternalServerErrorException
 from core.exceptions import KibaException
-from core.queues.model import Message, SqsMessage
+from core.queues.model import Message
+from core.queues.model import SqsMessage
 from core.queues.sqs_message_queue import SqsMessageQueue
 from core.slack_client import SlackClient
 from core.util.value_holder import RequestIdHolder

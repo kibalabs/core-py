@@ -1,5 +1,5 @@
-from typing import Iterator, Sequence
-from typing import List
+from typing import Iterator
+from typing import Sequence
 from typing import TypeVar
 
 ListItemType = TypeVar('ListItemType')  # pylint: disable=invalid-name

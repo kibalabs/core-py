@@ -9,6 +9,7 @@ from typing import Tuple
 from typing import Union
 from urllib import parse as urlparse
 
+from core.exceptions import InternalServerErrorException
 from core.requester import FileContent
 from core.requester import KibaResponse
 from core.requester import Requester
@@ -46,13 +47,15 @@ class AwsRequester(Requester):
         canonicalQueryString = ''
         if data is None and dataDict is not None:
             if method == 'GET':
-                raise Exception('GET requests with parameters are not supported on AwsRequester yet.')
+                raise InternalServerErrorException('GET requests with parameters are not supported on AwsRequester yet.')
             if method == 'POST':
                 data = json.dumps(dataDict).encode()
+        if not data:
+            raise InternalServerErrorException('requests without date are not supported on AwsRequester yet.')
         if formDataDict:
-            raise Exception('formDataDict is not supported on AwsRequester yet.')
+            raise InternalServerErrorException('formDataDict is not supported on AwsRequester yet.')
         if formFiles:
-            raise Exception('formFiles is not supported on AwsRequester yet.')
+            raise InternalServerErrorException('formFiles is not supported on AwsRequester yet.')
         parsedUrl = urlparse.urlparse(url=url)
         host = parsedUrl.netloc
         path = parsedUrl.path or '/'

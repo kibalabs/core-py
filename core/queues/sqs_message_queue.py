@@ -1,7 +1,8 @@
-from contextlib import AsyncExitStack
-from typing import List, Optional
-from typing import Sequence
 import typing
+from contextlib import AsyncExitStack
+from typing import List
+from typing import Optional
+from typing import Sequence
 
 from aiobotocore.session import get_session as get_botocore_session
 from types_aiobotocore_sqs import SQSClient
