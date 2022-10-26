@@ -34,7 +34,7 @@ setup(
     test_suite='tests',
     include_package_data=True,
     extras_require={
-        'api': ['fastapi~0.85.1', 'uvicorn[standard]~=0.19.0'],
+        'api': ['fastapi~=0.85.1', 'uvicorn[standard]~=0.19.0'],
         'storage': ['aiobotocore~=2.4.0'],
         'queues': ['aiobotocore~=2.4.0'],
         'database-psql': ['sqlalchemy[asyncio]~=1.4.42', 'asyncpg~=0.26.0'],
