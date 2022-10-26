@@ -1,18 +1,23 @@
-import typing
 from contextlib import AsyncExitStack
+from typing import TYPE_CHECKING
 from typing import List
 from typing import Optional
 from typing import Sequence
+from typing import Any
 
 from aiobotocore.session import get_session as get_botocore_session
-from types_aiobotocore_sqs import SQSClient
-from types_aiobotocore_sqs.type_defs import SendMessageBatchRequestEntryTypeDef
 
 from core.exceptions import InternalServerErrorException
 from core.queues.model import Message
 from core.queues.model import SqsMessage
 from core.util import list_util
 
+if TYPE_CHECKING:
+    from types_aiobotocore_sqs import SQSClient
+    from types_aiobotocore_sqs.type_defs import SendMessageBatchRequestEntryTypeDef
+else:
+    SQSClient = Any
+    SendMessageBatchRequestEntryTypeDef = Any
 
 class SqsMessageQueue:
 
@@ -26,7 +31,7 @@ class SqsMessageQueue:
 
     async def connect(self) -> None:
         session = get_botocore_session()
-        self._sqsClient = typing.cast(SQSClient, await self._exitStack.enter_async_context(session.create_client('sqs', region_name=self.region, aws_access_key_id=self._accessKeyId, aws_secret_access_key=self._accessKeySecret)))
+        self._sqsClient = await self._exitStack.enter_async_context(session.create_client('sqs', region_name=self.region, aws_access_key_id=self._accessKeyId, aws_secret_access_key=self._accessKeySecret))
 
     async def disconnect(self) -> None:
         await self._exitStack.aclose()

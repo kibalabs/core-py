@@ -5,6 +5,8 @@ import random
 import typing
 from contextlib import AsyncExitStack
 from string import ascii_letters
+from typing import TYPE_CHECKING
+from typing import Any
 from typing import AsyncGenerator
 from typing import Dict
 from typing import Optional
@@ -14,12 +16,17 @@ from typing import Tuple
 from aiobotocore.session import get_session as get_botocore_session
 from botocore.exceptions import ClientError
 from httpx import Headers
-from types_aiobotocore_s3 import S3Client
 
 from core import logging
 from core.exceptions import InternalServerErrorException
 from core.exceptions import NotFoundException
 from core.util import file_util
+
+if TYPE_CHECKING:
+    from types_aiobotocore_s3 import S3Client
+else:
+    S3Client = Any
+
 
 
 @dataclasses.dataclass
@@ -48,7 +55,7 @@ class S3Manager:
 
     async def connect(self) -> None:
         session = get_botocore_session()
-        self._s3Client = typing.cast(S3Client, await self._exitStack.enter_async_context(session.create_client('s3', region_name=self.region, aws_access_key_id=self._accessKeyId, aws_secret_access_key=self._accessKeySecret)))
+        self._s3Client = await self._exitStack.enter_async_context(session.create_client('s3', region_name=self.region, aws_access_key_id=self._accessKeyId, aws_secret_access_key=self._accessKeySecret))
 
     async def disconnect(self) -> None:
         await self._exitStack.aclose()

@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import datetime
 import uuid
+from typing import TYPE_CHECKING
 from typing import Optional
 
 from pydantic import BaseModel
-from types_aiobotocore_sqs.type_defs import MessageTypeDef as RawSqsMessage
 
 from core.util import date_util
 from core.util.typing_util import JSON
+
+if TYPE_CHECKING:
+    from types_aiobotocore_sqs.type_defs import MessageTypeDef as RawSqsMessage
 
 
 class Message(BaseModel):
