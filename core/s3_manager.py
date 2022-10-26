@@ -5,12 +5,12 @@ import random
 import typing
 from contextlib import AsyncExitStack
 from string import ascii_letters
+from typing import TYPE_CHECKING
 from typing import AsyncGenerator
 from typing import Dict
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import TYPE_CHECKING
 
 from aiobotocore.session import get_session as get_botocore_session
 from botocore.exceptions import ClientError

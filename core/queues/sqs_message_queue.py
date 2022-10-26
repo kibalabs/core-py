@@ -1,9 +1,9 @@
 import typing
 from contextlib import AsyncExitStack
+from typing import TYPE_CHECKING
 from typing import List
 from typing import Optional
 from typing import Sequence
-from typing import TYPE_CHECKING
 
 from aiobotocore.session import get_session as get_botocore_session
 
