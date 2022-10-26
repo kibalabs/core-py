@@ -1,9 +1,9 @@
-import typing
 from contextlib import AsyncExitStack
 from typing import TYPE_CHECKING
 from typing import List
 from typing import Optional
 from typing import Sequence
+from typing import Any
 
 from aiobotocore.session import get_session as get_botocore_session
 
@@ -15,6 +15,9 @@ from core.util import list_util
 if TYPE_CHECKING:
     from types_aiobotocore_sqs import SQSClient
     from types_aiobotocore_sqs.type_defs import SendMessageBatchRequestEntryTypeDef
+else:
+    SQSClient = Any
+    SendMessageBatchRequestEntryTypeDef = Any
 
 class SqsMessageQueue:
 

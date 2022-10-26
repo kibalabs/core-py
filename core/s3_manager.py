@@ -6,6 +6,7 @@ import typing
 from contextlib import AsyncExitStack
 from string import ascii_letters
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import AsyncGenerator
 from typing import Dict
 from typing import Optional
@@ -23,6 +24,8 @@ from core.util import file_util
 
 if TYPE_CHECKING:
     from types_aiobotocore_s3 import S3Client
+else:
+    S3Client = Any
 
 
 
