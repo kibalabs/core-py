@@ -9,15 +9,23 @@ import typing
 from logging import Formatter
 from logging import Logger
 from logging import LogRecord
-from logging import StreamHandler
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Optional
+from typing import TextIO
 from typing import Union
 
-from core.util.typing_util import JSON
+from core.exceptions import KibaException
 from core.util.value_holder import RequestIdHolder
+
+if TYPE_CHECKING:
+    # NOTE(krishan711): this is only processed by mypy
+    StreamHandler = logging.StreamHandler[TextIO]
+else:
+    from logging import StreamHandler
+
 
 
 @dataclasses.dataclass
@@ -73,7 +81,7 @@ class KibaLoggingFormatter(Formatter):
         setattr(record, 'requestId', self.requestIdHolder.get_value() if self.requestIdHolder is not None else '')
         return super().format(record=record)
 
-    def formatTime(self, record: LogRecord, datefmt: Optional[str] = None):
+    def formatTime(self, record: LogRecord, datefmt: Optional[str] = None) -> str:
         logDate = datetime.datetime.fromtimestamp(record.created)
         return logDate.strftime(datefmt or "%Y-%m-%dT%H:%M:%S.%f")
 
@@ -81,7 +89,7 @@ class KibaJsonLoggingFormatter(KibaLoggingFormatter):
 
     def format(self, record: LogRecord) -> str:
         message = self.formatException(record.exc_info) if record.exc_info else str(record.msg)
-        recordDict = {
+        recordDict: Dict[str, Union[str, int, float, bool, None]] = {
             'date': self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%f"),
             # NOTE(krishan711): for some reason these constantly report this file instead of original
             # 'path': record.pathname,
@@ -135,7 +143,7 @@ def init_basic_logging(showDebug: bool = False) -> None:
 
 
 def _serialize_numeric_value(value: Union[None, float, int]) -> str:
-    if value is None or value == '':  # type: ignore[comparison-overlap]
+    if value is None:
         return ''
     roundedNumber = round(value, 6)
     return f'{roundedNumber:f}'.rstrip('0').rstrip('.')
@@ -175,7 +183,7 @@ DEBUG = logging.DEBUG
 
 def _log(level: int, msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
     if ROOT_LOGGER.isEnabledFor(level=level):
-        ROOT_LOGGER._log(level=level, msg=msg, args=args, **kwargs)  # type: ignore[attr-defined, misc]  # pylint: disable=protected-access
+        ROOT_LOGGER._log(level=level, msg=msg, args=args, **kwargs)  # pylint: disable=protected-access
 
 
 def critical(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
@@ -186,8 +194,14 @@ def error(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
     _log(level=ERROR, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
-def exception(msg: str, *args: Any, exc_info: bool = True, **kwargs: Any) -> None:  # type: ignore[misc]
-    _log(level=ERROR, msg=msg, exc_info=exc_info, *args, **kwargs)  # type: ignore[misc]
+def exception(msg: Union[str, Exception], *args: Any, exc_info: bool = True, **kwargs: Any) -> None:  # type: ignore[misc]
+    if isinstance(msg, KibaException):
+        resolvedMessage = msg.message or str(msg)
+    elif isinstance(msg, Exception):
+        resolvedMessage = str(msg)
+    else:
+        resolvedMessage = msg
+    _log(level=ERROR, msg=resolvedMessage, exc_info=exc_info, *args, **kwargs)  # type: ignore[misc]
 
 
 def warning(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
@@ -202,9 +216,9 @@ def debug(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
     _log(level=DEBUG, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
-def basicConfig(**kwargs: JSON) -> None:  # pylint: disable=invalid-name
+def basicConfig(**kwargs: Any) -> None:  # type: ignore[misc]  # pylint: disable=invalid-name
     logging.basicConfig(**kwargs)
 
 
-def getLogger(name: str = Optional[None]) -> Logger:  # pylint: disable=invalid-name
+def getLogger(name: Optional[str] = None) -> Logger:  # pylint: disable=invalid-name
     return logging.getLogger(name=name)

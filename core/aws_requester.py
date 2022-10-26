@@ -3,13 +3,17 @@ import hashlib
 import hmac
 import json
 from typing import Dict
+from typing import Mapping
+from typing import MutableMapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import Union
 from urllib import parse as urlparse
 
+from core.exceptions import InternalServerErrorException
 from core.requester import FileContent
+from core.requester import HttpxFileTypes
 from core.requester import KibaResponse
 from core.requester import Requester
 from core.util import date_util
@@ -42,17 +46,19 @@ class AwsRequester(Requester):
         key5 = self._sign(key=key4, message='aws4_request')
         return self._sign_hex(key=key5, message=stringToSign)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, Tuple[str, FileContent]]]] = None, timeout: Optional[int] = 10, headers: Optional[Dict[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         canonicalQueryString = ''
         if data is None and dataDict is not None:
             if method == 'GET':
-                raise Exception('GET requests with parameters are not supported on AwsRequester yet.')
+                raise InternalServerErrorException('GET requests with parameters are not supported on AwsRequester yet.')
             if method == 'POST':
                 data = json.dumps(dataDict).encode()
+        if not data:
+            raise InternalServerErrorException('requests without date are not supported on AwsRequester yet.')
         if formDataDict:
-            raise Exception('formDataDict is not supported on AwsRequester yet.')
+            raise InternalServerErrorException('formDataDict is not supported on AwsRequester yet.')
         if formFiles:
-            raise Exception('formFiles is not supported on AwsRequester yet.')
+            raise InternalServerErrorException('formFiles is not supported on AwsRequester yet.')
         parsedUrl = urlparse.urlparse(url=url)
         host = parsedUrl.netloc
         path = parsedUrl.path or '/'

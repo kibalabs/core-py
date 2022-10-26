@@ -5,6 +5,7 @@ from typing import Optional
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
+from starlette.responses import Response
 from starlette.types import ASGIApp
 
 from core import logging
@@ -17,7 +18,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         super().__init__(app=app)
         self.requestIdHolder = requestIdHolder
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         requestId = str(uuid.uuid4()).replace('-', '')
         if self.requestIdHolder:
             self.requestIdHolder.set_value(value=requestId)

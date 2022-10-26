@@ -34,11 +34,11 @@ setup(
     test_suite='tests',
     include_package_data=True,
     extras_require={
-        'api': ['fastapi~=0.82.0', 'uvicorn[standard]~=0.18.0'],
+        'api': ['fastapi~=0.85.1', 'uvicorn[standard]~=0.19.0'],
         'storage': ['aiobotocore~=2.4.0'],
         'queues': ['aiobotocore~=2.4.0'],
-        'database-psql': ['sqlalchemy[asyncio]~=1.4.41', 'asyncpg~=0.26.0'],
+        'database-psql': ['sqlalchemy[asyncio]~=1.4.42', 'asyncpg~=0.26.0'],
         'requester': ['httpx~=0.23.0'],
-        'web3': ['web3==6.0.0-beta.4'],
+        'web3': ['web3~=6.0.0-beta.7'],
     },
 )

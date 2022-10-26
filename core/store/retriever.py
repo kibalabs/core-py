@@ -5,7 +5,7 @@ from typing import Optional
 from typing import Sequence
 
 from sqlalchemy import Table
-from sqlalchemy.sql.expression import FromClause
+from sqlalchemy.sql.expression import Select
 from sqlalchemy.sql.expression import func as sqlalchemyfunc
 
 from core.store.database import Database
@@ -76,7 +76,7 @@ class Retriever:
         self.database = database
 
     @staticmethod
-    def _apply_order(query: FromClause, table: Table, order: Order) -> FromClause:
+    def _apply_order(query: Select, table: Table, order: Order) -> Select:
         if isinstance(order, RandomOrder):
             query = query.order_by(sqlalchemyfunc.random())
         else:
@@ -84,13 +84,13 @@ class Retriever:
             query = query.order_by(field.asc() if order.direction == Direction.ASCENDING else field.desc())
         return query
 
-    def _apply_orders(self, query: FromClause, table: Table, orders: Sequence[Order]) -> FromClause:
+    def _apply_orders(self, query: Select, table: Table, orders: Sequence[Order]) -> Select:
         for order in orders:
             query = self._apply_order(query=query, table=table, order=order)
         return query
 
     @staticmethod
-    def _apply_string_field_filter(query: FromClause, table: Table, fieldFilter: StringFieldFilter) -> FromClause:
+    def _apply_string_field_filter(query: Select, table: Table, fieldFilter: StringFieldFilter) -> Select:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -103,7 +103,7 @@ class Retriever:
         return query
 
     @staticmethod
-    def _apply_date_field_filter(query: FromClause, table: Table, fieldFilter: DateFieldFilter) -> FromClause:
+    def _apply_date_field_filter(query: Select, table: Table, fieldFilter: DateFieldFilter) -> Select:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -124,7 +124,7 @@ class Retriever:
         return query
 
     @staticmethod
-    def _apply_integer_field_filter(query: FromClause, table: Table, fieldFilter: IntegerFieldFilter) -> FromClause:
+    def _apply_integer_field_filter(query: Select, table: Table, fieldFilter: IntegerFieldFilter) -> Select:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -145,7 +145,7 @@ class Retriever:
         return query
 
     @staticmethod
-    def _apply_float_field_filter(query: FromClause, table: Table, fieldFilter: FloatFieldFilter) -> FromClause:
+    def _apply_float_field_filter(query: Select, table: Table, fieldFilter: FloatFieldFilter) -> Select:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -165,7 +165,7 @@ class Retriever:
             query = query.where(field.notin_(fieldFilter.notContainedIn))
         return query
 
-    def _apply_field_filter(self, query: FromClause, table: Table, fieldFilter: FieldFilter) -> FromClause:
+    def _apply_field_filter(self, query: Select, table: Table, fieldFilter: FieldFilter) -> Select:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.isNull:
             query = query.where(field is None)
@@ -181,7 +181,7 @@ class Retriever:
             query = self._apply_float_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         return query
 
-    def _apply_field_filters(self, query: FromClause, table: Table, fieldFilters: Sequence[FieldFilter]) -> FromClause:
+    def _apply_field_filters(self, query: Select, table: Table, fieldFilters: Sequence[FieldFilter]) -> Select:
         for fieldFilter in fieldFilters:
             query = self._apply_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         return query

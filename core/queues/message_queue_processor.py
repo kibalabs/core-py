@@ -10,6 +10,7 @@ from core import logging
 from core.exceptions import InternalServerErrorException
 from core.exceptions import KibaException
 from core.queues.model import Message
+from core.queues.model import SqsMessage
 from core.queues.sqs_message_queue import SqsMessageQueue
 from core.slack_client import SlackClient
 from core.util.value_holder import RequestIdHolder
@@ -39,11 +40,12 @@ class MessageQueueProcessor:
         self.slackClient = slackClient
         self.requestIdHolder = requestIdHolder
 
-    async def _process_message(self, message: Message) -> None:
+    async def _process_message(self, message: SqsMessage) -> None:
         requestId = message.requestId or str(uuid.uuid4()).replace('-', '')
         if self.requestIdHolder:
             self.requestIdHolder.set_value(value=requestId)
-        logging.api(action='MESSAGE', path=message.command, query=urlparse.urlencode(message.content, doseq=True))
+        query = urlparse.urlencode(message.content, doseq=True)  # type: ignore[arg-type]
+        logging.api(action='MESSAGE', path=message.command, query=query)
         startTime = time.time()
         statusCode = 200
         try:
@@ -60,7 +62,7 @@ class MessageQueueProcessor:
                 await self.slackClient.post(text=f'Error processing message: {message.command}\n```{requestId}\n{message.content}\n{exception}```')
             # TODO(krish): should possibly reset the visibility timeout
         duration = time.time() - startTime
-        logging.api(action='MESSAGE', path=message.command, query=urlparse.urlencode(message.content, doseq=True), response=statusCode, duration=duration)
+        logging.api(action='MESSAGE', path=message.command, query=query, response=statusCode, duration=duration)
         if self.requestIdHolder:
             self.requestIdHolder.set_value(value=None)
 
@@ -90,4 +92,4 @@ class MessageQueueProcessor:
 
     async def run(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, sleepTime: int = 30, totalMessageLimit: Optional[int] = None) -> bool:
         processedMessageCount = await self.run_batches(batchSize=1, sleepTime=sleepTime, totalMessageLimit=totalMessageLimit, expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds)
-        return processedMessageCount > totalMessageLimit
+        return processedMessageCount > 0
