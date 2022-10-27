@@ -40,11 +40,6 @@ setup(
         'database-psql': ['sqlalchemy[asyncio]~=2.0.0b2', 'asyncpg~=0.26.0'],
         'requester': ['httpx~=0.23.0'],
         'web3': ['web3==6.0.0-beta.7'],
-        'database-types': [
-            # 'sqlalchemy[mypy]~=1.4.42',
-            # 'sqlalchemy-stubs~=0.4',
-            # 'sqlalchemy2-stubs~=0.0.2a29',
-        ],
         'types': [
             'types-aiobotocore[essential]~=2.4.0.post1',
             'types-aiofiles~=22.1.0',
