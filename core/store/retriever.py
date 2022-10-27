@@ -76,8 +76,7 @@ class Retriever:
     def __init__(self, database: Database):
         self.database = database
 
-    @staticmethod
-    def _apply_order(query: Select[ResultType], table: Table, order: Order) -> Select[ResultType]:
+    def _apply_order(self, query: Select[ResultType], table: Table, order: Order) -> Select[ResultType]:
         if isinstance(order, RandomOrder):
             query = query.order_by(sqlalchemy.func.random())
         else:
@@ -90,8 +89,7 @@ class Retriever:
             query = self._apply_order(query=query, table=table, order=order)
         return query
 
-    @staticmethod
-    def _apply_string_field_filter(query: Select[ResultType], table: Table, fieldFilter: StringFieldFilter) -> Select[ResultType]:
+    def _apply_string_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: StringFieldFilter) -> Select[ResultType]:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -103,29 +101,7 @@ class Retriever:
             query = query.where(field.not_in(fieldFilter.notContainedIn))
         return query
 
-    @staticmethod
-    def _apply_date_field_filter(query: Select[ResultType], table: Table, fieldFilter: DateFieldFilter) -> Select[ResultType]:
-        field = table.c[fieldFilter.fieldName]
-        if fieldFilter.eq is not None:
-            query = query.where(field == fieldFilter.eq)
-        if fieldFilter.ne is not None:
-            query = query.where(field != fieldFilter.ne)
-        if fieldFilter.lte is not None:
-            query = query.where(field <= fieldFilter.lte)
-        if fieldFilter.lt is not None:
-            query = query.where(field < fieldFilter.lt)
-        if fieldFilter.gte is not None:
-            query = query.where(field >= fieldFilter.gte)
-        if fieldFilter.gt is not None:
-            query = query.where(field > fieldFilter.gt)
-        if fieldFilter.containedIn is not None:
-            query = query.where(field.in_(fieldFilter.containedIn))
-        if fieldFilter.notContainedIn is not None:
-            query = query.where(field.not_in(fieldFilter.notContainedIn))
-        return query
-
-    @staticmethod
-    def _apply_integer_field_filter(query: Select[ResultType], table: Table, fieldFilter: IntegerFieldFilter) -> Select[ResultType]:
+    def _apply_date_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: DateFieldFilter) -> Select[ResultType]:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -145,8 +121,27 @@ class Retriever:
             query = query.where(field.not_in(fieldFilter.notContainedIn))
         return query
 
-    @staticmethod
-    def _apply_float_field_filter(query: Select[ResultType], table: Table, fieldFilter: FloatFieldFilter) -> Select[ResultType]:
+    def _apply_integer_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: IntegerFieldFilter) -> Select[ResultType]:
+        field = table.c[fieldFilter.fieldName]
+        if fieldFilter.eq is not None:
+            query = query.where(field == fieldFilter.eq)
+        if fieldFilter.ne is not None:
+            query = query.where(field != fieldFilter.ne)
+        if fieldFilter.lte is not None:
+            query = query.where(field <= fieldFilter.lte)
+        if fieldFilter.lt is not None:
+            query = query.where(field < fieldFilter.lt)
+        if fieldFilter.gte is not None:
+            query = query.where(field >= fieldFilter.gte)
+        if fieldFilter.gt is not None:
+            query = query.where(field > fieldFilter.gt)
+        if fieldFilter.containedIn is not None:
+            query = query.where(field.in_(fieldFilter.containedIn))
+        if fieldFilter.notContainedIn is not None:
+            query = query.where(field.not_in(fieldFilter.notContainedIn))
+        return query
+
+    def _apply_float_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: FloatFieldFilter) -> Select[ResultType]:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
