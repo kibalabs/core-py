@@ -4,11 +4,12 @@ from enum import Enum
 from typing import Optional
 from typing import Sequence
 
+import sqlalchemy
 from sqlalchemy import Table
-from sqlalchemy.sql.expression import Select
-from sqlalchemy.sql.expression import func as sqlalchemyfunc
+from sqlalchemy.sql import Select
 
 from core.store.database import Database
+from core.store.database import ResultType
 
 
 class Direction(Enum):
@@ -32,10 +33,10 @@ class FieldFilter:
 
 @dataclasses.dataclass
 class StringFieldFilter(FieldFilter):
-    eq: Optional[int] = None
-    ne: Optional[int] = None
-    containedIn: Optional[Sequence[int]] = None
-    notContainedIn: Optional[Sequence[int]] = None
+    eq: Optional[str] = None
+    ne: Optional[str] = None
+    containedIn: Optional[Sequence[str]] = None
+    notContainedIn: Optional[Sequence[str]] = None
 
 @dataclasses.dataclass
 class DateFieldFilter(FieldFilter):
@@ -76,21 +77,21 @@ class Retriever:
         self.database = database
 
     @staticmethod
-    def _apply_order(query: Select, table: Table, order: Order) -> Select:
+    def _apply_order(query: Select[ResultType], table: Table, order: Order) -> Select[ResultType]:
         if isinstance(order, RandomOrder):
-            query = query.order_by(sqlalchemyfunc.random())
+            query = query.order_by(sqlalchemy.func.random())
         else:
             field = table.c[order.fieldName]
             query = query.order_by(field.asc() if order.direction == Direction.ASCENDING else field.desc())
         return query
 
-    def _apply_orders(self, query: Select, table: Table, orders: Sequence[Order]) -> Select:
+    def _apply_orders(self, query: Select[ResultType], table: Table, orders: Sequence[Order]) -> Select[ResultType]:
         for order in orders:
             query = self._apply_order(query=query, table=table, order=order)
         return query
 
     @staticmethod
-    def _apply_string_field_filter(query: Select, table: Table, fieldFilter: StringFieldFilter) -> Select:
+    def _apply_string_field_filter(query: Select[ResultType], table: Table, fieldFilter: StringFieldFilter) -> Select[ResultType]:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -99,11 +100,11 @@ class Retriever:
         if fieldFilter.containedIn is not None:
             query = query.where(field.in_(fieldFilter.containedIn))
         if fieldFilter.notContainedIn is not None:
-            query = query.where(field.notin_(fieldFilter.notContainedIn))
+            query = query.where(field.not_in(fieldFilter.notContainedIn))
         return query
 
     @staticmethod
-    def _apply_date_field_filter(query: Select, table: Table, fieldFilter: DateFieldFilter) -> Select:
+    def _apply_date_field_filter(query: Select[ResultType], table: Table, fieldFilter: DateFieldFilter) -> Select[ResultType]:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -120,11 +121,11 @@ class Retriever:
         if fieldFilter.containedIn is not None:
             query = query.where(field.in_(fieldFilter.containedIn))
         if fieldFilter.notContainedIn is not None:
-            query = query.where(field.notin_(fieldFilter.notContainedIn))
+            query = query.where(field.not_in(fieldFilter.notContainedIn))
         return query
 
     @staticmethod
-    def _apply_integer_field_filter(query: Select, table: Table, fieldFilter: IntegerFieldFilter) -> Select:
+    def _apply_integer_field_filter(query: Select[ResultType], table: Table, fieldFilter: IntegerFieldFilter) -> Select[ResultType]:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -141,11 +142,11 @@ class Retriever:
         if fieldFilter.containedIn is not None:
             query = query.where(field.in_(fieldFilter.containedIn))
         if fieldFilter.notContainedIn is not None:
-            query = query.where(field.notin_(fieldFilter.notContainedIn))
+            query = query.where(field.not_in(fieldFilter.notContainedIn))
         return query
 
     @staticmethod
-    def _apply_float_field_filter(query: Select, table: Table, fieldFilter: FloatFieldFilter) -> Select:
+    def _apply_float_field_filter(query: Select[ResultType], table: Table, fieldFilter: FloatFieldFilter) -> Select[ResultType]:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.eq is not None:
             query = query.where(field == fieldFilter.eq)
@@ -162,15 +163,15 @@ class Retriever:
         if fieldFilter.containedIn is not None:
             query = query.where(field.in_(fieldFilter.containedIn))
         if fieldFilter.notContainedIn is not None:
-            query = query.where(field.notin_(fieldFilter.notContainedIn))
+            query = query.where(field.not_in(fieldFilter.notContainedIn))
         return query
 
-    def _apply_field_filter(self, query: Select, table: Table, fieldFilter: FieldFilter) -> Select:
+    def _apply_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: FieldFilter) -> Select[ResultType]:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.isNull:
-            query = query.where(field is None)
+            query = query.where(field.is_(None))
         if fieldFilter.isNotNull:
-            query = query.where(field is not None)
+            query = query.where(field.is_not(None))
         if isinstance(fieldFilter, StringFieldFilter):
             query = self._apply_string_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         if isinstance(fieldFilter, DateFieldFilter):
@@ -181,7 +182,7 @@ class Retriever:
             query = self._apply_float_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         return query
 
-    def _apply_field_filters(self, query: Select, table: Table, fieldFilters: Sequence[FieldFilter]) -> Select:
+    def _apply_field_filters(self, query: Select[ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[ResultType]:
         for fieldFilter in fieldFilters:
             query = self._apply_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         return query
