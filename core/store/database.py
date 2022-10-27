@@ -15,7 +15,7 @@ from sqlalchemy.sql.selectable import TypedReturnsRows
 from core.exceptions import InternalServerErrorException
 
 DatabaseConnection = AsyncConnection
-ResultType = TypeVar('ResultType', bound=Tuple)  # type: ignore[type-arg]  pylint: disable=invalid-name
+ResultType = TypeVar('ResultType', bound=Tuple)  # pylint: disable=invalid-name  type: ignore[type-arg]
 
 
 class Database:
