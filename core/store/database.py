@@ -1,7 +1,6 @@
 import contextlib
 import contextvars
 import typing
-from typing import Any
 from typing import AsyncIterator
 from typing import Optional
 from typing import Tuple
@@ -11,14 +10,12 @@ from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.sql import ClauseElement
-from sqlalchemy.sql import Select
 from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from core.exceptions import InternalServerErrorException
 
 DatabaseConnection = AsyncConnection
-ResultType = TypeVar('ResultType', bound=Tuple)  # type: ignore[type-arg]
+ResultType = TypeVar('ResultType', bound=Tuple)  # type: ignore[type-arg]  pylint: disable=invalid-name
 
 
 class Database:
