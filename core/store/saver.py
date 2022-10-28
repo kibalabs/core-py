@@ -1,10 +1,8 @@
 import contextlib
 from typing import AsyncIterator
 from typing import Optional
-from typing import Union
 
 from sqlalchemy.engine import Result
-from sqlalchemy.sql import Executable
 from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from core.exceptions import InternalServerErrorException
@@ -27,7 +25,7 @@ class Saver:
         async with self.database.create_transaction() as connection:
             yield connection
 
-    async def _execute(self, query: Union[Executable, TypedReturnsRows[ResultType]], connection: Optional[DatabaseConnection] = None) -> Result[ResultType]:
+    async def _execute(self, query: TypedReturnsRows[ResultType], connection: Optional[DatabaseConnection] = None) -> Result[ResultType]:
         try:
             if connection:
                 return await self.database.execute(query=query, connection=connection)

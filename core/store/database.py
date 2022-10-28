@@ -5,13 +5,11 @@ from typing import AsyncIterator
 from typing import Optional
 from typing import Tuple
 from typing import TypeVar
-from typing import Union
 
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.sql import Executable
 from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from core.exceptions import InternalServerErrorException
@@ -70,7 +68,7 @@ class Database:
             self._connectionContext.set(connection)
             yield connection
 
-    async def execute(self, query: Union[Executable, TypedReturnsRows[ResultType]], connection: Optional[DatabaseConnection] = None) -> Result[ResultType]:
+    async def execute(self, query: TypedReturnsRows[ResultType], connection: Optional[DatabaseConnection] = None) -> Result[ResultType]:
         if not self._engine:
             raise InternalServerErrorException(message='Connection has not been established. Please called collect() first.')
         if connection:
