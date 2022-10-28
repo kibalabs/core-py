@@ -3,14 +3,13 @@ from __future__ import annotations
 import datetime
 import uuid
 from typing import TYPE_CHECKING
-from typing import Optional
 from typing import Any
 from typing import Dict
+from typing import Optional
 
 from pydantic import BaseModel
 
 from core.util import date_util
-
 
 if TYPE_CHECKING:
     from types_aiobotocore_sqs.type_defs import MessageTypeDef as RawSqsMessage
