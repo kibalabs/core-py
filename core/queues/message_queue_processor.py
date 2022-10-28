@@ -44,7 +44,7 @@ class MessageQueueProcessor:
         requestId = message.requestId or str(uuid.uuid4()).replace('-', '')
         if self.requestIdHolder:
             self.requestIdHolder.set_value(value=requestId)
-        query = urlparse.urlencode(message.content, doseq=True)  # type: ignore[arg-type]
+        query = urlparse.urlencode(message.content, doseq=True)
         logging.api(action='MESSAGE', path=message.command, query=query)
         startTime = time.time()
         statusCode = 200

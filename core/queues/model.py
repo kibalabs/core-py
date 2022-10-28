@@ -3,12 +3,13 @@ from __future__ import annotations
 import datetime
 import uuid
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Dict
 from typing import Optional
 
 from pydantic import BaseModel
 
 from core.util import date_util
-from core.util.typing_util import JSON
 
 if TYPE_CHECKING:
     from types_aiobotocore_sqs.type_defs import MessageTypeDef as RawSqsMessage
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 
 class Message(BaseModel):
     command: str
-    content: JSON
+    content: Dict[str, Any]  # type: ignore[misc]
     requestId: Optional[str]
     postCount: Optional[int]
     postDate: Optional[datetime.datetime]

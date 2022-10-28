@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 -[MINOR] Updated `Saver` to throw `SavingException` when saving fails
 -[MINOR] Added `MessageNeedsReprocessingException` to `MessageQueueProcessor` to support rescheduling a message
 -[MINOR] Use `www-authenticate` as message (if available) in 401 responses
+-[MAJOR] Upgraded to sqlalchemy2
 
 ### Removed
 

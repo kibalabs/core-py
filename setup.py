@@ -37,7 +37,7 @@ setup(
         'api': ['fastapi~=0.85.1', 'uvicorn[standard]~=0.19.0'],
         'storage': ['aiobotocore~=2.4.0'],
         'queues': ['aiobotocore~=2.4.0'],
-        'database-psql': ['sqlalchemy[asyncio]~=2.0.0b2', 'asyncpg~=0.26.0'],
+        'database-psql': ['sqlalchemy[asyncio]~=2.0.0b2', 'asyncpg~=0.27.0'],
         'requester': ['httpx~=0.23.0'],
         'web3': ['web3==6.0.0-beta.7'],
         'types': [
