@@ -2,12 +2,13 @@ import contextlib
 from typing import AsyncIterator
 from typing import Optional
 
-from sqlalchemy.engine import ResultProxy
-from sqlalchemy.sql import ClauseElement
+from sqlalchemy.engine import Result
+from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from core.exceptions import InternalServerErrorException
 from core.store.database import Database
 from core.store.database import DatabaseConnection
+from core.store.database import ResultType
 
 
 class SavingException(InternalServerErrorException):
@@ -24,7 +25,7 @@ class Saver:
         async with self.database.create_transaction() as connection:
             yield connection
 
-    async def _execute(self, query: ClauseElement, connection: Optional[DatabaseConnection] = None) -> ResultProxy:
+    async def _execute(self, query: TypedReturnsRows[ResultType], connection: Optional[DatabaseConnection] = None) -> Result[ResultType]:
         try:
             if connection:
                 return await self.database.execute(query=query, connection=connection)

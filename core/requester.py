@@ -49,7 +49,7 @@ class ResponseException(KibaException):
 
 class Requester:
 
-    def __init__(self, headers: Optional[Dict[str, str]] = None, shouldFollowRedirects: bool = True):
+    def __init__(self, headers: Optional[Mapping[str, str]] = None, shouldFollowRedirects: bool = True):
         self.headers = headers or {}
         self.client = httpx.AsyncClient(follow_redirects=shouldFollowRedirects)
 
@@ -64,7 +64,7 @@ class Requester:
         headers.update({'Content-Type': 'application/json'})
         return await self.make_request(method='POST', url=url, dataDict=dataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def post_form(self, url: str, formDataDict: Optional[Dict[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def post_form(self, url: str, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         headers = headers or httpx.Headers()
         # headers.update({'Content-Type': 'multipart/form-data'})
         return await self.make_request(method='POST', url=url, formDataDict=formDataDict, formFiles=formFiles, timeout=timeout, headers=headers, outputFilePath=outputFilePath)

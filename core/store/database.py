@@ -3,18 +3,20 @@ import contextvars
 import typing
 from typing import AsyncIterator
 from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
-from sqlalchemy.engine import ResultProxy
+from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.sql import ClauseElement
+from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from core.exceptions import InternalServerErrorException
 
+DatabaseConnection = AsyncConnection
+ResultType = TypeVar('ResultType', bound=Tuple)  # type: ignore[type-arg]  # pylint: disable=invalid-name
 
-class DatabaseConnection(AsyncConnection):
-    pass
 
 class Database:
 
@@ -66,13 +68,13 @@ class Database:
             self._connectionContext.set(connection)
             yield connection
 
-    async def execute(self, query: ClauseElement, connection: Optional[DatabaseConnection] = None) -> ResultProxy:
+    async def execute(self, query: TypedReturnsRows[ResultType], connection: Optional[DatabaseConnection] = None) -> Result[ResultType]:
         if not self._engine:
             raise InternalServerErrorException(message='Connection has not been established. Please called collect() first.')
         if connection:
-            return typing.cast(ResultProxy, await connection.execute(statement=query))
+            return typing.cast(Result[ResultType], await connection.execute(statement=query))
         newConnection = self._get_connection()
         if newConnection:
-            return typing.cast(ResultProxy, await newConnection.execute(statement=query))
+            return typing.cast(Result[ResultType], await newConnection.execute(statement=query))
         async with self._engine.connect() as temporaryConnection:
-            return typing.cast(ResultProxy, await temporaryConnection.execute(statement=query))
+            return typing.cast(Result[ResultType], await temporaryConnection.execute(statement=query))
