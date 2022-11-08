@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Removed
+
+## [0.5.0] - 2022-11-08
+
+### Added
 -[MINOR] Added `requestId` to `Message`
 
 ### Changed
@@ -15,8 +23,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 -[MINOR] Added `MessageNeedsReprocessingException` to `MessageQueueProcessor` to support rescheduling a message
 -[MINOR] Use `www-authenticate` as message (if available) in 401 responses
 -[MAJOR] Upgraded to sqlalchemy2
-
-### Removed
 
 ## [0.4.0] - 2022-07-19
 

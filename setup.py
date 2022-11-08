@@ -19,7 +19,7 @@ with open(os.path.join(setupDirectory, 'requirements-dev.txt'), 'r') as requirem
 
 setup(
     name='kiba-core',
-    version='0.4.0',
+    version='0.5.0',
     description='Kiba Labs\' python utilities',
     url='https://github.com/kibalabs/core-py',
     packages=find_packages(exclude=['tests*']),
@@ -34,15 +34,15 @@ setup(
     test_suite='tests',
     include_package_data=True,
     extras_require={
-        'api': ['fastapi~=0.85.1', 'uvicorn[standard]~=0.19.0'],
+        'api': ['fastapi~=0.86.0', 'uvicorn[standard]~=0.19.0'],
         'storage': ['aiobotocore~=2.4.0'],
         'queues': ['aiobotocore~=2.4.0'],
-        'database-psql': ['sqlalchemy[asyncio]~=2.0.0b2', 'asyncpg~=0.27.0'],
+        'database-psql': ['sqlalchemy[asyncio]~=2.0.0b3', 'asyncpg~=0.27.0'],
         'requester': ['httpx~=0.23.0'],
         'web3': ['web3==6.0.0-beta.7'],
         'types': [
             'types-aiobotocore[essential]~=2.4.0.post1',
-            'types-aiofiles~=22.1.0',
+            'types-aiofiles~=22.1.0.1',
         ]
     },
 )

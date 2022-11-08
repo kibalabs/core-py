@@ -66,11 +66,12 @@ class Requester:
 
     async def post_form(self, url: str, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         headers = headers or httpx.Headers()
-        # headers.update({'Content-Type': 'multipart/form-data'})
+        # headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
         return await self.make_request(method='POST', url=url, formDataDict=formDataDict, formFiles=formFiles, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
     async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
-        # TODO(krishan711): rename var to content when ready
+        requestHeaders = httpx.Headers({**self.headers, **(headers or {})})
+        # TODO(krishan711): rename parameter to content when ready
         contentDict = dataDict
         content = data
         if contentDict is not None:
@@ -83,6 +84,7 @@ class Requester:
                 url = urlparse.urlunsplit(components=(urlParts.scheme, urlParts.netloc, urlParts.path, queryString, urlParts.fragment))
             if method == 'POST':
                 # TODO(krishan711): this should only happen if json is in the content headers
+                # if requestHeaders.get('content-type') and requestHeaders.get('content-type').lower() == 'application/json':
                 content = json.dumps(contentDict).encode()
         files: Optional[List[Tuple[str, HttpxFileTypes]]] = None
         innerData: Optional[Dict[Any, Any]] = None  # type: ignore[misc]
@@ -104,8 +106,7 @@ class Requester:
                 files += formFiles
             else:
                 logging.error('Error: formFiles should only be passed into POST requests.')
-        allHeaders = {**self.headers, **(headers or {})}
-        request = self.client.build_request(method=method, url=url, content=content, data=innerData, files=files, timeout=timeout, headers=allHeaders)
+        request = self.client.build_request(method=method, url=url, content=content, data=innerData, files=files, timeout=timeout, headers=requestHeaders)
         httpxResponse = await self.client.send(request=request)
         if 400 <= httpxResponse.status_code < 600:
             message = httpxResponse.text
