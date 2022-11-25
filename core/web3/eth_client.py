@@ -54,7 +54,7 @@ class EthClientInterface:
         raise NotImplementedError()
 
     async def call_contract_function(self, contract: BaseContract, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
-        functionAbi = [internalAbi for internalAbi in contract.abi if internalAbi.get('name') == functionName][0]
+        functionAbi = typing.cast(ABIFunction, [internalAbi for internalAbi in contract.abi if internalAbi.get('name') == functionName][0])
         return await self.call_function(toAddress=contract.address, contractAbi=contract.abi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments, blockNumber=blockNumber)
 
     async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, privateKey: str, gasPrice: int, gas: int, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None) -> str:
