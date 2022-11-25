@@ -21,12 +21,14 @@ from web3.types import HexStr
 from web3.types import LogReceipt
 from web3.types import TxData
 from web3.types import TxReceipt
+from web3.contract import BaseContract
 
 from core.exceptions import BadRequestException
 from core.requester import Requester
 
 ListAny = List[Any]  # type: ignore[misc]
 DictStrAny = Dict[str, Any]  # type: ignore[misc]
+
 
 class EthClientInterface:
 
@@ -51,8 +53,13 @@ class EthClientInterface:
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
         raise NotImplementedError()
 
+    async def call_contract_function(self, contract: BaseContract, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+        functionAbi = [internalAbi for internalAbi in contract.abi if internalAbi.get('name') == functionName][0]
+        return await self.call_function(toAddress=contract.address, contractAbi=contract.abi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments, blockNumber=blockNumber)
+
     async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, privateKey: str, gasPrice: int, gas: int, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None) -> str:
         raise NotImplementedError()
+
 
 class Web3EthClient(EthClientInterface):
 
@@ -94,6 +101,7 @@ class Web3EthClient(EthClientInterface):
 
     async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, privateKey: str, gasPrice: int, gas: int, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None) -> str:
         raise NotImplementedError()
+
 
 class RestEthClient(EthClientInterface):
 
