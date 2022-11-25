@@ -12,6 +12,7 @@ from web3._utils import method_formatters
 from web3._utils.abi import get_abi_output_types
 from web3._utils.contracts import encode_transaction_data
 from web3._utils.rpc_abi import RPC
+from web3.contract import BaseContract
 from web3.middleware import geth_poa_middleware
 from web3.types import ABI
 from web3.types import ABIFunction
@@ -21,7 +22,6 @@ from web3.types import HexStr
 from web3.types import LogReceipt
 from web3.types import TxData
 from web3.types import TxReceipt
-from web3.contract import BaseContract
 
 from core.exceptions import BadRequestException
 from core.requester import Requester
