@@ -12,6 +12,7 @@ from web3._utils import method_formatters
 from web3._utils.abi import get_abi_output_types
 from web3._utils.contracts import encode_transaction_data
 from web3._utils.rpc_abi import RPC
+from web3.contract import BaseContract
 from web3.middleware import geth_poa_middleware
 from web3.types import ABI
 from web3.types import ABIFunction
@@ -27,6 +28,7 @@ from core.requester import Requester
 
 ListAny = List[Any]  # type: ignore[misc]
 DictStrAny = Dict[str, Any]  # type: ignore[misc]
+
 
 class EthClientInterface:
 
@@ -51,8 +53,13 @@ class EthClientInterface:
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
         raise NotImplementedError()
 
+    async def call_contract_function(self, contract: BaseContract, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+        functionAbi = typing.cast(ABIFunction, [internalAbi for internalAbi in contract.abi if internalAbi.get('name') == functionName][0])
+        return await self.call_function(toAddress=contract.address, contractAbi=contract.abi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments, blockNumber=blockNumber)
+
     async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, privateKey: str, gasPrice: int, gas: int, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None) -> str:
         raise NotImplementedError()
+
 
 class Web3EthClient(EthClientInterface):
 
@@ -94,6 +101,7 @@ class Web3EthClient(EthClientInterface):
 
     async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, privateKey: str, gasPrice: int, gas: int, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None) -> str:
         raise NotImplementedError()
+
 
 class RestEthClient(EthClientInterface):
 
