@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Added
 -[MINOR] Added `call_contract_function` to `EthClientInterface`
+-[MINOR] Added `_insert_record`, `_update_records`, and `_delete_records` to `Saver`
 
 ### Changed
 

@@ -3,45 +3,53 @@ on:
   pull_request:
     branches: ["*"]
 jobs:
-  build-package:
+  package-build:
     runs-on: ubuntu-latest
     env:
-      DOCKER_IMAGE: core
+      DOCKER_IMAGE: build
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
       - name: Build docker image
-        run: docker build --tag $DOCKER_IMAGE .
-      - name: Run linting
+        uses: docker/build-push-action@v2
+        with:
+          context: package
+          load: true
+          cache-from: type=gha,scope=package
+          cache-to: type=gha,mode=max,scope=package
+          tags: ${{ env.DOCKER_IMAGE }}
+      - name: Run lint
         run: |
-          docker run --name linting $DOCKER_IMAGE lint --directory core --output-file linting-results.json --output-format annotations
-          docker cp linting:/app/linting-results.json ./linting-results.json
-      - name: Upload linting results
+          docker run --name lint-check $DOCKER_IMAGE make lint-check-ci
+          docker cp lint-check:/app/lint-check-results.json ./lint-check-results.json
+      - name: Upload lint results
         uses: kibalabs/github-action-create-annotations@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          json-file-path: ./linting-results.json
-          check-name: lint-package
+          json-file-path: ./lint-check-results.json
+          check-name: package-lint-check
           fail-on-error: false
       - name: Run type-check
         run: |
-          docker run --name type-check $DOCKER_IMAGE type-check --directory core --output-file type-check-results.json --output-format annotations
+          docker run --name type-check $DOCKER_IMAGE make type-check-ci
           docker cp type-check:/app/type-check-results.json ./type-check-results.json
       - name: Upload type-check results
         uses: kibalabs/github-action-create-annotations@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           json-file-path: ./type-check-results.json
-          check-name: type-check-package
+          check-name: package-type-check
           fail-on-error: false
       - name: Run security-check
         run: |
-          docker run --name security-check $DOCKER_IMAGE security-check --directory core --output-file security-check-results.json --output-format annotations
+          docker run --name security-check $DOCKER_IMAGE make security-check-ci
           docker cp security-check:/app/security-check-results.json ./security-check-results.json
       - name: Upload security-check results
         uses: kibalabs/github-action-create-annotations@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           json-file-path: ./security-check-results.json
-          check-name: security-check-package
+          check-name: package-security-check
           fail-on-error: false
