@@ -15,7 +15,7 @@ jobs:
       - name: Build docker image
         uses: docker/build-push-action@v2
         with:
-          context: core
+          context: .
           load: true
           cache-from: type=gha,scope=core
           cache-to: type=gha,mode=max,scope=core
