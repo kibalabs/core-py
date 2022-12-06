@@ -24,10 +24,10 @@ else:
     _ColumnExpressionArgument = Any
 
 
-ColumnType = TypeVar('ColumnType')
+ClauseType = TypeVar('ClauseType')
 CreateRecordValuesDict = Dict[_DMLColumnArgument, Any]  # type: ignore[misc]
 UpdateRecordValuesDict = Dict[_DMLColumnArgument, Any]  # type: ignore[misc]
-WhereClause = _ColumnExpressionArgument[ColumnType]
+WhereClause = _ColumnExpressionArgument[ClauseType]
 
 
 class SavingException(InternalServerErrorException):
