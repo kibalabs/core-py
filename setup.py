@@ -41,7 +41,7 @@ setup(
         'requester': ['httpx~=0.23.1'],
         'web3': ['web3==6.0.0-beta.8'],
         'types': [
-            'types-aiobotocore[essential]~=2.4.0.post1',
+            'types-aiobotocore[essential]~=2.4.1',
             'types-aiofiles~=22.1.0.4',
         ]
     },
