@@ -5,7 +5,6 @@ from typing import AsyncIterator
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import TypeVar
 
 from sqlalchemy import Table
 from sqlalchemy.engine import Result
