@@ -5,6 +5,7 @@ from typing import AsyncIterator
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import TypeVar
 
 from sqlalchemy import Table
 from sqlalchemy.engine import Result
@@ -23,9 +24,10 @@ else:
     _ColumnExpressionArgument = Any
 
 
+ColumnType = TypeVar('ColumnType')
 CreateRecordValuesDict = Dict[_DMLColumnArgument, Any]  # type: ignore[misc]
 UpdateRecordValuesDict = Dict[_DMLColumnArgument, Any]  # type: ignore[misc]
-WhereClause = _ColumnExpressionArgument
+WhereClause = _ColumnExpressionArgument[ColumnType]
 
 
 class SavingException(InternalServerErrorException):
@@ -58,13 +60,13 @@ class Saver:
         rowId = int(result.scalar_one())
         return rowId
 
-    async def _update_records(self, table: Table, where: WhereClause, values: UpdateRecordValuesDict, connection: Optional[DatabaseConnection] = None) -> List[int]:
+    async def _update_records(self, table: Table, where: WhereClause[bool], values: UpdateRecordValuesDict, connection: Optional[DatabaseConnection] = None) -> List[int]:
         query = table.update().where(where).values(values).returning(table.c.id)
         result = await self._execute(query=query, connection=connection)
         rowIds = [int(rowId) for rowId in result.scalars()]
         return rowIds
 
-    async def _delete_records(self, table: Table, where: WhereClause, connection: Optional[DatabaseConnection] = None) -> List[int]:
+    async def _delete_records(self, table: Table, where: WhereClause[bool], connection: Optional[DatabaseConnection] = None) -> List[int]:
         query = table.delete().where(where).returning(table.c.id)
         result = await self._execute(query=query, connection=connection)
         rowIds = [int(rowId) for rowId in result.scalars()]
