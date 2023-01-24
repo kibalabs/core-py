@@ -36,7 +36,10 @@ setup(
     extras_require={
         'api': ['fastapi~=0.88.0', 'uvicorn[standard]~=0.20.0'],
         'storage': ['aiobotocore~=2.4.1'],
+        # TODO(krishan711): remove this in next major update
         'queues': ['aiobotocore~=2.4.1'],
+        'queue-sqs': ['aiobotocore~=2.4.1'],
+        'queue-aqs': ['azure-storage-queue~=12.5.0'],
         'database-psql': ['sqlalchemy[asyncio]~=2.0.0b3', 'asyncpg~=0.27.0'],
         'requester': ['httpx~=0.23.1'],
         'web3': ['web3==6.0.0-beta.8'],
