@@ -4,14 +4,15 @@ import time
 import urllib.parse as urlparse
 import uuid
 from abc import ABC
+from typing import Generic
 from typing import Optional
+from typing import TypeVar
 
 from core import logging
 from core.exceptions import InternalServerErrorException
 from core.exceptions import KibaException
+from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
-from core.queues.model import SqsMessage
-from core.queues.sqs_message_queue import SqsMessageQueue
 from core.slack_client import SlackClient
 from core.util.value_holder import RequestIdHolder
 
@@ -32,15 +33,17 @@ class MessageNeedsReprocessingException(InternalServerErrorException):
         self.originalException = originalException
 
 
-class MessageQueueProcessor:
+MessageType = TypeVar('MessageType', bound=Message)  # pylint: disable=invalid-name
 
-    def __init__(self, queue: SqsMessageQueue, messageProcessor: MessageProcessor, slackClient: Optional[SlackClient] = None, requestIdHolder: Optional[RequestIdHolder] = None):
+class MessageQueueProcessor(Generic[MessageType]):
+
+    def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, slackClient: Optional[SlackClient] = None, requestIdHolder: Optional[RequestIdHolder] = None):
         self.queue = queue
         self.messageProcessor = messageProcessor
         self.slackClient = slackClient
         self.requestIdHolder = requestIdHolder
 
-    async def _process_message(self, message: SqsMessage) -> None:
+    async def _process_message(self, message: MessageType) -> None:
         requestId = message.requestId or str(uuid.uuid4()).replace('-', '')
         if self.requestIdHolder:
             self.requestIdHolder.set_value(value=requestId)
