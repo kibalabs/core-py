@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `call_contract_function` to `EthClientInterface`
 - [MINOR] Added `_insert_record`, `_update_records`, and `_delete_records` to `Saver`
 - [MINOR] Added `core.queues.aqs.AqsMessage` and `core.queues.aqs.AqsMessageQueue` to work with Azure Queues
-- [MINOR] Added `BooleanFieldFilter` to `Requester`
+- [MINOR] Added `BooleanFieldFilter` to `Retriever`
 
 ### Changed
 - [MAJOR] Moved `SqsMessage` and `SqsMessageQueue` to `core.queues.sqs`
