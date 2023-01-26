@@ -71,6 +71,11 @@ class FloatFieldFilter(FieldFilter):
     containedIn: Optional[Sequence[float]] = None
     notContainedIn: Optional[Sequence[float]] = None
 
+@dataclasses.dataclass
+class BooleanFieldFilter(FieldFilter):
+    eq: Optional[bool] = None
+    ne: Optional[bool] = None
+
 class Retriever:
 
     def __init__(self, database: Database):
@@ -161,6 +166,14 @@ class Retriever:
             query = query.where(field.not_in(fieldFilter.notContainedIn))
         return query
 
+    def _apply_boolean_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: BooleanFieldFilter) -> Select[ResultType]:
+        field = table.c[fieldFilter.fieldName]
+        if fieldFilter.eq is not None:
+            query = query.where(field == fieldFilter.eq)
+        if fieldFilter.ne is not None:
+            query = query.where(field != fieldFilter.ne)
+        return query
+
     def _apply_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: FieldFilter) -> Select[ResultType]:
         field = table.c[fieldFilter.fieldName]
         if fieldFilter.isNull:
@@ -175,6 +188,8 @@ class Retriever:
             query = self._apply_integer_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         if isinstance(fieldFilter, FloatFieldFilter):
             query = self._apply_float_field_filter(query=query, table=table, fieldFilter=fieldFilter)
+        if isinstance(fieldFilter, BooleanFieldFilter):
+            query = self._apply_boolean_field_filter(query=query, table=table, fieldFilter=fieldFilter)
         return query
 
     def _apply_field_filters(self, query: Select[ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[ResultType]:
