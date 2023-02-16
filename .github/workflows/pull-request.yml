@@ -20,11 +20,11 @@ jobs:
           cache-from: type=gha,scope=core
           cache-to: type=gha,mode=max,scope=core
           tags: ${{ env.DOCKER_IMAGE }}
-      - name: Run lint
+      - name: Run lint-check
         run: |
           docker run --name lint-check $DOCKER_IMAGE make lint-check-ci
           docker cp lint-check:/app/lint-check-results.json ./lint-check-results.json
-      - name: Upload lint results
+      - name: Upload lint-check results
         uses: kibalabs/github-action-create-annotations@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

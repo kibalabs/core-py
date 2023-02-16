@@ -50,13 +50,13 @@ def generate_clock_hour_intervals(startDate: datetime.datetime, endDate: datetim
         return
     if startDate < startDateNextHour:
         yield (startDate, startDateNextHour)
-    for periodStartDate, periodEndDate in generate_datetime_intervals(startDate=startDateNextHour, endDate=endDate, seconds=(60 * 60)):
+    for periodStartDate, periodEndDate in generate_datetime_intervals(startDate=startDateNextHour, endDate=endDate, seconds=(60 * 60)):  # pylint: disable=superfluous-parens
         yield periodStartDate, periodEndDate
 
 
 def generate_hourly_intervals(startDate: datetime.datetime, endDate: datetime.datetime) -> Iterator[Tuple[datetime.datetime, datetime.datetime]]:
     # NOTE(krishan711) this has the results that look like [startDate, startDate + 1hr]...[startDate + N hrs, endDate]
-    return generate_datetime_intervals(startDate=startDate, endDate=endDate, seconds=(60 * 60))
+    return generate_datetime_intervals(startDate=startDate, endDate=endDate, seconds=(60 * 60))  # pylint: disable=superfluous-parens
 
 
 def generate_datetime_intervals(startDate: datetime.datetime, endDate: datetime.datetime, seconds: int) -> Iterator[Tuple[datetime.datetime, datetime.datetime]]:

@@ -1,4 +1,4 @@
-FROM python:3.8.2-slim as build
+FROM python:3.10.9-slim as build
 
 RUN apt-get update && apt-get install --yes --no-install-recommends make
 

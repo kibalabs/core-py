@@ -83,7 +83,7 @@ class Retriever:
 
     def _apply_order(self, query: Select[ResultType], table: Table, order: Order) -> Select[ResultType]:
         if isinstance(order, RandomOrder):
-            query = query.order_by(sqlalchemy.func.random())
+            query = query.order_by(sqlalchemy.sql.functions.random())  # type: ignore[no-untyped-call]
         else:
             field = table.c[order.fieldName]
             query = query.order_by(field.asc() if order.direction == Direction.ASCENDING else field.desc())
