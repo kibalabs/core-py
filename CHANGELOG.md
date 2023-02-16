@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Removed
+
+## [0.5.1] - 2023-02-16
+
+### Added
 - [MINOR] Added `call_contract_function` to `EthClientInterface`
 - [MINOR] Added `_insert_record`, `_update_records`, and `_delete_records` to `Saver`
 - [MINOR] Added `core.queues.aqs.AqsMessage` and `core.queues.aqs.AqsMessageQueue` to work with Azure Queues
@@ -15,8 +23,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Changed
 - [MAJOR] Moved `SqsMessage` and `SqsMessageQueue` to `core.queues.sqs`
-
-### Removed
 
 ## [0.5.0] - 2022-11-08
 
