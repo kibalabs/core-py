@@ -12,7 +12,7 @@ from web3._utils import method_formatters
 from web3._utils.abi import get_abi_output_types
 from web3._utils.contracts import encode_transaction_data
 from web3._utils.rpc_abi import RPC
-from web3.contract import BaseContract
+from web3.contract import Contract
 from web3.middleware import geth_poa_middleware
 from web3.types import ABI
 from web3.types import ABIFunction
@@ -25,6 +25,7 @@ from web3.types import TxReceipt
 
 from core.exceptions import BadRequestException
 from core.requester import Requester
+from core.util import chain_util
 
 ListAny = List[Any]  # type: ignore[misc]
 DictStrAny = Dict[str, Any]  # type: ignore[misc]
@@ -53,7 +54,7 @@ class EthClientInterface:
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
         raise NotImplementedError()
 
-    async def call_contract_function(self, contract: BaseContract, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+    async def call_contract_function(self, contract: Contract, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
         functionAbi = typing.cast(ABIFunction, [internalAbi for internalAbi in contract.abi if internalAbi.get('name') == functionName][0])
         return await self.call_function(toAddress=contract.address, contractAbi=contract.abi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments, blockNumber=blockNumber)
 
@@ -79,7 +80,7 @@ class Web3EthClient(EthClientInterface):
         return self.w3.eth.get_uncle_count(blockNumber)
 
     async def get_transaction_count(self, address: str) -> int:
-        return self.w3.eth.get_transaction_count(address)
+        return self.w3.eth.get_transaction_count(chain_util.normalize_address_checksum(value=address))
 
     async def get_transaction(self, transactionHash: str) -> TxData:
         return self.w3.eth.get_transaction(typing.cast(HexStr, transactionHash))
@@ -89,12 +90,12 @@ class Web3EthClient(EthClientInterface):
 
     async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
         contractFilter = self.w3.eth.filter({
-            'fromBlock': startBlockNumber,
-            'toBlock': endBlockNumber,
-            'topics': topics,
-            'address': address,
+            'fromBlock': startBlockNumber,  # type: ignore[typeddict-item]
+            'toBlock': endBlockNumber,  # type: ignore[typeddict-item]
+            'topics': topics,  # type: ignore[typeddict-item]
+            'address': address,  # type: ignore[typeddict-item]
         })
-        return typing.cast(List[LogReceipt], contractFilter.get_all_entries())
+        return contractFilter.get_all_entries()
 
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
         raise NotImplementedError()
@@ -176,7 +177,7 @@ class RestEthClient(EthClientInterface):
         response = await self._make_request(method='eth_call', params=[params, blockNumber or 'latest'])
         outputTypes = get_abi_output_types(abi=functionAbi)
         try:
-            outputData = self.w3.codec.decode_abi(types=outputTypes, data=HexBytes(response['result']))
+            outputData = self.w3.codec.decode(types=outputTypes, data=HexBytes(response['result']))
         except InsufficientDataBytes as exception:
             if response['result'] == '0x':
                 raise BadRequestException(message=f'Empty response: {str(exception)}. Maybe the method does not exist on this contract.')
