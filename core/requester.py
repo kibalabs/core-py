@@ -82,14 +82,14 @@ class Requester:
                 currentQuery = urlparse.parse_qs(urlParts.query)
                 queryString = urlparse.urlencode(query=dict_util.merge_dicts(currentQuery, typing.cast(Dict[str, str], contentDict)), doseq=True)  # type: ignore[arg-type]
                 url = urlparse.urlunsplit(components=(urlParts.scheme, urlParts.netloc, urlParts.path, queryString, urlParts.fragment))
-            if method == 'POST' or method == 'PUT':
+            if method in {'POST', 'PUT'}:
                 # TODO(krishan711): this should only happen if json is in the content headers
                 # if requestHeaders.get('content-type') and requestHeaders.get('content-type').lower() == 'application/json':
                 content = json.dumps(contentDict).encode()
         files: Optional[List[Tuple[str, HttpxFileTypes]]] = None
         innerData: Optional[Dict[Any, Any]] = None  # type: ignore[misc]
         if formDataDict:
-            if method == 'POST' or method == 'PUT':
+            if method == 'POST':
                 formDataDictCleaned: Dict[str, str] = {}
                 files = []
                 for name, value in formDataDict.items():
@@ -101,7 +101,7 @@ class Requester:
             else:
                 logging.error('Error: formDataDict should only be passed into POST requests.')
         if formFiles:
-            if method == 'POST' or method == 'PUT':
+            if method == 'POST':
                 files = files or []
                 files += formFiles
             else:
