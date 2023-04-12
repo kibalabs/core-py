@@ -82,7 +82,7 @@ class Requester:
                 currentQuery = urlparse.parse_qs(urlParts.query)
                 queryString = urlparse.urlencode(query=dict_util.merge_dicts(currentQuery, typing.cast(Dict[str, str], contentDict)), doseq=True)  # type: ignore[arg-type]
                 url = urlparse.urlunsplit(components=(urlParts.scheme, urlParts.netloc, urlParts.path, queryString, urlParts.fragment))
-            if method == 'POST':
+            if method in {'POST', 'PUT'}:
                 # TODO(krishan711): this should only happen if json is in the content headers
                 # if requestHeaders.get('content-type') and requestHeaders.get('content-type').lower() == 'application/json':
                 content = json.dumps(contentDict).encode()
