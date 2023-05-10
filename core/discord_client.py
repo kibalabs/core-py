@@ -1,12 +1,10 @@
-from typing import Optional
-
 from core.requester import KibaResponse
 from core.requester import Requester
 from core.notification_client import NotificationsClient
 
 class DiscordClient(NotificationsClient):
 
-    def __init__(self, webhookUrl: str, requester: Requester) -> None:
+    def __init__(self, webhookUrl: str, requester: Requester) -> KibaResponse:
         self.webhookUrl = webhookUrl
         self.requester = requester
 
