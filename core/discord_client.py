@@ -9,6 +9,6 @@ class DiscordClient(NotificationClient):
         self.requester = requester
 
     async def post(self, messageText: str) -> KibaResponse:
-        dataDict = {"content": messageText}
-        response = await self.requester.post(self.webhookUrl, dataDict=dataDict)
+        data = {"content": messageText}
+        response = await self.requester.post(self.webhookUrl, dataDict=data, headers={"content-type": 'application/json'})
         return response
