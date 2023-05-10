@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
-- [MAJOR] Added `notification_client.py` abstract class to help send data to multiple platforms
-- [MAJOR] Added `discord_client.py` to send data discord server
-- [MINOR] Updated `MessageQueueProcessor` to use a list of NotificationClients to send server messages
-- [MINOR] Updated `SlackClient`  to post `messageText` instead of text
+- [MAJOR] Updated `MessageQueueProcessor` to use a list of `NotificationClients` to send server messages
+- [MAJOR] Updated `SlackClient`  to post `messageText` instead of text
+- [MINOR] Added `NotificationClient.py` abstract class to help send data to multiple platforms
+- [MINOR] Added `DiscordClient.py` to send data discord server
 
 ### Changed
 - [MINOR] Updated `Requester` to send data correctly for PUT requests
