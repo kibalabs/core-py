@@ -62,7 +62,7 @@ class MessageQueueProcessor(Generic[MessageType]):
             logging.error('Caught exception whilst processing message')
             logging.exception(exception)
             if self.slackClient:
-                await self.slackClient.post(text=f'Error processing message: {message.command}\n```{requestId}\n{message.content}\n{exception}```')
+                await self.slackClient.post(messageText=f'Error processing message: {message.command}\n```{requestId}\n{message.content}\n{exception}```')
             # TODO(krish): should possibly reset the visibility timeout
         duration = time.time() - startTime
         logging.api(action='MESSAGE', path=message.command, query=query, response=statusCode, duration=duration)
