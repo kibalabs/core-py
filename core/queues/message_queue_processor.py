@@ -5,6 +5,7 @@ import urllib.parse as urlparse
 import uuid
 from abc import ABC
 from typing import Generic
+from typing import List
 from typing import Optional
 from typing import TypeVar
 
@@ -13,8 +14,9 @@ from core.exceptions import InternalServerErrorException
 from core.exceptions import KibaException
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
-from core.slack_client import SlackClient
+# from core.slack_client import SlackClient
 from core.util.value_holder import RequestIdHolder
+from core.notification_client import NotificationClient
 
 
 class MessageProcessor(ABC):
@@ -37,10 +39,10 @@ MessageType = TypeVar('MessageType', bound=Message)  # pylint: disable=invalid-n
 
 class MessageQueueProcessor(Generic[MessageType]):
 
-    def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, slackClient: Optional[SlackClient] = None, requestIdHolder: Optional[RequestIdHolder] = None):
+    def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, notificationClients: List[NotificationClient], requestIdHolder: Optional[RequestIdHolder] = None):
         self.queue = queue
         self.messageProcessor = messageProcessor
-        self.slackClient = slackClient
+        self.notificationClients = notificationClients
         self.requestIdHolder = requestIdHolder
 
     async def _process_message(self, message: MessageType) -> None:
@@ -61,8 +63,10 @@ class MessageQueueProcessor(Generic[MessageType]):
             statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
             logging.error('Caught exception whilst processing message')
             logging.exception(exception)
-            if self.slackClient:
-                await self.slackClient.post(messageText=f'Error processing message: {message.command}\n```{requestId}\n{message.content}\n{exception}```')
+            for client in self.notificationClients:
+                await client.post(messageText=f'Error processing message: {message.command}\n```{requestId}\n{message.content}\n{exception}```')
+            # if self.slackClient:
+            #     await self.slackClient.post(messageText=f'Error processing message: {message.command}\n```{requestId}\n{message.content}\n{exception}```')
             # TODO(krish): should possibly reset the visibility timeout
         duration = time.time() - startTime
         logging.api(action='MESSAGE', path=message.command, query=query, response=statusCode, duration=duration)
