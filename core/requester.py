@@ -69,6 +69,22 @@ class Requester:
         # headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
         return await self.make_request(method='POST', url=url, formDataDict=formDataDict, formFiles=formFiles, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
+    async def patch(self, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+        return await self.make_request(method='PATCH', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
+
+    async def patch_json(self, url: str, dataDict: Optional[JSON] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+        headers = headers or httpx.Headers()
+        headers.update({'Content-Type': 'application/json'})
+        return await self.make_request(method='PATCH', url=url, dataDict=dataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
+
+    async def put(self, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+        return await self.make_request(method='PUT', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
+
+    async def put_json(self, url: str, dataDict: Optional[JSON] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+        headers = headers or httpx.Headers()
+        headers.update({'Content-Type': 'application/json'})
+        return await self.make_request(method='PUT', url=url, dataDict=dataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
+
     async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         requestHeaders = httpx.Headers({**self.headers, **(headers or {})})
         # TODO(krishan711): rename parameter to content when ready
@@ -82,7 +98,7 @@ class Requester:
                 currentQuery = urlparse.parse_qs(urlParts.query)
                 queryString = urlparse.urlencode(query=dict_util.merge_dicts(currentQuery, typing.cast(Dict[str, str], contentDict)), doseq=True)  # type: ignore[arg-type]
                 url = urlparse.urlunsplit(components=(urlParts.scheme, urlParts.netloc, urlParts.path, queryString, urlParts.fragment))
-            if method in {'POST', 'PUT'}:
+            if method in {'POST', 'PUT', 'PATCH'}:
                 # TODO(krishan711): this should only happen if json is in the content headers
                 # if requestHeaders.get('content-type') and requestHeaders.get('content-type').lower() == 'application/json':
                 content = json.dumps(contentDict).encode()
