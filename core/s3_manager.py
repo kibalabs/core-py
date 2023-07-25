@@ -104,7 +104,7 @@ class S3Manager:
         bucket, key = self._split_path_to_bucket_key(path=sourcePath)
         response = await self._s3Client.get_object(Bucket=bucket, Key=key)
         async with response['Body'] as stream:
-            output = typing.cast(bytes, await stream.read())
+            output = await stream.read()
         return output
 
     async def download_file(self, sourcePath: str, filePath: str) -> None:
