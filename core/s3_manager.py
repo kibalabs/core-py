@@ -2,7 +2,6 @@ import dataclasses
 import mimetypes
 import os
 import random
-import typing
 from contextlib import AsyncExitStack
 from string import ascii_letters
 from typing import TYPE_CHECKING
