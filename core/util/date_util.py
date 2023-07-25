@@ -75,3 +75,9 @@ def generate_dates_in_range(startDate: datetime.date, endDate: datetime.date, da
     endDate = endDate.date() if isinstance(endDate, datetime.datetime) else endDate
     for day in range(0, (endDate - startDate).days + extraStep, days):
         yield startDate + datetime.timedelta(days=day)
+
+
+def calculate_diff_years(birthDate: datetime.datetime, targetDate: datetime.datetime) -> float:
+    ageDays = (targetDate - birthDate).days
+    ageYears = ageDays / 365.25
+    return round(ageYears, 2)

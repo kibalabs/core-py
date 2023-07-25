@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MAJOR] Updated `SlackClient`  to post `messageText` instead of text
 - [MINOR] Added `NotificationClient.py` abstract class to help send data to multiple platforms
 - [MINOR] Added `DiscordClient.py` to send data discord server
+- [MINOR] Added `calculate_diff_years` to `date_util`
 
 ### Changed
 - [MINOR] Updated `Requester` to send data correctly for PUT requests
