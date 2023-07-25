@@ -77,7 +77,12 @@ def generate_dates_in_range(startDate: datetime.date, endDate: datetime.date, da
         yield startDate + datetime.timedelta(days=day)
 
 
-def calculate_diff_years(birthDate: datetime.datetime, targetDate: datetime.datetime) -> float:
-    ageDays = (targetDate - birthDate).days
-    ageYears = ageDays / 365.25
-    return round(ageYears, 2)
+def calculate_diff_days(startDate: datetime.datetime, endDate: datetime.datetime) -> int:
+    diffDays = (endDate - startDate).days
+    return diffDays
+
+
+def calculate_diff_years(startDate: datetime.datetime, endDate: datetime.datetime) -> float:
+    diffDays = calculate_diff_days(startDate=startDate, endDate=endDate)
+    diffYears = diffDays / 365.25
+    return round(diffYears, 2)
