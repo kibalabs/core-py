@@ -86,3 +86,7 @@ def calculate_diff_years(startDate: datetime.datetime, endDate: datetime.datetim
     diffDays = calculate_diff_days(startDate=startDate, endDate=endDate)
     diffYears = diffDays / 365.25
     return round(diffYears, 2)
+
+
+def datetime_to_utc(dt: datetime.datetime) -> datetime.datetime:
+    return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
