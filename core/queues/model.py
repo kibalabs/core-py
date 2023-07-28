@@ -29,12 +29,12 @@ class MessageContent(BaseModel):
 
     @classmethod
     def get_command(cls) -> str:
-        return cls._COMMAND
+        return str(cls._COMMAND)
 
     def to_message(self) -> Message:
         return Message(
             command=self.get_command(),
-            content=self.dict(),
+            content=self.model_dump(),
             requestId=None,
             postCount=None,
             postDate=None,
