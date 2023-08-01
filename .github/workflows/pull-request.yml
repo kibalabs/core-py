@@ -2,6 +2,9 @@ name: Build
 on:
   pull_request:
     branches: ["*"]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-pull-request
+  cancel-in-progress: true
 jobs:
   core-build:
     runs-on: ubuntu-latest

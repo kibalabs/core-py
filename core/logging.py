@@ -12,6 +12,7 @@ from logging import LogRecord
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Collection
 from typing import Dict
 from typing import Optional
 from typing import TextIO
@@ -25,7 +26,6 @@ if TYPE_CHECKING:
     StreamHandler = logging.StreamHandler[TextIO]
 else:
     from logging import StreamHandler
-
 
 
 @dataclasses.dataclass
@@ -85,6 +85,7 @@ class KibaLoggingFormatter(Formatter):
         logDate = datetime.datetime.fromtimestamp(record.created)
         return logDate.strftime(datefmt or "%Y-%m-%dT%H:%M:%S.%f")
 
+
 class KibaJsonLoggingFormatter(KibaLoggingFormatter):
 
     def format(self, record: LogRecord) -> str:
@@ -113,6 +114,11 @@ def init_logger(logger: Logger, loggingLevel: int, handler: StreamHandler) -> No
     logger.propagate = False
     logger.handlers = [handler]
     logger.setLevel(level=loggingLevel)
+
+
+def init_external_loggers(loggerNames: Collection[str], loggingLevel: int = logging.WARNING) -> None:
+    for loggerName in loggerNames:
+        logging.getLogger(loggerName).setLevel(loggingLevel)
 
 
 def init_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: Optional[RequestIdHolder] = None) -> None:
