@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import datetime
+import typing
 import uuid
 from typing import Any
 from typing import Dict
 from typing import Optional
 
 from pydantic import BaseModel
+from pydantic.fields import ModelPrivateAttr
 
 from core.util import date_util
 
@@ -29,7 +31,7 @@ class MessageContent(BaseModel):
 
     @classmethod
     def get_command(cls) -> str:
-        return cls._COMMAND.get_default()
+        return typing.cast(str, typing.cast(ModelPrivateAttr, cls._COMMAND).get_default())  # pylint: disable=no-member
 
     def to_message(self) -> Message:
         return Message(
