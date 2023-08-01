@@ -2,6 +2,9 @@ name: Deploy
 on:
   push:
     branches: [main]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-deploy
+  cancel-in-progress: true
 jobs:
   deploy-package-next:
     runs-on: ubuntu-latest
