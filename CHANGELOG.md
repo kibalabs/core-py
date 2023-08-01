@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `DiscordClient.py` to send data discord server
 - [MINOR] Added `calculate_diff_days` and `calculate_diff_years` to `date_util`
 - [MINOR] Added `datetime_to_utc` to `date_util`
+- [MINOR] Added `init_external_loggers` to `logging`
 
 ### Changed
 - [MINOR] Updated `Requester` to send data correctly for PUT requests
