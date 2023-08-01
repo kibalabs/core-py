@@ -6,13 +6,13 @@ import os
 import re
 import sys
 import typing
-from typing import Collection
 from logging import Formatter
 from logging import Logger
 from logging import LogRecord
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Collection
 from typing import Dict
 from typing import Optional
 from typing import TextIO
@@ -118,7 +118,7 @@ def init_logger(logger: Logger, loggingLevel: int, handler: StreamHandler) -> No
 
 def init_external_loggers(loggerNames: Collection[str], loggingLevel: int = logging.WARNING) -> None:
     for loggerName in loggerNames:
-            logging.getLogger(loggerName).setLevel(loggingLevel)
+        logging.getLogger(loggerName).setLevel(loggingLevel)
 
 
 def init_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: Optional[RequestIdHolder] = None) -> None:
