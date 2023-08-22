@@ -14,7 +14,7 @@ from core.queues.model import Message
 from core.util import list_util
 
 
-class AqsMessage(Message):
+class AqsMessage(Message):  # type: ignore[misc]
     aqsId: str
     popReceipt: str
 

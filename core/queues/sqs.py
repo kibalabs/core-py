@@ -24,7 +24,7 @@ else:
     RawSqsMessageTypeDef = Any
 
 
-class SqsMessage(Message):
+class SqsMessage(Message):  # type: ignore[misc]
     receiptHandle: str
 
     @classmethod
