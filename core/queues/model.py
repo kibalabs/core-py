@@ -13,7 +13,7 @@ from pydantic.fields import ModelPrivateAttr
 from core.util import date_util
 
 
-class Message(BaseModel):
+class Message(BaseModel):  # type: ignore[misc]
     command: str
     content: Dict[str, Any]  # type: ignore[misc]
     requestId: Optional[str]
