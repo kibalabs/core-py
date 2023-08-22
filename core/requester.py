@@ -21,7 +21,7 @@ from core.exceptions import HTTP_EXCEPTIONS_MAP
 from core.exceptions import KibaException
 from core.util import dict_util
 from core.util import file_util
-from core.util.typing_util import JSON
+from core.util.typing_util import Json
 
 KibaResponse = httpx.Response
 
@@ -53,13 +53,13 @@ class Requester:
         self.headers = headers or {}
         self.client = httpx.AsyncClient(follow_redirects=shouldFollowRedirects)
 
-    async def get(self, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def get(self, url: str, dataDict: Optional[Json] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='GET', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def post(self, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def post(self, url: str, dataDict: Optional[Json] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='POST', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def post_json(self, url: str, dataDict: Optional[JSON] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def post_json(self, url: str, dataDict: Optional[Json] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         headers = headers or httpx.Headers()
         headers.update({'Content-Type': 'application/json'})
         return await self.make_request(method='POST', url=url, dataDict=dataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
@@ -69,23 +69,23 @@ class Requester:
         # headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
         return await self.make_request(method='POST', url=url, formDataDict=formDataDict, formFiles=formFiles, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def patch(self, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def patch(self, url: str, dataDict: Optional[Json] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='PATCH', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def patch_json(self, url: str, dataDict: Optional[JSON] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def patch_json(self, url: str, dataDict: Optional[Json] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         headers = headers or httpx.Headers()
         headers.update({'Content-Type': 'application/json'})
         return await self.make_request(method='PATCH', url=url, dataDict=dataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def put(self, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def put(self, url: str, dataDict: Optional[Json] = None, data: Optional[bytes] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         return await self.make_request(method='PUT', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def put_json(self, url: str, dataDict: Optional[JSON] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def put_json(self, url: str, dataDict: Optional[Json] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         headers = headers or httpx.Headers()
         headers.update({'Content-Type': 'application/json'})
         return await self.make_request(method='PUT', url=url, dataDict=dataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def make_request(self, method: str, url: str, dataDict: Optional[Json] = None, data: Optional[bytes] = None, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         requestHeaders = httpx.Headers({**self.headers, **(headers or {})})
         # TODO(krishan711): rename parameter to content when ready
         contentDict = dataDict

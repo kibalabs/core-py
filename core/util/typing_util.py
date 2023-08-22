@@ -1,20 +1,14 @@
-# NOTE(krishan711): waiting for JSON type to be defined in mypy: https://github.com/python/typing/issues/182
-# NOTE(krishan711): copied from https://gist.github.com/BMDan/ede923f733dfdf5ed3f6c9634a3e281f
-from typing import Any
-from typing import List
+from typing import Dict
 from typing import Mapping
-from typing import Union
+from typing import List
+from typing import Sequence
+from typing import TypeAlias
 
-JSONV = Union[str, int, float, bool, None]  # pylint: disable=invalid-name
-JSON5 = JSONV
-JSON4 = Union[JSONV, List[JSON5], Mapping[str, JSON5]]
-JSON3 = Union[JSONV, List[JSON4], Mapping[str, JSON4]]
-JSON2 = Union[JSONV, List[JSON3], Mapping[str, JSON3]]
-JSON1 = Union[JSONV, List[JSON2], Mapping[str, JSON2]]
-JSON = Union[JSONV, List[JSON1], Mapping[str, JSON1]]  # pylint: disable=invalid-name
-UnsafeJSON5 = Union[JSONV, List[Any], Mapping[str, Any]]  # type: ignore  # pylint: disable=invalid-name
-UnsafeJSON4 = Union[JSONV, List[UnsafeJSON5], Mapping[str, UnsafeJSON5]]  # pylint: disable=invalid-name
-UnsafeJSON3 = Union[JSONV, List[UnsafeJSON4], Mapping[str, UnsafeJSON4]]  # pylint: disable=invalid-name
-UnsafeJSON2 = Union[JSONV, List[UnsafeJSON3], Mapping[str, UnsafeJSON3]]  # pylint: disable=invalid-name
-UnsafeJSON1 = Union[JSONV, List[UnsafeJSON2], Mapping[str, UnsafeJSON2]]  # pylint: disable=invalid-name
-UnsafeJSON = Union[JSONV, List[UnsafeJSON1], Mapping[str, UnsafeJSON1]]  # pylint: disable=invalid-name
+# NOTE(krishan711): copied from https://github.com/python/typing/issues/182
+JsonBaseType = str | int | float | bool | None
+Json: TypeAlias = Dict[str, "Json"] | Mapping[str, "Json"] | List["Json"] | Sequence["Json"] | JsonBaseType
+JsonDict: TypeAlias = Dict[str, Json] | Mapping[str, Json]
+JsonList: TypeAlias = List[Json] | Sequence[Json]
+
+# TODO(krishan711): remove this in the next major version
+JSON = Json

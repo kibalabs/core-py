@@ -17,7 +17,7 @@ from core.requester import HttpxFileTypes
 from core.requester import KibaResponse
 from core.requester import Requester
 from core.util import date_util
-from core.util.typing_util import JSON
+from core.util.typing_util import Json
 
 
 # NOTE(krishan711): mostly adapted from https://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
@@ -46,7 +46,7 @@ class AwsRequester(Requester):
         key5 = self._sign(key=key4, message='aws4_request')
         return self._sign_hex(key=key5, message=stringToSign)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[JSON] = None, data: Optional[bytes] = None, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def make_request(self, method: str, url: str, dataDict: Optional[Json] = None, data: Optional[bytes] = None, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
         canonicalQueryString = ''
         if data is None and dataDict is not None:
             if method == 'GET':

@@ -6,7 +6,7 @@ from typing import Optional
 from typing import Type
 from typing import Union
 
-from core.util.typing_util import JSON
+from core.util.typing_util import Json
 
 
 class KibaException(Exception):
@@ -23,7 +23,7 @@ class KibaException(Exception):
             return exception
         return KibaException(message=str(exception), statusCode=statusCode, exceptionType=exception.__class__.__name__)
 
-    def to_dict(self) -> Dict[str, JSON]:
+    def to_dict(self) -> Dict[str, Json]:
         return {
             'exceptionType': self.exceptionType,
             'message': self.message,
