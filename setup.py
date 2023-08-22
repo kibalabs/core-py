@@ -34,18 +34,18 @@ setup(
     test_suite='tests',
     include_package_data=True,
     extras_require={
-        'api': ['fastapi~=0.100.0', 'uvicorn[standard]~=0.23.1'],
-        'storage': ['aiobotocore~=2.5.2'],
+        'api': ['fastapi~=0.101.1', 'uvicorn[standard]~=0.23.2'],
+        'storage': ['aiobotocore~=2.6.0'],
         # TODO(krishan711): remove this in next major update
-        'queues': ['aiobotocore~=2.5.2'],
-        'queue-sqs': ['aiobotocore~=2.5.2'],
+        'queues': ['aiobotocore~=2.6.0'],
+        'queue-sqs': ['aiobotocore~=2.6.0'],
         'queue-aqs': ['azure-storage-queue~=12.6.0'],
-        'database-psql': ['sqlalchemy[asyncio]~=2.0.19', 'asyncpg~=0.28.0'],
+        'database-psql': ['sqlalchemy[asyncio]~=2.0.20', 'asyncpg~=0.28.0'],
         'requester': ['httpx~=0.24.1'],
-        'web3': ['web3==6.6.1'],
+        'web3': ['web3==6.8.0'],
         'types': [
-            'types-aiobotocore[essential]~=2.5.2',
-            'types-aiofiles~=23.1.0.5',
+            'types-aiobotocore[essential]~=2.6.0',
+            'types-aiofiles~=23.2.0.0',
         ]
     },
 )
