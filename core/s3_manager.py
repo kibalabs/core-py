@@ -27,21 +27,31 @@ else:
     S3Client = Any
 
 
-
 @dataclasses.dataclass
 class PresignedUploadField:
     name: str
     value: str
+
 
 @dataclasses.dataclass
 class S3PresignedUpload:
     url: str
     fields: Sequence[PresignedUploadField]
 
+
 @dataclasses.dataclass
 class S3File:
     bucket: str
     path: str
+
+
+@dataclasses.dataclass
+class S3Grant:
+    granteeType: str
+    granteeDisplayName: Optional[str]
+    granteeURI: Optional[str]
+    permission: str
+
 
 class S3Manager:
 
@@ -136,6 +146,21 @@ class S3Manager:
         except ClientError:
             raise NotFoundException()
         return Headers(response['ResponseMetadata'].get('HTTPHeaders', {}))
+
+    async def get_file_grants(self, filePath: str) -> Sequence[S3Grant]:
+        if not self._s3Client:
+            raise InternalServerErrorException("You need to call .connect() before trying to read from s3")
+        bucket, key = self._split_path_to_bucket_key(path=filePath)
+        try:
+            response = await self._s3Client.get_object_acl(Bucket=bucket, Key=key)
+        except ClientError:
+            raise NotFoundException()
+        return [S3Grant(
+            granteeType=grant['Grantee']['Type'],
+            granteeDisplayName=grant['Grantee'].get('DisplayName'),
+            granteeURI=grant['Grantee'].get('URI'),
+            permission=grant['Permission'],
+        ) for grant in response['Grants']]
 
     async def check_file_exists(self, filePath: str) -> bool:
         if not self._s3Client:
