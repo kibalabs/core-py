@@ -67,7 +67,7 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         if not self._aqsClient:
             raise InternalServerErrorException("You need to call .connect() before trying to send messages")
         message = await self._aqsClient.receive_message(visibility_timeout=expectedProcessingSeconds, timeout=longPollSeconds)
-        aqsMessage = AqsMessage.from_aqs_message(aqsMessage=message)
+        aqsMessage = AqsMessage.from_aqs_message(aqsMessage=message) if message else None
         return aqsMessage
 
     async def get_messages(self, limit: int = 1, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> List[AqsMessage]:
