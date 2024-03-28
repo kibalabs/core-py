@@ -17,6 +17,11 @@ def start_of_day(dt: Optional[datetime.datetime] = None) -> datetime.datetime:
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
+def end_of_day(dt: Optional[datetime.datetime] = None) -> datetime.datetime:
+    dt = dt if dt is not None else datetime.datetime.utcnow()
+    return dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+
 def datetime_from_datetime(dt: datetime.datetime, days: int = 0, seconds: float = 0, milliseconds: int = 0, minutes: int = 0, hours: int = 0, weeks: int = 0) -> datetime.datetime:
     return dt + datetime.timedelta(days=days, seconds=seconds, milliseconds=milliseconds, minutes=minutes, hours=hours, weeks=weeks)
 
