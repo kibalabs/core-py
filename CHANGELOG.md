@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `datetime_to_utc` to `date_util`
 - [MINOR] Added `init_external_loggers` to `logging`
 - [MINOR] Added `end_of_day` to `date_util`
+- [MINOR] Added `aiosqlite engine` to `database`
 
 ### Changed
 - [MINOR] Updated `Requester` to send data correctly for PUT requests
