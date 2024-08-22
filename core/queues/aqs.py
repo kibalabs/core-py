@@ -16,7 +16,7 @@ from core.util import list_util
 
 class AqsMessage(Message):  # type: ignore[misc]
     aqsId: str
-    popReceipt: str
+    popReceipt: str | None
 
     @classmethod
     def from_aqs_message(cls, aqsMessage: RawAqsMessage) -> AqsMessage:
