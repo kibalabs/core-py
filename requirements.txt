@@ -1,2 +1,2 @@
-aiofiles~=23.2.1
-pydantic~=2.4.0
+aiofiles~=24.1.0
+pydantic~=2.8.0

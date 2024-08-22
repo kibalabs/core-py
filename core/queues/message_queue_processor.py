@@ -12,7 +12,7 @@ from typing import TypeVar
 from core import logging
 from core.exceptions import InternalServerErrorException
 from core.exceptions import KibaException
-from core.notification_client import NotificationClient
+from core.notifications.notification_client import NotificationClient
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
 # from core.slack_client import SlackClient

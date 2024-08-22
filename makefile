@@ -5,26 +5,26 @@ list-outdated: install
 	@ pip list -o
 
 lint-check:
-	@ lint --directory ./core
+	@ lint-check *.py ./core
 
 lint-check-ci:
-	@ lint --directory ./core --output-file lint-check-results.json --output-format annotations
+	@ lint-check *.py ./core --output-file lint-check-results.json --output-format annotations
 
 lint-fix:
 	@ isort --sl -l 1000 ./core
-	@ lint --directory ./core
+	@ lint-check *.py ./core
 
 type-check:
-	@ type-check --directory ./core
+	@ type-check *.py ./core
 
 type-check-ci:
-	@ type-check --directory ./core --output-file type-check-results.json --output-format annotations
+	@ type-check *.py ./core --output-file type-check-results.json --output-format annotations
 
 security-check:
-	@ security-check --directory ./core
+	@ security-check *.py ./core
 
 security-check-ci:
-	@ security-check --directory ./core --output-file security-check-results.json --output-format annotations
+	@ security-check *.py ./core --output-file security-check-results.json --output-format annotations
 
 build:
 	@ echo "Not Supported"

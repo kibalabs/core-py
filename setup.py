@@ -1,6 +1,6 @@
 import os
 
-from setuptools import find_packages
+from setuptools import find_packages  # type: ignore[import-untyped]
 from setuptools import setup
 
 setupDirectory = os.path.dirname(os.path.realpath(__file__))
@@ -34,18 +34,18 @@ setup(
     test_suite='tests',
     include_package_data=True,
     extras_require={
-        'api': ['fastapi~=0.103.1', 'uvicorn[standard]~=0.23.2'],
-        'storage': ['aiobotocore~=2.6.0'],
+        'api': ['fastapi~=0.112.1', 'uvicorn[standard]~=0.30.6'],
+        'storage': ['aiobotocore~=2.13.2'],
         # TODO(krishan711): remove this in next major update
-        'queues': ['aiobotocore~=2.6.0'],
-        'queue-sqs': ['aiobotocore~=2.6.0'],
-        'queue-aqs': ['azure-storage-queue~=12.7.2'],
-        'database-psql': ['sqlalchemy[asyncio]~=2.0.21', 'asyncpg~=0.28.0'],
-        'requester': ['httpx~=0.25.0'],
+        'queues': ['aiobotocore~=2.13.2'],
+        'queue-sqs': ['aiobotocore~=2.13.2'],
+        'queue-aqs': ['azure-storage-queue~=12.11.0'],
+        'database-psql': ['sqlalchemy[asyncio]~=2.0.32', 'asyncpg~=0.29.0'],
+        'requester': ['httpx~=0.27.0'],
         'web3': ['web3==6.10.0'],
         'types': [
-            'types-aiobotocore[essential]~=2.6.0',
-            'types-aiofiles~=23.2.0.0',
+            'types-aiobotocore[essential]~=2.13.2',
+            'types-aiofiles~=24.1.0.20240626',
         ]
     },
 )
