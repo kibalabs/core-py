@@ -28,6 +28,10 @@ class Database:
     def create_psql_connection_string(username: str, password: str, host: str, port: str, name: str) -> str:
         return Database.create_connection_string(engine='postgresql+asyncpg', username=username, password=password, host=host, port=port, name=name)
 
+    @staticmethod
+    def create_sqlite_connection_string(filename: str) -> str:
+        return f'sqlite+aiosqlite:///{filename}'
+
     def __init__(self, connectionString: str):
         self.connectionString = connectionString
         self._engine: Optional[AsyncEngine] = None
