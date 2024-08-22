@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Removed
+
+## [0.5.2] - 2024-08-22
+
+### Added
 - [MAJOR] Updated `MessageQueueProcessor` to use a list of `NotificationClients` to send server messages
 - [MAJOR] Updated `SlackClient`  to post `messageText` instead of text
 - [MINOR] Added `NotificationClient.py` abstract class to help send data to multiple platforms
@@ -19,6 +27,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `aiosqlite engine` to `database`
 
 ### Changed
+- [MAJOR] Moved SlackClient to `core.notifications`
+- [MAJOR] Moved DiscordClient to `core.notifications`
+- [MAJOR] Moved NotificationClient to `core.notifications`
 - [MINOR] Updated `Requester` to send data correctly for PUT requests
 - [MINOR] Updated `Requester` to send data correctly for PATCH requests
 
