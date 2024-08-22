@@ -41,6 +41,7 @@ setup(
         'queue-sqs': ['aiobotocore~=2.13.2'],
         'queue-aqs': ['azure-storage-queue~=12.11.0'],
         'database-psql': ['sqlalchemy[asyncio]~=2.0.32', 'asyncpg~=0.29.0'],
+        'database-sqlite': ['sqlalchemy[asyncio]~=2.0.32', 'aiosqlite~=0.20.0'],
         'requester': ['httpx~=0.27.0'],
         'web3': ['web3==6.10.0'],
         'types': [
