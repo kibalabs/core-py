@@ -35,7 +35,7 @@ class Database:
     def __init__(self, connectionString: str):
         self.connectionString = connectionString
         self._engine: Optional[AsyncEngine] = None
-        self._connectionContext = contextvars.ContextVar[DatabaseConnection]("_connectionContext")
+        self._connectionContext = contextvars.ContextVar[DatabaseConnection | None]("_connectionContext")
 
     async def connect(self) -> None:
         if not self._engine:
@@ -53,10 +53,11 @@ class Database:
         async with self._engine.begin() as connection:
             yield connection
 
+
     def _get_connection(self) -> Optional[DatabaseConnection]:
         try:
             connection = self._connectionContext.get()
-            if not connection.closed:
+            if connection and not connection.closed:
                 return connection
         except LookupError:
             pass
@@ -70,7 +71,10 @@ class Database:
             raise InternalServerErrorException(message='Connection has already been established in this context.')
         async with self._engine.begin() as connection:
             self._connectionContext.set(connection)
-            yield connection
+            try:
+                yield connection
+            finally:
+                self._connectionContext.set(None)
 
     async def execute(self, query: TypedReturnsRows[ResultType], connection: Optional[DatabaseConnection] = None) -> Result[ResultType]:
         if not self._engine:

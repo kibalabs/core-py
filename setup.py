@@ -35,6 +35,7 @@ setup(
     include_package_data=True,
     extras_require={
         'api': ['fastapi~=0.112.2', 'uvicorn[standard]~=0.30.6'],
+        'core-api': ['starlette==0.38.2', 'uvicorn[standard]~=0.30.6'],
         'storage': ['aiobotocore~=2.14.0'],
         # TODO(krishan711): remove this in next major update
         'queues': ['aiobotocore~=2.14.0'],
