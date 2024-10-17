@@ -37,9 +37,10 @@ def authorize_bearer_jwt(  # type: ignore[misc]
                 raise ForbiddenException(message='AUTH_NOT_PROVIDED')
             if not authorization.startswith('Bearer '):
                 raise ForbiddenException(message='AUTH_INVALID')
+            jwtString = authorization.replace('Bearer ', '')
             try:
-                jwt = await authorizer.validate_jwt(jwtString=authorization.replace('Bearer ', ''))
-            except Exception:
+                jwt = await authorizer.validate_jwt(jwtString=jwtString)
+            except BaseException:
                 raise ForbiddenException(message='AUTH_INVALID')
             request.authJwt = jwt
             return await func(request=request)
