@@ -25,6 +25,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `init_external_loggers` to `logging`
 - [MINOR] Added `end_of_day` to `date_util`
 - [MINOR] Added `aiosqlite engine` to `database`
+- [MINOR] Added core-api extra to server APIs with starlette only, no fastapi:
+    - Added `core.http.jwt.Jwt`
+    - Added `core.http.rest_method.RestMethod`
+    - Added `core.api.api_request.KibaApiRequest`
+    - Added `core.api.api_response.KibaJSONResponse`
+    - Added `core.api.authorizer.authorize_bearer_jwt`
+    - Added `core.api.json_route.json_route`
 
 ### Changed
 - [MAJOR] Moved SlackClient to `core.notifications`

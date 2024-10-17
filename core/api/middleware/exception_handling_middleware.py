@@ -1,4 +1,3 @@
-from fastapi.exceptions import RequestValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
@@ -29,9 +28,6 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
         except KibaException as exception:
             logging.exception(exception)
             response = self._convert_exception(exception=exception)
-        except RequestValidationError as exception:
-            logging.exception(exception)
-            response = self._convert_exception(exception=KibaException(message=str(exception).replace('\n', ' '), statusCode=400, exceptionType=exception.__class__.__name__))
         except Exception as exception:  # pylint: disable=broad-except
             logging.exception(exception)
             response = self._convert_exception(exception=KibaException.from_exception(exception=exception))
