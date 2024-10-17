@@ -40,5 +40,6 @@ def authorize_bearer_jwt(  # type: ignore[misc]
             jwt = await authorizer.validate_jwt(jwtString=authorization.replace('Bearer ', ''))
             request.authJwt = jwt
             return await func(request=request)
-        return async_wrapper
+        # TODO(krishan711): figure out correct typing here
+        return async_wrapper  # type: ignore[return-value]
     return decorator

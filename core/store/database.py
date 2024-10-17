@@ -35,7 +35,7 @@ class Database:
     def __init__(self, connectionString: str):
         self.connectionString = connectionString
         self._engine: Optional[AsyncEngine] = None
-        self._connectionContext = contextvars.ContextVar[DatabaseConnection]("_connectionContext")
+        self._connectionContext = contextvars.ContextVar[DatabaseConnection | None]("_connectionContext")
 
     async def connect(self) -> None:
         if not self._engine:
@@ -57,7 +57,7 @@ class Database:
     def _get_connection(self) -> Optional[DatabaseConnection]:
         try:
             connection = self._connectionContext.get()
-            if not connection.closed:
+            if connection and not connection.closed:
                 return connection
         except LookupError:
             pass

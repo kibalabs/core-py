@@ -46,5 +46,6 @@ def json_route(
             if not isinstance(receivedResponse, responseType):
                 raise ValueError(f"Expected response to be of type {responseType}, got {type(receivedResponse)}")
             return KibaJSONResponse(content=receivedResponse.model_dump())
-        return async_wrapper
+        # TODO(krishan711): figure out correct typing here
+        return async_wrapper  # type: ignore[return-value]
     return decorator
