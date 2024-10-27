@@ -30,6 +30,7 @@ def json_route(
         async def async_wrapper(*args: typing.Any) -> KibaJSONResponse:  # type: ignore[misc]
             receivedRequest = args[0]
             pathParams = receivedRequest.path_params
+            queryParams = receivedRequest.query_params
             bodyBytes = await args[0].body()
             if len(bodyBytes) == 0:
                 body = {}
@@ -38,7 +39,7 @@ def json_route(
                     body = json.loads(bodyBytes.decode())
                 except json.JSONDecodeError as exception:
                     raise BadRequestException(f"Invalid JSON body: {exception}")
-            allParams = {**pathParams, **body}
+            allParams = {**pathParams, **body, **queryParams}
             requestParams = requestType(**allParams)
             kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # pylint: disable=protected-access
             kibaRequest.data = requestParams
