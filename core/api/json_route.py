@@ -46,8 +46,8 @@ def json_route(
             try:
                 requestParams = requestType(**allParams)
             except ValidationError as exception:
-                validation_error_message = ', '.join([f"{'.'.join(list(error['loc']))}: {error['msg']}" for error in exception.errors()])
-                raise BadRequestException(f"Invalid request: {validation_error_message}")
+                validationErrorMessage = ', '.join([f"{'.'.join(list(error['loc']))}: {error['msg']}" for error in exception.errors()])
+                raise BadRequestException(f"Invalid request: {validationErrorMessage}")
             kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # pylint: disable=protected-access
             kibaRequest.data = requestParams
             receivedResponse = await func(request=kibaRequest)
