@@ -6,10 +6,12 @@ import typing
 
 from mypy_extensions import Arg
 from pydantic import BaseModel
+from pydantic import ValidationError
 
 from core.api.api_request import KibaApiRequest
 from core.api.api_respnse import KibaJSONResponse
 from core.exceptions import BadRequestException
+from core.exceptions import InternalServerErrorException
 
 if sys.version_info >= (3, 10):  # pragma: no cover
     from typing import ParamSpec
@@ -30,6 +32,7 @@ def json_route(
         async def async_wrapper(*args: typing.Any) -> KibaJSONResponse:  # type: ignore[misc]
             receivedRequest = args[0]
             pathParams = receivedRequest.path_params
+            # TODO(krishan711): move these to get request only
             queryParams = receivedRequest.query_params
             bodyBytes = await args[0].body()
             if len(bodyBytes) == 0:
@@ -40,12 +43,16 @@ def json_route(
                 except json.JSONDecodeError as exception:
                     raise BadRequestException(f"Invalid JSON body: {exception}")
             allParams = {**pathParams, **body, **queryParams}
-            requestParams = requestType(**allParams)
+            try:
+                requestParams = requestType(**allParams)
+            except ValidationError as exception:
+                validationErrorMessage = ', '.join([f"{'.'.join([str(value) for value in error['loc']])}: {error['msg']}" for error in exception.errors()])
+                raise BadRequestException(f"Invalid request: {validationErrorMessage}")
             kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # pylint: disable=protected-access
             kibaRequest.data = requestParams
             receivedResponse = await func(request=kibaRequest)
             if not isinstance(receivedResponse, responseType):
-                raise ValueError(f"Expected response to be of type {responseType}, got {type(receivedResponse)}")
+                raise InternalServerErrorException(f"Expected response to be of type {responseType}, got {type(receivedResponse)}")
             return KibaJSONResponse(content=receivedResponse.model_dump())
         # TODO(krishan711): figure out correct typing here
         return async_wrapper  # type: ignore[return-value]
