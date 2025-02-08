@@ -1,6 +1,7 @@
 import os
 import pathlib
 import shutil
+import time
 from typing import Optional
 
 import aiofiles
@@ -25,6 +26,19 @@ def remove_file_sync(filePath: str) -> None:
 
 def remove_directory_sync(directory: str) -> None:
     shutil.rmtree(directory)
+
+async def file_exists(filePath: str) -> bool:
+    return await aiofiles.os.path.exists(filePath)
+
+def file_exists_sync(filePath: str) -> bool:
+    return os.path.exists(filePath)
+
+async def get_file_age_millis(filePath: str) -> int:
+    # NOTE(krishan711): is there an async verison of this?
+    return int((time.time() - os.path.getmtime(filePath)) * 1000)
+
+def get_file_age_millis_sync(filePath: str) -> int:
+    return int((time.time() - os.path.getmtime(filePath)) * 1000)
 
 async def read_file(filePath: str) -> str:
     async with aiofiles.open(filePath, 'r') as file:
@@ -63,3 +77,7 @@ async def create_directory(directory: str, shouldAllowExisting: bool = True) -> 
 
 async def create_directory_sync(directory: str, shouldAllowExisting: bool = True) -> None:
     pathlib.Path(directory).mkdir(parents=True, exist_ok=shouldAllowExisting)
+
+def get_file_extension(filename: str) -> str:
+    _, fileExtension = os.path.splitext(filename)
+    return fileExtension

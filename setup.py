@@ -34,20 +34,20 @@ setup(
     test_suite='tests',
     include_package_data=True,
     extras_require={
-        'api': ['fastapi~=0.112.2', 'uvicorn[standard]~=0.30.6'],
-        'core-api': ['starlette==0.38.2', 'uvicorn[standard]~=0.30.6'],
-        'storage': ['aiobotocore~=2.14.0'],
+        'api': ['fastapi>=0.112.2', 'uvicorn[standard]>=0.30.6'],
+        'core-api': ['starlette>=0.38.2', 'uvicorn[standard]>=0.30.6'],
+        'storage': ['aiobotocore>=2.14.0'],
         # TODO(krishan711): remove this in next major update
-        'queues': ['aiobotocore~=2.14.0'],
-        'queue-sqs': ['aiobotocore~=2.14.0'],
-        'queue-aqs': ['azure-storage-queue[aio]~=12.11.0'],
-        'database-psql': ['sqlalchemy[asyncio]~=2.0.34', 'asyncpg~=0.30.0'],
-        'database-sqlite': ['sqlalchemy[asyncio]~=2.0.34', 'aiosqlite~=0.20.0'],
-        'requester': ['httpx~=0.27.2'],
-        'web3': ['web3==6.10.0'],
+        'queues': ['aiobotocore>=2.14.0'],
+        'queue-sqs': ['aiobotocore>=2.14.0'],
+        'queue-aqs': ['azure-storage-queue[aio]>=12.11.0'],
+        'database-psql': ['sqlalchemy[asyncio]>=2.0.34', 'asyncpg>=0.30.0'],
+        'database-sqlite': ['sqlalchemy[asyncio]>=2.0.34', 'aiosqlite>=0.20.0'],
+        'requester': ['httpx>=0.27.2'],
+        'web3': ['web3>=6.10.0'],
         'types': [
-            'types-aiobotocore[essential]~=2.14.0',
-            'types-aiofiles~=24.1.0.20240626',
+            'types-aiobotocore[essential]>=2.14.0',
+            'types-aiofiles>=24.1.0.20240626',
         ]
     },
 )
