@@ -167,7 +167,7 @@ class RestEthClient(EthClientInterface):
         return typing.cast(List[LogReceipt], method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getLogs](response['result']))
 
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
-        data = encode_transaction_data(w3=self.w3, abi_element_identifier=functionAbi['name'], contract_abi=contractAbi, abi_callable=functionAbi, kwargs=(arguments or {}))
+        data = encode_transaction_data(w3=self.w3, abi_element_identifier=functionAbi['name'], contract_abi=contractAbi, abi_callable=functionAbi, kwargs=(arguments or {}), args=[])
         params = {
             'from': fromAddress or '0x0000000000000000000000000000000000000000',
             'to': toAddress,
@@ -185,8 +185,8 @@ class RestEthClient(EthClientInterface):
             raise BadRequestException(message=str(exception))
         return list(outputData)
 
-    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
-        functionAbi = next((abi for abi in contractAbi if abi['type'] == 'function'), None)
+    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+        functionAbi = typing.cast(Optional[ABIFunction], next((abi for abi in contractAbi if abi.get('name') == functionName), None))
         if not functionAbi:
             raise BadRequestException(message='Function not found in ABI')
         return await self.call_function(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments, blockNumber=blockNumber)
