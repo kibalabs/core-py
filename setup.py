@@ -34,8 +34,8 @@ setup(
     test_suite='tests',
     include_package_data=True,
     extras_require={
-        'api': ['fastapi>=0.115.8', 'uvicorn[standard]>0.34.0'],
-        'core-api': ['starlette>=0.45.3', 'uvicorn[standard]>0.34.0'],
+        'api': ['fastapi>=0.115.8', 'uvicorn[standard]>=0.34.0'],
+        'core-api': ['starlette>=0.45.3', 'uvicorn[standard]>=0.34.0'],
         'storage': ['aiobotocore>=2.19.0'],
         # TODO(krishan711): remove this in next major update
         'queues': ['aiobotocore>=2.19.0'],
