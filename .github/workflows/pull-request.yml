@@ -59,7 +59,7 @@ jobs:
       - name: Run tests
         run: |
           docker run --name tests $DOCKER_IMAGE make test-ci
-          docker cp tests:/app/test-results.json ./test-results.json
+          # docker cp tests:/app/test-results.json ./test-results.json
       # - name: Upload test results
       #   uses: kibalabs/github-action-create-annotations@main
       #   with:
