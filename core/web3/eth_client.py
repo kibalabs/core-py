@@ -7,15 +7,14 @@ from typing import Optional
 
 from eth_abi.exceptions import DecodingError
 from eth_abi.exceptions import InsufficientDataBytes
+from eth_typing import ABI
+from eth_typing import ABIFunction
+from eth_utils.abi import get_abi_output_types
 from web3 import Web3
 from web3._utils import method_formatters
-from web3._utils.abi import get_abi_output_types
 from web3._utils.contracts import encode_transaction_data
 from web3._utils.rpc_abi import RPC
 from web3.contract import Contract
-from web3.middleware import geth_poa_middleware
-from web3.types import ABI
-from web3.types import ABIFunction
 from web3.types import BlockData
 from web3.types import HexBytes
 from web3.types import HexStr
@@ -67,8 +66,8 @@ class Web3EthClient(EthClientInterface):
     def __init__(self, web3Connection: Web3, isTestnet: bool = False):
         self.w3 = web3Connection
         self.isTestnet = isTestnet
-        if self.isTestnet:
-            self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        # if self.isTestnet:
+        #     self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     async def get_latest_block_number(self) -> int:
         return self.w3.eth.block_number
@@ -168,14 +167,14 @@ class RestEthClient(EthClientInterface):
         return typing.cast(List[LogReceipt], method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getLogs](response['result']))
 
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
-        data = encode_transaction_data(w3=self.w3, fn_identifier=functionAbi['name'], contract_abi=contractAbi, fn_abi=functionAbi, kwargs=(arguments or {}))
+        data = encode_transaction_data(w3=self.w3, abi_element_identifier=functionAbi['name'], contract_abi=contractAbi, abi_callable=functionAbi, kwargs=(arguments or {}))
         params = {
             'from': fromAddress or '0x0000000000000000000000000000000000000000',
             'to': toAddress,
             'data': data,
         }
         response = await self._make_request(method='eth_call', params=[params, blockNumber or 'latest'])
-        outputTypes = get_abi_output_types(abi=functionAbi)
+        outputTypes = get_abi_output_types(abi_element=functionAbi)
         try:
             outputData = self.w3.codec.decode(types=outputTypes, data=HexBytes(response['result']))
         except InsufficientDataBytes as exception:
@@ -186,8 +185,14 @@ class RestEthClient(EthClientInterface):
             raise BadRequestException(message=str(exception))
         return list(outputData)
 
+    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+        functionAbi = next((abi for abi in contractAbi if abi['type'] == 'function'), None)
+        if not functionAbi:
+            raise BadRequestException(message='Function not found in ABI')
+        return await self.call_function(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments, blockNumber=blockNumber)
+
     def _get_transaction_params(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, gasPrice: int = 2000000000000, gas: int = 90000, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None) -> DictStrAny:
-        data = encode_transaction_data(w3=self.w3, fn_identifier=functionAbi['name'], contract_abi=contractAbi, fn_abi=functionAbi, kwargs=(arguments or {}))
+        data = encode_transaction_data(w3=self.w3, abi_element_identifier=functionAbi['name'], contract_abi=contractAbi, abi_callable=functionAbi, kwargs=(arguments or {}))
         params = {
             'from': fromAddress or '0x0000000000000000000000000000000000000000',
             'to': toAddress,
