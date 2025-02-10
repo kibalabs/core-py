@@ -36,7 +36,11 @@ start-prod:
 	@ echo "Not Supported"
 
 test:
-	@ echo "Not Supported"
+	@ python -m pytest tests -v
+
+test-ci:
+# NOTE(krishan711): implement this in build-py
+	@ python -m pytest tests -v
 
 clean:
 	@ rm -rf ./.mypy_cache ./__pycache__ ./build ./dist
