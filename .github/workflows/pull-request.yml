@@ -60,10 +60,10 @@ jobs:
         run: |
           docker run --name tests $DOCKER_IMAGE make test-ci
           docker cp tests:/app/test-results.json ./test-results.json
-      - name: Upload test results
-        uses: kibalabs/github-action-create-annotations@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          json-file-path: ./test-results.json
-          check-name: core-tests
-          fail-on-error: true
+      # - name: Upload test results
+      #   uses: kibalabs/github-action-create-annotations@main
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     json-file-path: ./test-results.json
+      #     check-name: core-tests
+      #     fail-on-error: true
