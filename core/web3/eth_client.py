@@ -15,7 +15,6 @@ from web3 import Web3
 from web3._utils import method_formatters
 from web3._utils.contracts import encode_transaction_data
 from web3._utils.rpc_abi import RPC
-from web3.contract import Contract
 from web3.types import BlockData
 from web3.types import HexBytes
 from web3.types import HexStr
@@ -55,11 +54,19 @@ class EthClientInterface:
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
         raise NotImplementedError()
 
-    async def call_contract_function(self, contract: Contract, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
-        functionAbi = typing.cast(ABIFunction, [internalAbi for internalAbi in contract.abi if internalAbi.get('name') == functionName][0])
-        return await self.call_function(toAddress=contract.address, contractAbi=contract.abi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments, blockNumber=blockNumber)
+    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+        raise NotImplementedError()
 
-    async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, privateKey: str, gasPrice: int, gas: int, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None) -> str:
+    async def send_raw_transaction(self, transactionData: str) -> str:
+        raise NotImplementedError()
+
+    async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
+        raise NotImplementedError()
+
+    async def send_transaction_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
+        raise NotImplementedError()
+
+    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
         raise NotImplementedError()
 
 
@@ -101,7 +108,19 @@ class Web3EthClient(EthClientInterface):
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
         raise NotImplementedError()
 
-    async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, nonce: int, privateKey: str, gasPrice: int, gas: int, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None) -> str:
+    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+        raise NotImplementedError()
+
+    async def send_raw_transaction(self, transactionData: str) -> str:
+        raise NotImplementedError()
+
+    async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
+        raise NotImplementedError()
+
+    async def send_transaction_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
+        raise NotImplementedError()
+
+    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
         raise NotImplementedError()
 
 
@@ -263,7 +282,7 @@ class RestEthClient(EthClientInterface):
         functionAbi = self._find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
         return await self.send_transaction(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, privateKey=privateKey, fromAddress=fromAddress, nonce=nonce, gas=gas, maxFeePerGas=maxFeePerGas, maxPriorityFeePerGas=maxPriorityFeePerGas, arguments=arguments, chainId=chainId)
 
-    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> str:
+    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
         while True:
             try:
                 transactionReceipt = await self.get_transaction_receipt(transactionHash=transactionHash)
