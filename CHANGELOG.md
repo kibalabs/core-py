@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Added
 - [MAJOR] Update web3 to 7.8.0
+- [MINOR] Added `call_function_by_name`, `send_transaction_by_name` and `wait_for_transaction_receipt` to `RestEthClient`
+- [MINOR] Updated `RestEthClient` to use `maxPriorityFeePerGas` and `maxFeePerGas` instead of `gasPrice`
 
 ### Changed
 
