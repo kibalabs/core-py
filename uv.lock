@@ -1096,7 +1096,7 @@ wheels = [
 
 [[package]]
 name = "kiba-build"
-version = "0.1.11.dev6"
+version = "0.1.11.dev7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asyncclick" },
@@ -1111,9 +1111,9 @@ dependencies = [
     { name = "twine" },
     { name = "wheel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/72/44/5dea5c37303f2efc356bc72c204844356d5feb1391acbf09146a6f376933/kiba_build-0.1.11.dev6.tar.gz", hash = "sha256:1e7cbf1a3c0f7f2b9916178956cbb7677f0d6f9d61d1f730be64c8480cdf1f45", size = 46338 }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/49/f1ad594f53a0eeb448d1e42ac992ecfc73b7ff40a0b21cf7f26face1ce23/kiba_build-0.1.11.dev7.tar.gz", hash = "sha256:6dab204ddc6a6ba4a58372ef6070224b703b0b1555dc50a9eb0a862c1172d684", size = 46421 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/59/1c2f4fbdce01115caddde866f4978d2b8fa9b6f47b62261ddda85cec3ab1/kiba_build-0.1.11.dev6-py3-none-any.whl", hash = "sha256:8d46fa5f71849e0f06a30b0423c8b086cd28f2746f81593df14788efdfa4f1c4", size = 11740 },
+    { url = "https://files.pythonhosted.org/packages/5f/92/f61d99ccf3d81970eeb6aff6b9fb212068adc2ff40511de76632ac199f7d/kiba_build-0.1.11.dev7-py3-none-any.whl", hash = "sha256:3b69a72f70607fa618188b124d3008f3f966db06f54a59f8ab2377963456abd0", size = 11769 },
 ]
 
 [[package]]
@@ -1200,7 +1200,7 @@ provides-extras = ["api", "core-api", "storage", "queues", "queue-sqs", "queue-a
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "kiba-build", specifier = "==0.1.11.dev6" },
+    { name = "kiba-build", specifier = "==0.1.11.dev7" },
     { name = "pytest", specifier = "==8.3.4" },
 ]
 

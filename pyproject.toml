@@ -54,7 +54,7 @@ types = [
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev6",
+    "kiba-build==0.1.11.dev7",
     "pytest==8.3.4",
 ]
 
