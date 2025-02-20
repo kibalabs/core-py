@@ -34,40 +34,40 @@ DictStrAny = Dict[str, Any]  # type: ignore[explicit-any]
 class EthClientInterface:
 
     async def get_latest_block_number(self) -> int:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def get_block_uncle_count(self, blockNumber: int) -> int:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def get_transaction(self, transactionHash: str) -> TxData:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def get_transaction_receipt(self, transactionHash: str) -> TxReceipt:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def send_raw_transaction(self, transactionData: str) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def send_transaction_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class Web3EthClient(EthClientInterface):
@@ -106,22 +106,22 @@ class Web3EthClient(EthClientInterface):
         return contractFilter.get_all_entries()
 
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def send_raw_transaction(self, transactionData: str) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def send_transaction_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class RestEthClient(EthClientInterface):
@@ -141,20 +141,19 @@ class RestEthClient(EthClientInterface):
         response = await self.requester.post_json(url=self.url, dataDict={'jsonrpc':'2.0', 'method': method, 'params': params or [], 'id': 0}, timeout=100)
         jsonResponse = response.json()
         if jsonResponse.get('error'):
-            print('jsonResponse', jsonResponse)
             raise BadRequestException(message=jsonResponse['error'].get('message') or jsonResponse['error'].get('details') or json.dumps(jsonResponse['error']))
         return jsonResponse
 
     async def get_latest_block_number(self) -> int:
         response = await self._make_request(method='eth_blockNumber')
         if response['result'] is None:
-            raise NotFoundException()
+            raise NotFoundException
         return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_blockNumber](response['result']))
 
     async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
         response = await self._make_request(method='eth_getBlockByNumber', params=[hex(blockNumber), shouldHydrateTransactions])
         if response['result'] is None:
-            raise NotFoundException()
+            raise NotFoundException
         if self.isTestnet:
             # NOTE(krishan711): In testnet strip out the extra data as done by web3
             # https://web3py.readthedocs.io/en/stable/middleware.html#why-is-geth-poa-middleware-necessary
@@ -164,25 +163,25 @@ class RestEthClient(EthClientInterface):
     async def get_block_uncle_count(self, blockNumber: int) -> int:
         response = await self._make_request(method='eth_getUncleCountByBlockNumber', params=[hex(blockNumber)])
         if response['result'] is None:
-            raise NotFoundException()
+            raise NotFoundException
         return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getUncleCountByBlockNumber](response['result']))
 
     async def get_transaction_count(self, address: str) -> int:
         response = await self._make_request(method='eth_getTransactionCount', params=[address, 'latest'])
         if response['result'] is None:
-            raise NotFoundException()
+            raise NotFoundException
         return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionCount](response['result']))
 
     async def get_transaction(self, transactionHash: str) -> TxData:
         response = await self._make_request(method='eth_getTransactionByHash', params=[transactionHash])
         if response['result'] is None:
-            raise NotFoundException()
+            raise NotFoundException
         return typing.cast(TxData, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionByHash](response['result']))
 
     async def get_transaction_receipt(self, transactionHash: str) -> TxReceipt:
         response = await self._make_request(method='eth_getTransactionReceipt', params=[transactionHash])
         if response['result'] is None:
-            raise NotFoundException()
+            raise NotFoundException
         return typing.cast(TxReceipt, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionReceipt](response['result']))
 
     async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:

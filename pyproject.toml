@@ -8,6 +8,7 @@ dependencies = [
     "aiofiles>=24.1.0",
     "pydantic>=2.10.6",
     "orjson>=3.10.15",
+    "kiba-build",
 ]
 
 [project.optional-dependencies]
@@ -62,6 +63,9 @@ repository = "https://github.com/kibalabs/core-py"
 
 [tool.uv]
 package = true
+
+[tool.uv.sources]
+kiba-build = { path = "../build-py/dist/kiba_build-0.1.10.tar.gz" }
 
 [build-system]
 requires = ["setuptools", "wheel", "setuptools-scm"]

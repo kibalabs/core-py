@@ -10,14 +10,14 @@ list-outdated: install
 	@ pip list -o
 
 lint-check:
-	@ uv run lint-check ./core
+	@ uv run lint-check --new ./core
 
 lint-check-ci:
-	@ uv run lint-check ./core --output-file lint-check-results.json --output-format annotations
+	@ uv run lint-check --new ./core --output-file lint-check-results.json --output-format annotations
 
 lint-fix:
 	@ uv run isort --sl -l 1000 ./core
-	@ uv run lint-check ./core
+	@ uv run lint-check --new --fix ./core
 
 type-check:
 	@ uv run type-check ./core

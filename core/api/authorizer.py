@@ -1,4 +1,3 @@
-# import inspect
 import functools
 import sys
 import typing
@@ -10,10 +9,7 @@ from core.api.api_request import KibaApiRequest
 from core.exceptions import ForbiddenException
 from core.http.jwt import Jwt
 
-if sys.version_info >= (3, 10):  # pragma: no cover
-    from typing import ParamSpec
-else:  # pragma: no cover
-    from typing_extensions import ParamSpec
+from typing import ParamSpec
 
 _P = ParamSpec("_P")
 
