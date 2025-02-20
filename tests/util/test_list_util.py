@@ -20,7 +20,7 @@ class TestListUtil:
         assert result == expected
 
     def test_generate_chunks_with_empty_list(self):
-        inputList: List[int] = []
+        inputList: list[int] = []
         chunkSize = 2
         expected = []
         result = list(list_util.generate_chunks(inputList, chunkSize))

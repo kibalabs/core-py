@@ -2,9 +2,6 @@ import asyncio
 import json
 import typing
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from eth_abi.exceptions import DecodingError
 from eth_abi.exceptions import InsufficientDataBytes
@@ -27,12 +24,11 @@ from core.exceptions import NotFoundException
 from core.requester import Requester
 from core.util import chain_util
 
-ListAny = List[Any]  # type: ignore[explicit-any]
-DictStrAny = Dict[str, Any]  # type: ignore[explicit-any]
+ListAny = list[Any]  # type: ignore[explicit-any]
+DictStrAny = dict[str, Any]  # type: ignore[explicit-any]
 
 
 class EthClientInterface:
-
     async def get_latest_block_number(self) -> int:
         raise NotImplementedError
 
@@ -48,22 +44,48 @@ class EthClientInterface:
     async def get_transaction_receipt(self, transactionHash: str) -> TxReceipt:
         raise NotImplementedError
 
-    async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
+    async def get_log_entries(self, topics: list[str] | None = None, startBlockNumber: int | None = None, endBlockNumber: int | None = None, address: str | None = None) -> list[LogReceipt]:
         raise NotImplementedError
 
-    async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+    async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: str | None = None, arguments: DictStrAny | None = None, blockNumber: int | None = None) -> ListAny:
         raise NotImplementedError
 
-    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: str | None = None, arguments: DictStrAny | None = None, blockNumber: int | None = None) -> ListAny:
         raise NotImplementedError
 
     async def send_raw_transaction(self, transactionData: str) -> str:
         raise NotImplementedError
 
-    async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
+    async def send_transaction(
+        self,
+        toAddress: str,
+        contractAbi: ABI,
+        functionAbi: ABIFunction,
+        privateKey: str,
+        fromAddress: str,
+        nonce: int | None = None,
+        gas: int | None = None,
+        maxFeePerGas: int | None = None,
+        maxPriorityFeePerGas: int | None = None,
+        arguments: DictStrAny | None = None,
+        chainId: int | None = None,
+    ) -> str:
         raise NotImplementedError
 
-    async def send_transaction_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
+    async def send_transaction_by_name(
+        self,
+        toAddress: str,
+        contractAbi: ABI,
+        functionName: str,
+        privateKey: str,
+        fromAddress: str,
+        nonce: int | None = None,
+        gas: int | None = None,
+        maxFeePerGas: int | None = None,
+        maxPriorityFeePerGas: int | None = None,
+        arguments: DictStrAny | None = None,
+        chainId: int | None = None,
+    ) -> str:
         raise NotImplementedError
 
     async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
@@ -71,12 +93,9 @@ class EthClientInterface:
 
 
 class Web3EthClient(EthClientInterface):
-
-    def __init__(self, web3Connection: Web3, isTestnet: bool = False):
+    def __init__(self, web3Connection: Web3, isTestnet: bool = False) -> None:
         self.w3 = web3Connection
         self.isTestnet = isTestnet
-        # if self.isTestnet:
-        #     self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     async def get_latest_block_number(self) -> int:
         return self.w3.eth.block_number
@@ -96,28 +115,56 @@ class Web3EthClient(EthClientInterface):
     async def get_transaction_receipt(self, transactionHash: str) -> TxReceipt:
         return self.w3.eth.get_transaction_receipt(typing.cast(HexStr, transactionHash))
 
-    async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
-        contractFilter = self.w3.eth.filter({
-            'fromBlock': startBlockNumber,  # type: ignore[typeddict-item]
-            'toBlock': endBlockNumber,  # type: ignore[typeddict-item]
-            'topics': topics,  # type: ignore[typeddict-item]
-            'address': address,  # type: ignore[typeddict-item]
-        })
+    async def get_log_entries(self, topics: list[str] | None = None, startBlockNumber: int | None = None, endBlockNumber: int | None = None, address: str | None = None) -> list[LogReceipt]:
+        contractFilter = self.w3.eth.filter(
+            {
+                'fromBlock': startBlockNumber,  # type: ignore[typeddict-item]
+                'toBlock': endBlockNumber,  # type: ignore[typeddict-item]
+                'topics': topics,  # type: ignore[typeddict-item]
+                'address': address,  # type: ignore[typeddict-item]
+            }
+        )
         return contractFilter.get_all_entries()
 
-    async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+    async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: str | None = None, arguments: DictStrAny | None = None, blockNumber: int | None = None) -> ListAny:
         raise NotImplementedError
 
-    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: str | None = None, arguments: DictStrAny | None = None, blockNumber: int | None = None) -> ListAny:
         raise NotImplementedError
 
     async def send_raw_transaction(self, transactionData: str) -> str:
         raise NotImplementedError
 
-    async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
+    async def send_transaction(
+        self,
+        toAddress: str,
+        contractAbi: ABI,
+        functionAbi: ABIFunction,
+        privateKey: str,
+        fromAddress: str,
+        nonce: int | None = None,
+        gas: int | None = None,
+        maxFeePerGas: int | None = None,
+        maxPriorityFeePerGas: int | None = None,
+        arguments: DictStrAny | None = None,
+        chainId: int | None = None,
+    ) -> str:
         raise NotImplementedError
 
-    async def send_transaction_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
+    async def send_transaction_by_name(
+        self,
+        toAddress: str,
+        contractAbi: ABI,
+        functionName: str,
+        privateKey: str,
+        fromAddress: str,
+        nonce: int | None = None,
+        gas: int | None = None,
+        maxFeePerGas: int | None = None,
+        maxPriorityFeePerGas: int | None = None,
+        arguments: DictStrAny | None = None,
+        chainId: int | None = None,
+    ) -> str:
         raise NotImplementedError
 
     async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
@@ -125,9 +172,8 @@ class Web3EthClient(EthClientInterface):
 
 
 class RestEthClient(EthClientInterface):
-
-    #NOTE(krishan711): find docs at https://eth.wiki/json-rpc/API
-    def __init__(self, url: str, requester: Requester, isTestnet: bool = False):
+    # NOTE(krishan711): find docs at https://eth.wiki/json-rpc/API
+    def __init__(self, url: str, requester: Requester, isTestnet: bool = False) -> None:
         self.url = url
         self.requester = requester
         self.isTestnet = isTestnet
@@ -137,8 +183,8 @@ class RestEthClient(EthClientInterface):
     def _hex_to_int(value: str) -> int:
         return int(value, 16)
 
-    async def _make_request(self, method: str, params: Optional[ListAny] = None) -> Any:  # type: ignore[explicit-any]
-        response = await self.requester.post_json(url=self.url, dataDict={'jsonrpc':'2.0', 'method': method, 'params': params or [], 'id': 0}, timeout=100)
+    async def _make_request(self, method: str, params: ListAny | None = None) -> Any:  # type: ignore[explicit-any]
+        response = await self.requester.post_json(url=self.url, dataDict={'jsonrpc': '2.0', 'method': method, 'params': params or [], 'id': 0}, timeout=100)
         jsonResponse = response.json()
         if jsonResponse.get('error'):
             raise BadRequestException(message=jsonResponse['error'].get('message') or jsonResponse['error'].get('details') or json.dumps(jsonResponse['error']))
@@ -184,7 +230,7 @@ class RestEthClient(EthClientInterface):
             raise NotFoundException
         return typing.cast(TxReceipt, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionReceipt](response['result']))
 
-    async def get_log_entries(self, topics: Optional[List[str]] = None, startBlockNumber: Optional[int] = None, endBlockNumber: Optional[int] = None, address: Optional[str] = None) -> List[LogReceipt]:
+    async def get_log_entries(self, topics: list[str] | None = None, startBlockNumber: int | None = None, endBlockNumber: int | None = None, address: str | None = None) -> list[LogReceipt]:
         params: DictStrAny = {
             'fromBlock': 'earliest',
         }
@@ -197,9 +243,9 @@ class RestEthClient(EthClientInterface):
         if address:
             params['address'] = address
         response = await self._make_request(method='eth_getLogs', params=[params])
-        return typing.cast(List[LogReceipt], method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getLogs](response['result']))
+        return typing.cast(list[LogReceipt], method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getLogs](response['result']))
 
-    async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+    async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: str | None = None, arguments: DictStrAny | None = None, blockNumber: int | None = None) -> ListAny:  # noqa: ARG002
         data = encode_transaction_data(w3=self.w3, abi_element_identifier=functionAbi['name'], contract_abi=[functionAbi], abi_callable=functionAbi, kwargs=(arguments or {}), args=[])
         params = {
             'from': fromAddress or '0x0000000000000000000000000000000000000000',
@@ -212,30 +258,31 @@ class RestEthClient(EthClientInterface):
             outputData = self.w3.codec.decode(types=outputTypes, data=HexBytes(response['result']))
         except InsufficientDataBytes as exception:
             if response['result'] == '0x':
-                raise BadRequestException(message=f'Empty response: {str(exception)}. Maybe the method does not exist on this contract.')
-            raise exception
+                raise BadRequestException(message=f'Empty response: {exception!s}. Maybe the method does not exist on this contract.')
+            raise
         except DecodingError as exception:
             raise BadRequestException(message=str(exception))
         return list(outputData)
 
-    def _find_abi_by_name_args(self, contractAbi: ABI, functionName: str, arguments: Optional[DictStrAny] = None) -> ABIFunction:
-        functionAbis = typing.cast(List[ABIFunction], [abi for abi in contractAbi if abi.get('name') == functionName])
+    def _find_abi_by_name_args(self, contractAbi: ABI, functionName: str, arguments: DictStrAny | None = None) -> ABIFunction:
+        functionAbis = typing.cast(list[ABIFunction], [abi for abi in contractAbi if abi.get('name') == functionName])
         if len(functionAbis) == 0:
             raise BadRequestException(message='Function not found in ABI')
+        functionAbi: ABIFunction | None = None
         if len(functionAbis) == 1:
             functionAbi = functionAbis[0]
         else:
             argumentCount = len(arguments or {})
-            functionAbi = [abi for abi in functionAbis if len(abi['inputs']) == argumentCount][0]
+            functionAbi = next((abi for abi in functionAbis if len(abi['inputs']) == argumentCount), None)
         if not functionAbi:
             raise BadRequestException(message='Function not found in ABI')
         return functionAbi
 
-    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: Optional[str] = None, arguments: Optional[DictStrAny] = None, blockNumber: Optional[int] = None) -> ListAny:
+    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: str | None = None, arguments: DictStrAny | None = None, blockNumber: int | None = None) -> ListAny:
         functionAbi = self._find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
         return await self.call_function(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments, blockNumber=blockNumber)
 
-    def _get_base_transaction_params(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: str, arguments: Optional[DictStrAny] = None) -> DictStrAny:
+    def _get_base_transaction_params(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: str, arguments: DictStrAny | None = None) -> DictStrAny:
         params = {
             'to': toAddress,
             'from': fromAddress,
@@ -243,7 +290,19 @@ class RestEthClient(EthClientInterface):
         }
         return params
 
-    async def _get_transaction_params(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> DictStrAny:
+    async def _get_transaction_params(
+        self,
+        toAddress: str,
+        contractAbi: ABI,
+        functionAbi: ABIFunction,
+        fromAddress: str,
+        nonce: int | None = None,
+        gas: int | None = None,
+        maxFeePerGas: int | None = None,
+        maxPriorityFeePerGas: int | None = None,
+        arguments: DictStrAny | None = None,
+        chainId: int | None = None,
+    ) -> DictStrAny:
         params = self._get_base_transaction_params(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments)
         if gas is None:
             response = await self._make_request(method='eth_estimateGas', params=[params])
@@ -271,21 +330,52 @@ class RestEthClient(EthClientInterface):
         response = await self._make_request(method='eth_sendRawTransaction', params=[transactionData])
         return typing.cast(str, response['result'])
 
-    async def send_transaction(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
-        params = await self._get_transaction_params(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, nonce=nonce, gas=gas, maxFeePerGas=maxFeePerGas, maxPriorityFeePerGas=maxPriorityFeePerGas, arguments=arguments, chainId=chainId)
+    async def send_transaction(
+        self,
+        toAddress: str,
+        contractAbi: ABI,
+        functionAbi: ABIFunction,
+        privateKey: str,
+        fromAddress: str,
+        nonce: int | None = None,
+        gas: int | None = None,
+        maxFeePerGas: int | None = None,
+        maxPriorityFeePerGas: int | None = None,
+        arguments: DictStrAny | None = None,
+        chainId: int | None = None,
+    ) -> str:
+        params = await self._get_transaction_params(
+            toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, nonce=nonce, gas=gas, maxFeePerGas=maxFeePerGas, maxPriorityFeePerGas=maxPriorityFeePerGas, arguments=arguments, chainId=chainId
+        )
         signedParams = self.w3.eth.account.sign_transaction(transaction_dict=params, private_key=privateKey)
         output = await self.send_raw_transaction(transactionData=signedParams.raw_transaction.hex())
         return output
 
-    async def send_transaction_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, privateKey: str, fromAddress: str, nonce: Optional[int] = None, gas: Optional[int] = None, maxFeePerGas: Optional[int] = None, maxPriorityFeePerGas: Optional[int] = None, arguments: Optional[DictStrAny] = None, chainId: Optional[int] = None) -> str:
+    async def send_transaction_by_name(
+        self,
+        toAddress: str,
+        contractAbi: ABI,
+        functionName: str,
+        privateKey: str,
+        fromAddress: str,
+        nonce: int | None = None,
+        gas: int | None = None,
+        maxFeePerGas: int | None = None,
+        maxPriorityFeePerGas: int | None = None,
+        arguments: DictStrAny | None = None,
+        chainId: int | None = None,
+    ) -> str:
         functionAbi = self._find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
-        return await self.send_transaction(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, privateKey=privateKey, fromAddress=fromAddress, nonce=nonce, gas=gas, maxFeePerGas=maxFeePerGas, maxPriorityFeePerGas=maxPriorityFeePerGas, arguments=arguments, chainId=chainId)
+        return await self.send_transaction(
+            toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, privateKey=privateKey, fromAddress=fromAddress, nonce=nonce, gas=gas, maxFeePerGas=maxFeePerGas, maxPriorityFeePerGas=maxPriorityFeePerGas, arguments=arguments, chainId=chainId
+        )
 
     async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
         while True:
             try:
                 transactionReceipt = await self.get_transaction_receipt(transactionHash=transactionHash)
-                return transactionReceipt
             except NotFoundException:
                 pass
+            else:
+                return transactionReceipt
             await asyncio.sleep(sleepSeconds)

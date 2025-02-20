@@ -1,8 +1,7 @@
-# import inspect
 import functools
 import json
-import sys
 import typing
+from typing import ParamSpec
 
 from mypy_extensions import Arg
 from pydantic import BaseModel
@@ -13,15 +12,11 @@ from core.api.api_respnse import KibaJSONResponse
 from core.exceptions import BadRequestException
 from core.exceptions import InternalServerErrorException
 
-if sys.version_info >= (3, 10):  # pragma: no cover
-    from typing import ParamSpec
-else:  # pragma: no cover
-    from typing_extensions import ParamSpec
+_P = ParamSpec('_P')
 
-_P = ParamSpec("_P")
+ApiRequest = typing.TypeVar('ApiRequest', bound=BaseModel)
+ApiResponse = typing.TypeVar('ApiResponse', bound=BaseModel)
 
-ApiRequest = typing.TypeVar("ApiRequest", bound=BaseModel)
-ApiResponse = typing.TypeVar("ApiResponse", bound=BaseModel)
 
 def json_route(
     requestType: typing.Type[ApiRequest],
@@ -41,19 +36,21 @@ def json_route(
                 try:
                     body = json.loads(bodyBytes.decode())
                 except json.JSONDecodeError as exception:
-                    raise BadRequestException(f"Invalid JSON body: {exception}")
+                    raise BadRequestException(f'Invalid JSON body: {exception}')
             allParams = {**pathParams, **body, **queryParams}
             try:
                 requestParams = requestType(**allParams)
             except ValidationError as exception:
-                validationErrorMessage = ', '.join([f"{'.'.join([str(value) for value in error['loc']])}: {error['msg']}" for error in exception.errors()])
-                raise BadRequestException(f"Invalid request: {validationErrorMessage}")
-            kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # pylint: disable=protected-access
+                validationErrorMessage = ', '.join([f'{".".join([str(value) for value in error["loc"]])}: {error["msg"]}' for error in exception.errors()])
+                raise BadRequestException(f'Invalid request: {validationErrorMessage}')
+            kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # noqa: SLF001
             kibaRequest.data = requestParams
             receivedResponse = await func(request=kibaRequest)
             if not isinstance(receivedResponse, responseType):
-                raise InternalServerErrorException(f"Expected response to be of type {responseType}, got {type(receivedResponse)}")
+                raise InternalServerErrorException(f'Expected response to be of type {responseType}, got {type(receivedResponse)}')
             return KibaJSONResponse(content=receivedResponse.model_dump())
+
         # TODO(krishan711): figure out correct typing here
         return async_wrapper  # type: ignore[return-value]
+
     return decorator

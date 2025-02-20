@@ -5,8 +5,6 @@ import urllib.parse as urlparse
 import uuid
 from abc import ABC
 from typing import Generic
-from typing import List
-from typing import Optional
 from typing import TypeVar
 
 from core import logging
@@ -15,20 +13,17 @@ from core.exceptions import KibaException
 from core.notifications.notification_client import NotificationClient
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
-# from core.slack_client import SlackClient
 from core.util.value_holder import RequestIdHolder
 
 
 class MessageProcessor(ABC):
-
     @abc.abstractmethod
     async def process_message(self, message: Message) -> None:
         pass
 
 
 class MessageNeedsReprocessingException(InternalServerErrorException):
-
-    def __init__(self, maxRetryCount: int = 3, delaySeconds: int = 60, originalException: Optional[KibaException] = None) -> None:
+    def __init__(self, maxRetryCount: int = 3, delaySeconds: int = 60, originalException: KibaException | None = None) -> None:
         super().__init__(message='MessageNeedsReprocessingException')
         self.maxRetryCount = maxRetryCount
         self.delaySeconds = delaySeconds
@@ -37,9 +32,9 @@ class MessageNeedsReprocessingException(InternalServerErrorException):
 
 MessageType = TypeVar('MessageType', bound=Message)  # pylint: disable=invalid-name
 
-class MessageQueueProcessor(Generic[MessageType]):
 
-    def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, notificationClients: List[NotificationClient], requestIdHolder: Optional[RequestIdHolder] = None):
+class MessageQueueProcessor(Generic[MessageType]):
+    def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, notificationClients: list[NotificationClient], requestIdHolder: RequestIdHolder | None = None) -> None:
         self.queue = queue
         self.messageProcessor = messageProcessor
         self.notificationClients = notificationClients
@@ -57,9 +52,9 @@ class MessageQueueProcessor(Generic[MessageType]):
             await self.messageProcessor.process_message(message=message)
             await self.queue.delete_message(message=message)
         except MessageNeedsReprocessingException as exception:
-            logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {str(exception.originalException)}')
+            logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {exception.originalException!s}')
             await self.queue.send_message(message=message, delaySeconds=((message.postCount or 0) * exception.delaySeconds))  # pylint: disable=superfluous-parens
-        except Exception as exception:  # pylint: disable=broad-except
+        except Exception as exception:  # pylint: disable=broad-except   # noqa: BLE001
             statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
             logging.error('Caught exception whilst processing message')
             logging.exception(exception)
@@ -85,16 +80,16 @@ class MessageQueueProcessor(Generic[MessageType]):
         processedMessageCount = await self.execute_batch(batchSize=1, expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds)
         return processedMessageCount > 0
 
-    async def run_batches(self, batchSize: int, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, sleepTime: int = 30, totalMessageLimit: Optional[int] = None) -> int:
+    async def run_batches(self, batchSize: int, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, sleepTime: int = 30, totalMessageLimit: int | None = None) -> int:
         processedMessageCount = 0
         while totalMessageLimit is None or processedMessageCount < totalMessageLimit:
             innerProcessedMessageCount = await self.execute_batch(expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds, batchSize=batchSize)
             if innerProcessedMessageCount == 0:
                 logging.info('No message received.. sleeping')
-                time.sleep(sleepTime)
+                await asyncio.sleep(sleepTime)
             processedMessageCount += innerProcessedMessageCount
         return processedMessageCount
 
-    async def run(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, sleepTime: int = 30, totalMessageLimit: Optional[int] = None) -> bool:
+    async def run(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, sleepTime: int = 30, totalMessageLimit: int | None = None) -> bool:
         processedMessageCount = await self.run_batches(batchSize=1, sleepTime=sleepTime, totalMessageLimit=totalMessageLimit, expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds)
         return processedMessageCount > 0

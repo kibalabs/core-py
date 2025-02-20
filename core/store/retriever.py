@@ -1,8 +1,7 @@
 import dataclasses
 import datetime
+from collections.abc import Sequence
 from enum import Enum
-from typing import Optional
-from typing import Sequence
 
 import sqlalchemy
 from sqlalchemy import Table
@@ -16,69 +15,77 @@ class Direction(Enum):
     ASCENDING = 'ascending'
     DESCENDING = 'descending'
 
+
 @dataclasses.dataclass
 class Order:
     fieldName: str
     direction: Direction = Direction.DESCENDING
 
+
 @dataclasses.dataclass
 class RandomOrder(Order):
     fieldName: str = '__KIBA_RANDOM'
 
+
 @dataclasses.dataclass
 class FieldFilter:
     fieldName: str
-    isNull: Optional[bool] = None
-    isNotNull: Optional[bool] = None
+    isNull: bool | None = None
+    isNotNull: bool | None = None
+
 
 @dataclasses.dataclass
 class StringFieldFilter(FieldFilter):
-    eq: Optional[str] = None
-    ne: Optional[str] = None
-    containedIn: Optional[Sequence[str]] = None
-    notContainedIn: Optional[Sequence[str]] = None
+    eq: str | None = None
+    ne: str | None = None
+    containedIn: Sequence[str] | None = None
+    notContainedIn: Sequence[str] | None = None
+
 
 @dataclasses.dataclass
 class DateFieldFilter(FieldFilter):
-    eq: Optional[datetime.datetime] = None
-    ne: Optional[datetime.datetime] = None
-    lte: Optional[datetime.datetime] = None
-    lt: Optional[datetime.datetime] = None
-    gte: Optional[datetime.datetime] = None
-    gt: Optional[datetime.datetime] = None
-    containedIn: Optional[Sequence[datetime.datetime]] = None
-    notContainedIn: Optional[Sequence[datetime.datetime]] = None
+    eq: datetime.datetime | None = None
+    ne: datetime.datetime | None = None
+    lte: datetime.datetime | None = None
+    lt: datetime.datetime | None = None
+    gte: datetime.datetime | None = None
+    gt: datetime.datetime | None = None
+    containedIn: Sequence[datetime.datetime] | None = None
+    notContainedIn: Sequence[datetime.datetime] | None = None
+
 
 @dataclasses.dataclass
 class IntegerFieldFilter(FieldFilter):
-    eq: Optional[int] = None
-    ne: Optional[int] = None
-    lte: Optional[int] = None
-    lt: Optional[int] = None
-    gte: Optional[int] = None
-    gt: Optional[int] = None
-    containedIn: Optional[Sequence[int]] = None
-    notContainedIn: Optional[Sequence[int]] = None
+    eq: int | None = None
+    ne: int | None = None
+    lte: int | None = None
+    lt: int | None = None
+    gte: int | None = None
+    gt: int | None = None
+    containedIn: Sequence[int] | None = None
+    notContainedIn: Sequence[int] | None = None
+
 
 @dataclasses.dataclass
 class FloatFieldFilter(FieldFilter):
-    eq: Optional[float] = None
-    ne: Optional[float] = None
-    lte: Optional[float] = None
-    lt: Optional[float] = None
-    gte: Optional[float] = None
-    gt: Optional[float] = None
-    containedIn: Optional[Sequence[float]] = None
-    notContainedIn: Optional[Sequence[float]] = None
+    eq: float | None = None
+    ne: float | None = None
+    lte: float | None = None
+    lt: float | None = None
+    gte: float | None = None
+    gt: float | None = None
+    containedIn: Sequence[float] | None = None
+    notContainedIn: Sequence[float] | None = None
+
 
 @dataclasses.dataclass
 class BooleanFieldFilter(FieldFilter):
-    eq: Optional[bool] = None
-    ne: Optional[bool] = None
+    eq: bool | None = None
+    ne: bool | None = None
+
 
 class Retriever:
-
-    def __init__(self, database: Database):
+    def __init__(self, database: Database) -> None:
         self.database = database
 
     def _apply_order(self, query: Select[ResultType], table: Table, order: Order) -> Select[ResultType]:

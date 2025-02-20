@@ -1,6 +1,5 @@
 import time
 import uuid
-from typing import Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
@@ -13,8 +12,7 @@ from core.util.value_holder import RequestIdHolder
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
-
-    def __init__(self, app: ASGIApp, requestIdHolder: Optional[RequestIdHolder] = None):
+    def __init__(self, app: ASGIApp, requestIdHolder: RequestIdHolder | None = None) -> None:
         super().__init__(app=app)
         self.requestIdHolder = requestIdHolder
 

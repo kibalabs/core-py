@@ -1,7 +1,5 @@
 import datetime
-from typing import Iterator
-from typing import Optional
-from typing import Tuple
+from collections.abc import Iterator
 
 from core.exceptions import KibaException
 
@@ -12,13 +10,13 @@ class DateConversionException(KibaException):
     pass
 
 
-def start_of_day(dt: Optional[datetime.datetime] = None) -> datetime.datetime:
-    dt = dt if dt is not None else datetime.datetime.utcnow()
+def start_of_day(dt: datetime.datetime | None = None) -> datetime.datetime:
+    dt = dt if dt is not None else datetime.datetime.now(tz=datetime.UTC)
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def end_of_day(dt: Optional[datetime.datetime] = None) -> datetime.datetime:
-    dt = dt if dt is not None else datetime.datetime.utcnow()
+def end_of_day(dt: datetime.datetime | None = None) -> datetime.datetime:
+    dt = dt if dt is not None else datetime.datetime.now(tz=datetime.UTC)
     return dt.replace(hour=23, minute=59, second=59, microsecond=999999)
 
 
@@ -27,12 +25,12 @@ def datetime_from_datetime(dt: datetime.datetime, days: int = 0, seconds: float 
 
 
 def datetime_from_now(days: int = 0, seconds: float = 0, milliseconds: int = 0, minutes: int = 0, hours: int = 0, weeks: int = 0) -> datetime.datetime:
-    return datetime_from_datetime(dt=datetime.datetime.utcnow(), days=days, seconds=seconds, milliseconds=milliseconds, minutes=minutes, hours=hours, weeks=weeks)
+    return datetime_from_datetime(dt=datetime.datetime.now(tz=datetime.UTC), days=days, seconds=seconds, milliseconds=milliseconds, minutes=minutes, hours=hours, weeks=weeks)
 
 
 def datetime_from_string(dateString: str, dateFormat: str = JSON_DATE_FORMAT) -> datetime.datetime:
     try:
-        dt = datetime.datetime.strptime(dateString, dateFormat)
+        dt = datetime.datetime.strptime(dateString, dateFormat).replace(tzinfo=datetime.UTC)
     except (TypeError, ValueError) as exception:
         raise DateConversionException(message=f'Invalid dateString passed to datetime_from_string: {dateString}') from exception
     return dt
@@ -42,12 +40,12 @@ def datetime_to_string(dt: datetime.datetime, dateFormat: str = JSON_DATE_FORMAT
     return dt.strftime(dateFormat)
 
 
-def date_hour_from_datetime(dt: Optional[datetime.datetime] = None) -> datetime.datetime:
-    dt = dt if dt is not None else datetime.datetime.utcnow()
+def date_hour_from_datetime(dt: datetime.datetime | None = None) -> datetime.datetime:
+    dt = dt if dt is not None else datetime.datetime.now(tz=datetime.UTC)
     return dt.replace(minute=0, second=0, microsecond=0)
 
 
-def generate_clock_hour_intervals(startDate: datetime.datetime, endDate: datetime.datetime) -> Iterator[Tuple[datetime.datetime, datetime.datetime]]:
+def generate_clock_hour_intervals(startDate: datetime.datetime, endDate: datetime.datetime) -> Iterator[tuple[datetime.datetime, datetime.datetime]]:
     # NOTE(krishan711) this has the results that look like [startDate, hourA:00]...[hourN:00, hourM:00]...[hourY:00, endDate]
     startDateNextHour = datetime_from_datetime(dt=date_hour_from_datetime(dt=datetime_from_datetime(dt=startDate, seconds=-1)), hours=1)
     if endDate > startDate or startDateNextHour > endDate:
@@ -55,16 +53,15 @@ def generate_clock_hour_intervals(startDate: datetime.datetime, endDate: datetim
         return
     if startDate < startDateNextHour:
         yield (startDate, startDateNextHour)
-    for periodStartDate, periodEndDate in generate_datetime_intervals(startDate=startDateNextHour, endDate=endDate, seconds=(60 * 60)):  # pylint: disable=superfluous-parens
-        yield periodStartDate, periodEndDate
+    yield from generate_datetime_intervals(startDate=startDateNextHour, endDate=endDate, seconds=(60 * 60))
 
 
-def generate_hourly_intervals(startDate: datetime.datetime, endDate: datetime.datetime) -> Iterator[Tuple[datetime.datetime, datetime.datetime]]:
+def generate_hourly_intervals(startDate: datetime.datetime, endDate: datetime.datetime) -> Iterator[tuple[datetime.datetime, datetime.datetime]]:
     # NOTE(krishan711) this has the results that look like [startDate, startDate + 1hr]...[startDate + N hrs, endDate]
     return generate_datetime_intervals(startDate=startDate, endDate=endDate, seconds=(60 * 60))  # pylint: disable=superfluous-parens
 
 
-def generate_datetime_intervals(startDate: datetime.datetime, endDate: datetime.datetime, seconds: int) -> Iterator[Tuple[datetime.datetime, datetime.datetime]]:
+def generate_datetime_intervals(startDate: datetime.datetime, endDate: datetime.datetime, seconds: int) -> Iterator[tuple[datetime.datetime, datetime.datetime]]:
     counter = 1
     while startDate <= endDate:
         nextMaxDate = min(startDate + datetime.timedelta(seconds=counter * seconds), endDate)
@@ -94,4 +91,4 @@ def calculate_diff_years(startDate: datetime.datetime, endDate: datetime.datetim
 
 
 def datetime_to_utc(dt: datetime.datetime) -> datetime.datetime:
-    return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
+    return dt.astimezone(datetime.UTC).replace(tzinfo=None) if dt.tzinfo else dt

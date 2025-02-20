@@ -1,3 +1,4 @@
+# noqa: A005
 import dataclasses
 import datetime
 import json
@@ -6,17 +7,16 @@ import os
 import re
 import sys
 import typing
+from collections.abc import Callable
+from collections.abc import Collection
 from logging import Formatter
 from logging import Logger
 from logging import LogRecord
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
-from typing import Collection
-from typing import Dict
-from typing import Optional
 from typing import TextIO
 from typing import Union
+from typing import override
 
 from core.exceptions import KibaException
 from core.util.value_holder import RequestIdHolder
@@ -33,7 +33,7 @@ class LogFormat:
     loggerType: str
     loggerName: str
     loggerFormat: str
-    jsonFieldFormatters: Dict[str, Callable[[str], Union[str, int, float, None]]]
+    jsonFieldFormatters: dict[str, Callable[[str], Union[str, int, float, None]]]
 
 
 def json_parse_string_value(value: str) -> Union[str, None]:
@@ -41,10 +41,12 @@ def json_parse_string_value(value: str) -> Union[str, None]:
         return None
     return str(value)
 
+
 def json_parse_int_value(value: str) -> Union[int, None]:
     if value == '':
         return None
     return int(value)
+
 
 def json_parse_float_value(value: str) -> Union[float, None]:
     if value == '':
@@ -53,9 +55,16 @@ def json_parse_float_value(value: str) -> Union[float, None]:
 
 
 _LOGGING_FORMAT_VERSION = 1
-ROOT_FORMAT = LogFormat(loggerType="", loggerName=f"KIBA_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(message)s", jsonFieldFormatters={})
-STAT_FORMAT = LogFormat(loggerType="stat", loggerName=f"KIBA_STAT_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(statName)s:%(statKey)s:%(statValue)s", jsonFieldFormatters={'statName': json_parse_string_value, 'statKey': json_parse_string_value, 'statValue': json_parse_float_value})
-API_FORMAT = LogFormat(loggerType="api", loggerName=f"KIBA_API_{_LOGGING_FORMAT_VERSION}", loggerFormat="%(apiAction)s:%(apiPath)s:%(apiQuery)s:%(apiResponse)s:%(apiDuration)s", jsonFieldFormatters={'apiAction': json_parse_string_value, 'apiPath': json_parse_string_value, 'apiQuery': json_parse_string_value, 'apiResponse': json_parse_int_value, 'apiDuration': json_parse_float_value})
+ROOT_FORMAT = LogFormat(loggerType='', loggerName=f'KIBA_{_LOGGING_FORMAT_VERSION}', loggerFormat='%(message)s', jsonFieldFormatters={})
+STAT_FORMAT = LogFormat(
+    loggerType='stat', loggerName=f'KIBA_STAT_{_LOGGING_FORMAT_VERSION}', loggerFormat='%(statName)s:%(statKey)s:%(statValue)s', jsonFieldFormatters={'statName': json_parse_string_value, 'statKey': json_parse_string_value, 'statValue': json_parse_float_value}
+)
+API_FORMAT = LogFormat(
+    loggerType='api',
+    loggerName=f'KIBA_API_{_LOGGING_FORMAT_VERSION}',
+    loggerFormat='%(apiAction)s:%(apiPath)s:%(apiQuery)s:%(apiResponse)s:%(apiDuration)s',
+    jsonFieldFormatters={'apiAction': json_parse_string_value, 'apiPath': json_parse_string_value, 'apiQuery': json_parse_string_value, 'apiResponse': json_parse_int_value, 'apiDuration': json_parse_float_value},
+)
 ALL_LOGGER_FORMATS = [ROOT_FORMAT, STAT_FORMAT, API_FORMAT]
 
 ROOT_LOGGER = logging.getLogger(ROOT_FORMAT.loggerType)
@@ -64,10 +73,9 @@ API_LOGGER = logging.getLogger(API_FORMAT.loggerType)
 
 
 class KibaLoggingFormatter(Formatter):
-
     _BASE_FORMAT_STRING = '%(asctime)s - {format} - {name} - {version} - {environment} - %(requestId)s - %(levelname)s - %(name)s - %(pathname)s:%(funcName)s:%(lineno)s - {logMessage}'
 
-    def __init__(self, logFormat: LogFormat, name: str, version: str, environment: str, requestIdHolder: Optional[RequestIdHolder]) -> None:
+    def __init__(self, logFormat: LogFormat, name: str, version: str, environment: str, requestIdHolder: RequestIdHolder | None) -> None:
         formatString = self._BASE_FORMAT_STRING.format(format=logFormat.loggerName, name=name, version=version, environment=environment, logMessage=logFormat.loggerFormat)
         super().__init__(fmt=formatString)
         self.logFormat = logFormat
@@ -78,24 +86,25 @@ class KibaLoggingFormatter(Formatter):
 
     def format(self, record: LogRecord) -> str:
         record.pathname = re.sub(os.getcwd() + '.', '', record.pathname).replace('/', '.')
-        setattr(record, 'requestId', self.requestIdHolder.get_value() if self.requestIdHolder is not None else '')
+        record.requestId = self.requestIdHolder.get_value() if self.requestIdHolder is not None else ''
         return super().format(record=record)
 
-    def formatTime(self, record: LogRecord, datefmt: Optional[str] = None) -> str:
-        logDate = datetime.datetime.fromtimestamp(record.created)
-        return logDate.strftime(datefmt or "%Y-%m-%dT%H:%M:%S.%f")
+    @override
+    def formatTime(self, record: LogRecord, datefmt: str | None = None) -> str:
+        logDate = datetime.datetime.fromtimestamp(record.created, tz=datetime.UTC)
+        return logDate.strftime(datefmt or '%Y-%m-%dT%H:%M:%S.%f')
 
 
 class KibaJsonLoggingFormatter(KibaLoggingFormatter):
-
+    @override
     def format(self, record: LogRecord) -> str:
         message = self.formatException(record.exc_info) if record.exc_info else str(record.msg)
-        recordDict: Dict[str, Union[str, int, float, bool, None]] = {
-            'date': self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%f"),
+        recordDict: dict[str, Union[str, int, float, bool, None]] = {
+            'date': self.formatTime(record, '%Y-%m-%dT%H:%M:%S.%f'),
             # NOTE(krishan711): for some reason these constantly report this file instead of original
-            # 'path': record.pathname,
-            # 'function': record.funcName,
-            # 'line': record.lineno,
+            # 'path': record.pathname,  # noqa: ERA001
+            # 'function': record.funcName,  # noqa: ERA001
+            # 'line': record.lineno,  # noqa: ERA001
             'message': message or None,
             'level': record.levelname,
             'logger': record.name,
@@ -121,7 +130,7 @@ def init_external_loggers(loggerNames: Collection[str], loggingLevel: int = logg
         logging.getLogger(loggerName).setLevel(loggingLevel)
 
 
-def init_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: Optional[RequestIdHolder] = None) -> None:
+def init_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: RequestIdHolder | None = None) -> None:
     loggingLevel = logging.DEBUG if showDebug else logging.INFO
     for logFormat in ALL_LOGGER_FORMATS:
         logger = logging.getLogger(name=logFormat.loggerType)
@@ -130,7 +139,7 @@ def init_logging(name: str, version: str, environment: str, showDebug: bool = Fa
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
 
 
-def init_json_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: Optional[RequestIdHolder] = None) -> None:
+def init_json_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: RequestIdHolder | None = None) -> None:
     loggingLevel = logging.DEBUG if showDebug else logging.INFO
     for logFormat in ALL_LOGGER_FORMATS:
         logger = logging.getLogger(name=logFormat.loggerType)
@@ -148,7 +157,7 @@ def init_basic_logging(showDebug: bool = False) -> None:
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
 
 
-def _serialize_numeric_value(value: Union[None, float, int]) -> str:
+def _serialize_numeric_value(value: Union[None, float]) -> str:
     if value is None:
         return ''
     roundedNumber = round(value, 6)
@@ -159,22 +168,22 @@ def _serialize_string_value(value: str) -> str:
     return value.replace(':', '__')
 
 
-def stat(name: str, key: str, value: Union[float, int] = 1) -> None:
+def stat(name: str, key: str, value: float = 1) -> None:
     if STAT_LOGGER.isEnabledFor(level=logging.INFO):
         nameValue = _serialize_string_value(value=str(name))
         keyValue = _serialize_string_value(value=str(key))
         statValue = _serialize_numeric_value(value=value)
-        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'statName': nameValue, 'statKey': keyValue, 'statValue': statValue}))
+        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(dict[str, str], {'statName': nameValue, 'statKey': keyValue, 'statValue': statValue}))
 
 
-def api(action: str, path: str, query: str, response: Optional[int] = None, duration: Optional[float] = None) -> None:
+def api(action: str, path: str, query: str, response: int | None = None, duration: float | None = None) -> None:
     if API_LOGGER.isEnabledFor(level=logging.INFO):
         actionString = _serialize_string_value(value=action)
         pathString = _serialize_string_value(value=path)
         queryString = _serialize_string_value(value=query)
         responseString = _serialize_numeric_value(value=response)
         durationString = _serialize_numeric_value(value=duration)
-        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(Dict[str, str], {'apiAction': actionString, 'apiPath': pathString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''}))
+        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(dict[str, str], {'apiAction': actionString, 'apiPath': pathString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''}))
 
 
 # Wrappers around common python logging functions which go straight to the root logger
@@ -189,15 +198,15 @@ DEBUG = logging.DEBUG
 
 def _log(level: int, msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
     if ROOT_LOGGER.isEnabledFor(level=level):
-        ROOT_LOGGER._log(level=level, msg=msg, args=args, **kwargs)  # pylint: disable=protected-access
+        ROOT_LOGGER._log(level=level, msg=msg, args=args, **kwargs)  # noqa: SLF001
 
 
 def critical(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=CRITICAL, msg=msg, *args, **kwargs)  # type: ignore[misc]
+    _log(level=CRITICAL, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
 
 
 def error(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=ERROR, msg=msg, *args, **kwargs)  # type: ignore[misc]
+    _log(level=ERROR, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
 
 
 def exception(msg: Union[str, Exception], *args: Any, exc_info: bool = True, **kwargs: Any) -> None:  # type: ignore[explicit-any]
@@ -207,24 +216,24 @@ def exception(msg: Union[str, Exception], *args: Any, exc_info: bool = True, **k
         resolvedMessage = str(msg)
     else:
         resolvedMessage = msg
-    _log(level=ERROR, msg=resolvedMessage, exc_info=exc_info, *args, **kwargs)  # type: ignore[misc]
+    _log(level=ERROR, msg=resolvedMessage, exc_info=exc_info, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
 
 
 def warning(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=WARNING, msg=msg, *args, **kwargs)  # type: ignore[misc]
+    _log(level=WARNING, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
 
 
 def info(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=INFO, msg=msg, *args, **kwargs)  # type: ignore[misc]
+    _log(level=INFO, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
 
 
 def debug(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=DEBUG, msg=msg, *args, **kwargs)  # type: ignore[misc]
+    _log(level=DEBUG, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
 
 
-def basicConfig(**kwargs: Any) -> None:  # type: ignore[explicit-any]  # pylint: disable=invalid-name
+def basicConfig(**kwargs: Any) -> None:  # type: ignore[explicit-any]  # noqa: N802  # noqa: B026
     logging.basicConfig(**kwargs)
 
 
-def getLogger(name: Optional[str] = None) -> Logger:  # pylint: disable=invalid-name
+def getLogger(name: str | None = None) -> Logger:  # noqa: N802
     return logging.getLogger(name=name)

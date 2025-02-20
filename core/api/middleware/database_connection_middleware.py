@@ -8,7 +8,6 @@ from core.store.database import Database
 
 
 class DatabaseConnectionMiddleware(BaseHTTPMiddleware):
-
     def __init__(self, app: ASGIApp, database: Database) -> None:
         super().__init__(app=app)
         self.database = database

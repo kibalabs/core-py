@@ -1111,7 +1111,7 @@ dependencies = [
     { name = "twine" },
     { name = "wheel" },
 ]
-sdist = { hash = "sha256:fa6626eaa268952fc992363aa73409c8030c3d29c2e058c66a45612bb0ba4387" }
+sdist = { hash = "sha256:d0dbd21e9aeab31bf1f534f5a4a245c8ff21551dcdcf1e99441eb2519999862f" }
 
 [package.metadata]
 requires-dist = [

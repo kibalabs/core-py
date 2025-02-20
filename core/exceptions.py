@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-from typing import Dict
-from typing import Mapping
-from typing import Optional
-from typing import Type
-from typing import Union
+from collections.abc import Mapping
 
 from core.util.typing_util import Json
 
 
-class KibaException(Exception):
-
-    def __init__(self, message: Optional[str], statusCode: Optional[int] = None, exceptionType: Optional[str] = None) -> None:
+class KibaException(Exception):  # noqa: N818
+    def __init__(self, message: str | None, statusCode: int | None = None, exceptionType: str | None = None) -> None:
         super().__init__(message)
         self.message = message
         self.statusCode = statusCode or 500
@@ -23,7 +18,7 @@ class KibaException(Exception):
             return exception
         return KibaException(message=str(exception), statusCode=statusCode, exceptionType=exception.__class__.__name__)
 
-    def to_dict(self) -> Dict[str, Json]:
+    def to_dict(self) -> dict[str, Json]:
         return {
             'exceptionType': self.exceptionType,
             'message': self.message,
@@ -49,29 +44,25 @@ class ClientException(KibaException):
 
 
 class BadRequestException(ClientException):
-
-    def __init__(self, message: Optional[str] = None) -> None:
+    def __init__(self, message: str | None = None) -> None:
         message = message if message else 'Bad Request'
         super().__init__(message=message, statusCode=400)
 
 
 class UnauthorizedException(ClientException):
-
-    def __init__(self, message: Optional[str] = None) -> None:
+    def __init__(self, message: str | None = None) -> None:
         message = message if message else 'Unauthorized'
         super().__init__(message=message, statusCode=401)
 
 
 class ForbiddenException(ClientException):
-
-    def __init__(self, message: Optional[str] = None) -> None:
+    def __init__(self, message: str | None = None) -> None:
         message = message if message else 'Forbidden'
         super().__init__(message=message, statusCode=403)
 
 
 class NotFoundException(ClientException):
-
-    def __init__(self, message: Optional[str] = None) -> None:
+    def __init__(self, message: str | None = None) -> None:
         message = message if message else 'Not Found'
         super().__init__(message=message, statusCode=404)
 
@@ -81,18 +72,17 @@ class ServerException(KibaException):
 
 
 class InternalServerErrorException(ServerException):
-
-    def __init__(self, message: Optional[str] = None) -> None:
+    def __init__(self, message: str | None = None) -> None:
         message = message if message else 'Internal Server Error'
         super().__init__(message=message, statusCode=500)
+
 
 class DuplicateValueException(BadRequestException):
     pass
 
 
 class RedirectException(KibaException):
-
-    def __init__(self, location: str, statusCode: int, message: Optional[str] = None, shouldAddCacheHeader: Optional[bool] = True) -> None:
+    def __init__(self, location: str, statusCode: int, message: str | None = None, shouldAddCacheHeader: bool | None = True) -> None:
         message = message if message else 'RedirectException'
         super().__init__(message=message, statusCode=statusCode)
         self.location = location
@@ -100,22 +90,19 @@ class RedirectException(KibaException):
 
 
 class MovedPermanentlyRedirectException(RedirectException):
-
-    def __init__(self, location: str, message: Optional[str] = None, shouldAddCacheHeader: Optional[bool] = True) -> None:
+    def __init__(self, location: str, message: str | None = None, shouldAddCacheHeader: bool | None = True) -> None:
         message = message if message else 'Moved Permanently'
         super().__init__(location=location, message=message, statusCode=301, shouldAddCacheHeader=shouldAddCacheHeader)
 
 
 class FoundRedirectException(RedirectException):
-
-    def __init__(self, location: str, message: Optional[str] = None) -> None:
+    def __init__(self, location: str, message: str | None = None) -> None:
         message = message if message else 'Found Redirect'
         super().__init__(location=location, message=message, statusCode=302, shouldAddCacheHeader=False)
 
 
 class PermanentRedirectException(RedirectException):
-
-    def __init__(self, location: str, message: Optional[str] = None, shouldAddCacheHeader: Optional[bool] = True) -> None:
+    def __init__(self, location: str, message: str | None = None, shouldAddCacheHeader: bool | None = True) -> None:
         message = message if message else 'Permanent Redirect'
         super().__init__(location=location, message=message, statusCode=308, shouldAddCacheHeader=shouldAddCacheHeader)
 
@@ -247,7 +234,7 @@ SERVER_EXCEPTIONS_MAP = {
 }
 
 HTTP_EXCEPTIONS = CLIENT_EXCEPTIONS + SERVER_EXCEPTIONS
-HTTP_EXCEPTIONS_MAP: Mapping[int, Union[Type[ServerException], Type[ClientException]]] = {**SERVER_EXCEPTIONS_MAP, **CLIENT_EXCEPTIONS_MAP}
+HTTP_EXCEPTIONS_MAP: Mapping[int, type[ServerException | ClientException]] = {**SERVER_EXCEPTIONS_MAP, **CLIENT_EXCEPTIONS_MAP}
 
 ALL_EXCEPTION_CLASSES = [
     # DataException,
@@ -269,4 +256,5 @@ ALL_EXCEPTION_CLASSES = [
     # TypeNotFoundException,
     # SignalTimeoutAlreadySetException,
     # SqsSendingFaultException,
-] + HTTP_EXCEPTIONS
+    *HTTP_EXCEPTIONS
+]
