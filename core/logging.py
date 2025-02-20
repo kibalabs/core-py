@@ -99,9 +99,9 @@ class KibaJsonLoggingFormatter(KibaLoggingFormatter):
         recordDict: dict[str, Union[str, int, float, bool, None]] = {
             'date': self.formatTime(record, '%Y-%m-%dT%H:%M:%S.%f'),
             # NOTE(krishan711): for some reason these constantly report this file instead of original
-            # 'path': record.pathname,  # noqa: ERA001
-            # 'function': record.funcName,  # noqa: ERA001
-            # 'line': record.lineno,  # noqa: ERA001
+            # 'path': record.pathname,
+            # 'function': record.funcName,
+            # 'line': record.lineno,
             'message': message or None,
             'level': record.levelname,
             'logger': record.name,

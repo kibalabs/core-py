@@ -68,7 +68,7 @@ class Requester:
         outputFilePath: str | None = None,
     ) -> KibaResponse:
         headers = headers or httpx.Headers()
-        # headers.update({'Content-Type': 'application/x-www-form-urlencoded'})  # noqa: ERA001
+        # headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
         return await self.make_request(method='POST', url=url, formDataDict=formDataDict, formFiles=formFiles, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
     async def patch(self, url: str, dataDict: Json | None = None, data: bytes | None = None, timeout: int | None = 10, headers: MutableMapping[str, str] | None = None, outputFilePath: str | None = None) -> KibaResponse:
@@ -87,7 +87,7 @@ class Requester:
         headers.update({'Content-Type': 'application/json'})
         return await self.make_request(method='PUT', url=url, dataDict=dataDict, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
 
-    async def make_request(  # noqa: C901
+    async def make_request(
         self,
         method: str,
         url: str,
