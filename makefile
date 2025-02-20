@@ -25,12 +25,6 @@ type-check:
 type-check-ci:
 	@ uv run type-check ./core --output-file type-check-results.json --output-format annotations
 
-security-check:
-	@ uv run security-check ./core
-
-security-check-ci:
-	@ uv run security-check ./core --output-file security-check-results.json --output-format annotations
-
 build:
 	@ uv build
 

@@ -1096,8 +1096,8 @@ wheels = [
 
 [[package]]
 name = "kiba-build"
-version = "0.1.10"
-source = { path = "../build-py/dist/kiba_build-0.1.10.tar.gz" }
+version = "0.1.11.dev6"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asyncclick" },
     { name = "bandit" },
@@ -1111,21 +1111,9 @@ dependencies = [
     { name = "twine" },
     { name = "wheel" },
 ]
-sdist = { hash = "sha256:d0dbd21e9aeab31bf1f534f5a4a245c8ff21551dcdcf1e99441eb2519999862f" }
-
-[package.metadata]
-requires-dist = [
-    { name = "asyncclick", specifier = ">=8.1.8" },
-    { name = "bandit", specifier = ">=1.8.3" },
-    { name = "bump-my-version", specifier = ">=0.32.1" },
-    { name = "click", specifier = ">=8.1.7" },
-    { name = "isort", specifier = ">=6.0.0" },
-    { name = "mypy", specifier = ">=1.15.0" },
-    { name = "pylint", specifier = ">=3.3.4" },
-    { name = "ruff", specifier = ">=0.9.7" },
-    { name = "simple-chalk", specifier = ">=0.1.0" },
-    { name = "twine", specifier = ">=6.1.0" },
-    { name = "wheel", specifier = ">=0.45.1" },
+sdist = { url = "https://files.pythonhosted.org/packages/72/44/5dea5c37303f2efc356bc72c204844356d5feb1391acbf09146a6f376933/kiba_build-0.1.11.dev6.tar.gz", hash = "sha256:1e7cbf1a3c0f7f2b9916178956cbb7677f0d6f9d61d1f730be64c8480cdf1f45", size = 46338 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/59/1c2f4fbdce01115caddde866f4978d2b8fa9b6f47b62261ddda85cec3ab1/kiba_build-0.1.11.dev6-py3-none-any.whl", hash = "sha256:8d46fa5f71849e0f06a30b0423c8b086cd28f2746f81593df14788efdfa4f1c4", size = 11740 },
 ]
 
 [[package]]
@@ -1196,7 +1184,7 @@ requires-dist = [
     { name = "azure-storage-queue", extras = ["aio"], marker = "extra == 'queue-aqs'", specifier = ">=12.12.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115.8" },
     { name = "httpx", marker = "extra == 'requester'", specifier = ">=0.28.1" },
-    { name = "kiba-build", path = "../build-py/dist/kiba_build-0.1.10.tar.gz" },
+    { name = "kiba-build" },
     { name = "orjson", specifier = ">=3.10.15" },
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'database-psql'", specifier = ">=2.0.38" },
@@ -1212,7 +1200,7 @@ provides-extras = ["api", "core-api", "storage", "queues", "queue-sqs", "queue-a
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "kiba-build", path = "../build-py/dist/kiba_build-0.1.10.tar.gz" },
+    { name = "kiba-build", specifier = "==0.1.11.dev6" },
     { name = "pytest", specifier = "==8.3.4" },
 ]
 
