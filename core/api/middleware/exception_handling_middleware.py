@@ -27,7 +27,7 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
         except KibaException as exception:
             logging.exception(exception)
             response = self._convert_exception(exception=exception)
-        except Exception as exception:  # pylint: disable=broad-except   # noqa: BLE001
+        except Exception as exception:  # noqa: BLE001
             logging.exception(exception)
             response = self._convert_exception(exception=KibaException.from_exception(exception=exception))
         return response

@@ -6,7 +6,7 @@ import datetime
 import json
 import typing
 
-JwtType = typing.TypeVar('JwtType', bound='Jwt')  # pylint: disable=invalid-name
+JwtType = typing.TypeVar('JwtType', bound='Jwt')
 
 
 @dataclasses.dataclass

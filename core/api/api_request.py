@@ -6,7 +6,7 @@ from starlette.requests import Request
 from core.http.basic_authentication import BasicAuthentication
 from core.http.jwt import Jwt
 
-ApiRequestDataType = typing.TypeVar('ApiRequestDataType', bound=BaseModel)  # pylint: disable=invalid-name
+ApiRequestDataType = typing.TypeVar('ApiRequestDataType', bound=BaseModel)
 
 
 class KibaApiRequest(Request, typing.Generic[ApiRequestDataType]):

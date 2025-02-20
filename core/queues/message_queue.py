@@ -6,7 +6,7 @@ from typing import TypeVar
 
 from core.queues.model import Message
 
-MessageType = TypeVar('MessageType', bound=Message)  # pylint: disable=invalid-name
+MessageType = TypeVar('MessageType', bound=Message)
 
 
 class MessageQueue(Generic[MessageType], ABC):

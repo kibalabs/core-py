@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from collections.abc import Sequence
 from typing import TypeVar
 
-ListItemType = TypeVar('ListItemType')  # pylint: disable=invalid-name
+ListItemType = TypeVar('ListItemType')
 
 
 def generate_chunks(lst: Sequence[ListItemType], chunkSize: int) -> Iterator[Sequence[ListItemType]]:

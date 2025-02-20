@@ -1,9 +1,9 @@
 from typing import TypeVar
 from typing import Union
 
-DictKeyType = TypeVar('DictKeyType')  # pylint: disable=invalid-name
-DictValueType = TypeVar('DictValueType')  # pylint: disable=invalid-name
-DictValueType2 = TypeVar('DictValueType2')  # pylint: disable=invalid-name
+DictKeyType = TypeVar('DictKeyType')
+DictValueType = TypeVar('DictValueType')
+DictValueType2 = TypeVar('DictValueType2')
 
 
 def merge_dicts(dict1: dict[DictKeyType, DictValueType], dict2: dict[DictKeyType, DictValueType2]) -> dict[DictKeyType, Union[DictValueType, DictValueType2]]:

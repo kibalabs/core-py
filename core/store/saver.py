@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     WhereClause = _ColumnExpressionArgument[bool]
 else:
-    _DMLColumnArgument = Any  # pylint: disable=invalid-name
+    _DMLColumnArgument = Any
     WhereClause = Any
 
 

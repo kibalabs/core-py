@@ -30,7 +30,7 @@ class MessageNeedsReprocessingException(InternalServerErrorException):
         self.originalException = originalException
 
 
-MessageType = TypeVar('MessageType', bound=Message)  # pylint: disable=invalid-name
+MessageType = TypeVar('MessageType', bound=Message)
 
 
 class MessageQueueProcessor(Generic[MessageType]):
@@ -53,8 +53,8 @@ class MessageQueueProcessor(Generic[MessageType]):
             await self.queue.delete_message(message=message)
         except MessageNeedsReprocessingException as exception:
             logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {exception.originalException!s}')
-            await self.queue.send_message(message=message, delaySeconds=((message.postCount or 0) * exception.delaySeconds))  # pylint: disable=superfluous-parens
-        except Exception as exception:  # pylint: disable=broad-except   # noqa: BLE001
+            await self.queue.send_message(message=message, delaySeconds=((message.postCount or 0) * exception.delaySeconds))
+        except Exception as exception:  # noqa: BLE001
             statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
             logging.error('Caught exception whilst processing message')
             logging.exception(exception)
