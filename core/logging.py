@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import TextIO
 from typing import Union
-from typing import override
 
 from core.exceptions import KibaException
 from core.util.value_holder import RequestIdHolder
@@ -89,14 +88,12 @@ class KibaLoggingFormatter(Formatter):
         record.requestId = self.requestIdHolder.get_value() if self.requestIdHolder is not None else ''
         return super().format(record=record)
 
-    @override
-    def formatTime(self, record: LogRecord, datefmt: str | None = None) -> str:
+    def formatTime(self, record: LogRecord, datefmt: str | None = None) -> str:  # noqa: N802]
         logDate = datetime.datetime.fromtimestamp(record.created, tz=datetime.UTC)
         return logDate.strftime(datefmt or '%Y-%m-%dT%H:%M:%S.%f')
 
 
 class KibaJsonLoggingFormatter(KibaLoggingFormatter):
-    @override
     def format(self, record: LogRecord) -> str:
         message = self.formatException(record.exc_info) if record.exc_info else str(record.msg)
         recordDict: dict[str, Union[str, int, float, bool, None]] = {
