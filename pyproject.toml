@@ -1,6 +1,6 @@
 [project]
 name = "kiba-core"
-version = "0.5.2"
+version = "0.5.3.dev13"
 description = "Kiba Labs' python utilities"
 readme = "README.md"
 requires-python = "~=3.11"
