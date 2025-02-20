@@ -20,12 +20,12 @@ if TYPE_CHECKING:
     from sqlalchemy.sql._typing import _DMLColumnArgument
     WhereClause = _ColumnExpressionArgument[bool]
 else:
-    _DMLColumnArgument = Any
+    _DMLColumnArgument = Any  # pylint: disable=invalid-name
     WhereClause = Any
 
 
-CreateRecordValuesDict = Dict[_DMLColumnArgument, Any]  # type: ignore[misc]
-UpdateRecordValuesDict = Dict[_DMLColumnArgument, Any]  # type: ignore[misc]
+CreateRecordValuesDict = Dict[_DMLColumnArgument, Any]  # type: ignore[explicit-any]
+UpdateRecordValuesDict = Dict[_DMLColumnArgument, Any]  # type: ignore[explicit-any]
 
 
 class SavingException(InternalServerErrorException):

@@ -27,8 +27,8 @@ from core.exceptions import NotFoundException
 from core.requester import Requester
 from core.util import chain_util
 
-ListAny = List[Any]  # type: ignore[misc]
-DictStrAny = Dict[str, Any]  # type: ignore[misc]
+ListAny = List[Any]  # type: ignore[explicit-any]
+DictStrAny = Dict[str, Any]  # type: ignore[explicit-any]
 
 
 class EthClientInterface:
@@ -137,7 +137,7 @@ class RestEthClient(EthClientInterface):
     def _hex_to_int(value: str) -> int:
         return int(value, 16)
 
-    async def _make_request(self, method: str, params: Optional[ListAny] = None) -> Any:  # type: ignore[misc]
+    async def _make_request(self, method: str, params: Optional[ListAny] = None) -> Any:  # type: ignore[explicit-any]
         response = await self.requester.post_json(url=self.url, dataDict={'jsonrpc':'2.0', 'method': method, 'params': params or [], 'id': 0}, timeout=100)
         jsonResponse = response.json()
         if jsonResponse.get('error'):

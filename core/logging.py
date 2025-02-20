@@ -187,20 +187,20 @@ INFO = logging.INFO
 DEBUG = logging.DEBUG
 
 
-def _log(level: int, msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+def _log(level: int, msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
     if ROOT_LOGGER.isEnabledFor(level=level):
         ROOT_LOGGER._log(level=level, msg=msg, args=args, **kwargs)  # pylint: disable=protected-access
 
 
-def critical(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+def critical(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
     _log(level=CRITICAL, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
-def error(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+def error(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
     _log(level=ERROR, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
-def exception(msg: Union[str, Exception], *args: Any, exc_info: bool = True, **kwargs: Any) -> None:  # type: ignore[misc]
+def exception(msg: Union[str, Exception], *args: Any, exc_info: bool = True, **kwargs: Any) -> None:  # type: ignore[explicit-any]
     if isinstance(msg, KibaException):
         resolvedMessage = msg.message or str(msg)
     elif isinstance(msg, Exception):
@@ -210,19 +210,19 @@ def exception(msg: Union[str, Exception], *args: Any, exc_info: bool = True, **k
     _log(level=ERROR, msg=resolvedMessage, exc_info=exc_info, *args, **kwargs)  # type: ignore[misc]
 
 
-def warning(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+def warning(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
     _log(level=WARNING, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
-def info(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+def info(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
     _log(level=INFO, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
-def debug(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+def debug(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
     _log(level=DEBUG, msg=msg, *args, **kwargs)  # type: ignore[misc]
 
 
-def basicConfig(**kwargs: Any) -> None:  # type: ignore[misc]  # pylint: disable=invalid-name
+def basicConfig(**kwargs: Any) -> None:  # type: ignore[explicit-any]  # pylint: disable=invalid-name
     logging.basicConfig(**kwargs)
 
 

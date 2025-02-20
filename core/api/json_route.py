@@ -29,7 +29,7 @@ def json_route(
 ) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[ApiResponse]]], typing.Callable[_P, KibaJSONResponse]]:
     def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[ApiResponse]]) -> typing.Callable[_P, KibaJSONResponse]:
         @functools.wraps(func)
-        async def async_wrapper(*args: typing.Any) -> KibaJSONResponse:  # type: ignore[misc]
+        async def async_wrapper(*args: typing.Any) -> KibaJSONResponse:  # type: ignore[explicit-any, misc]
             receivedRequest = args[0]
             pathParams = receivedRequest.path_params
             # TODO(krishan711): move these to get request only
