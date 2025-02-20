@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "aiobotocore"
-version = "2.19.0"
+version = "2.20.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -20,9 +20,9 @@ dependencies = [
     { name = "urllib3" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/46/86a52025bb356bc38bfba9fa11f754b8411f400265094c3448148a931280/aiobotocore-2.19.0.tar.gz", hash = "sha256:552d5756989621b5274f1b4a4840cd76ae83dd930d0b1839af6443743a893faf", size = 107828 }
+sdist = { url = "https://files.pythonhosted.org/packages/04/0a/1db39b01304fbfc5a47e3ea45294a43b2e2de276e95ddec8c724fd51826b/aiobotocore-2.20.0.tar.gz", hash = "sha256:8902d8a96e3a389c99a68d23e2ca07c8d5059439c2a55acf28a8af19e65fe293", size = 108347 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8c/43/8a1bdf8dd7f0d7eca7be0d64bacdd96c593cf3f3aea6c452f90e052cf9e8/aiobotocore-2.19.0-py3-none-any.whl", hash = "sha256:12c2960a21472b8eb3452cde5eb31d541ca1464d236f4221556320fa8aed2ee8", size = 77659 },
+    { url = "https://files.pythonhosted.org/packages/b1/99/e7cb7c26c7109bf2b2a5b05a74575fada7c178718d2f3a57c7f621c44fd9/aiobotocore-2.20.0-py3-none-any.whl", hash = "sha256:02d9d727355a03f83ee1a4fc91f2fd14966862144b4d2cc3434181e82dfafd83", size = 78060 },
 ]
 
 [[package]]
@@ -343,16 +343,16 @@ wheels = [
 
 [[package]]
 name = "botocore"
-version = "1.36.3"
+version = "1.36.23"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/61/69eb06a803c83e0da733b60b2bc65880c18ef2dee19ee10cf8732794a3c1/botocore-1.36.3.tar.gz", hash = "sha256:775b835e979da5c96548ed1a0b798101a145aec3cd46541d62e27dda5a94d7f8", size = 13507880 }
+sdist = { url = "https://files.pythonhosted.org/packages/25/d4/e93bcf4f825faa25c2ff27b653cd9e976226df527445f8c414198020c967/botocore-1.36.23.tar.gz", hash = "sha256:9feaa2d876f487e718a5fd80a35fa401042b518c0c75117d3e1ea39a567439e7", size = 13571101 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9f/14/f952fed35b9c04aa66453b5fb5d1262a5a9f5dfdcb396d387c1ff0c6da41/botocore-1.36.3-py3-none-any.whl", hash = "sha256:536ab828e6f90dbb000e3702ac45fd76642113ae2db1b7b1373ad24104e89255", size = 13304681 },
+    { url = "https://files.pythonhosted.org/packages/7c/93/a566604998182dd354aa6bab3c5b0393077a2ce4b97e18713d94c362da06/botocore-1.36.23-py3-none-any.whl", hash = "sha256:886730e79495a2e153842725ebdf85185c8277cdf255b3b5879cd097ddc7fcc3", size = 13355279 },
 ]
 
 [[package]]
@@ -1096,22 +1096,23 @@ wheels = [
 
 [[package]]
 name = "kiba-build"
-version = "0.1.11.dev1"
+version = "0.1.11.dev5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asyncclick" },
     { name = "bandit" },
     { name = "bump-my-version" },
     { name = "click" },
+    { name = "isort" },
     { name = "mypy" },
     { name = "pylint" },
     { name = "simple-chalk" },
     { name = "twine" },
     { name = "wheel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/93/0b02dc802ca1c787f9d92e664f7e48f2d145f2714cfa9204202fa99aa949/kiba_build-0.1.11.dev1.tar.gz", hash = "sha256:b285ea5ec03e60f41fe037480af0279d229983330b96be94664dc618447c1a2a", size = 5766 }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/07/bba3f7397736af5e5426fc7f2ef49dbbb98725de9984601a50d75e502430/kiba_build-0.1.11.dev5.tar.gz", hash = "sha256:a991e8410e0a5a6ce17e69f6a21bcbcde4694552b7063d8b8615ff7545557f54", size = 42710 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/b9/32a8fcba8f91a93155632bef8998a1d6010052555bc3b1d315d0e5930c5d/kiba_build-0.1.11.dev1-py3-none-any.whl", hash = "sha256:9b46e46760ee31d40e1ed95877839f2e4930abef338ebd0d8d4cdc2065578411", size = 8379 },
+    { url = "https://files.pythonhosted.org/packages/55/b8/321db0da488f20285ba95bd20de6bbe8f707711f449c3b00642d2a6fb309/kiba_build-0.1.11.dev5-py3-none-any.whl", hash = "sha256:88529f07de2a5bdab9e0c9684ef5e2cda5ed90249131be7794317bfa7a39f9ef", size = 9608 },
 ]
 
 [[package]]
@@ -1166,20 +1167,8 @@ web3 = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "aiobotocore" },
-    { name = "aiosqlite" },
-    { name = "asyncpg" },
-    { name = "azure-storage-queue", extra = ["aio"] },
-    { name = "fastapi" },
-    { name = "httpx" },
     { name = "kiba-build" },
     { name = "pytest" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "starlette" },
-    { name = "types-aiobotocore", extra = ["essential"] },
-    { name = "types-aiofiles" },
-    { name = "uvicorn", extra = ["standard"] },
-    { name = "web3" },
 ]
 
 [package.metadata]
@@ -1208,20 +1197,8 @@ provides-extras = ["api", "core-api", "storage", "queues", "queue-sqs", "queue-a
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "aiobotocore", specifier = "==2.19.0" },
-    { name = "aiosqlite", specifier = "==0.21.0" },
-    { name = "asyncpg", specifier = "==0.30.0" },
-    { name = "azure-storage-queue", extras = ["aio"], specifier = "==12.12.0" },
-    { name = "fastapi", specifier = "==0.115.8" },
-    { name = "httpx", specifier = "==0.28.1" },
-    { name = "kiba-build", specifier = "==0.1.11.dev1" },
-    { name = "pytest", specifier = ">=8.3.4" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.0.38" },
-    { name = "starlette", specifier = "==0.45.3" },
-    { name = "types-aiobotocore", extras = ["essential"], specifier = "==2.19.0" },
-    { name = "types-aiofiles", specifier = "==24.1.0.20241221" },
-    { name = "uvicorn", extras = ["standard"], specifier = "==0.34.0" },
-    { name = "web3", specifier = "==7.8.0" },
+    { name = "kiba-build", specifier = "==0.1.11.dev5" },
+    { name = "pytest", specifier = "==8.3.4" },
 ]
 
 [[package]]

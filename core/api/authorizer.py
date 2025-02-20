@@ -26,12 +26,12 @@ class Authorizer:
 ApiRequest = typing.TypeVar("ApiRequest", bound=BaseModel)
 
 
-def authorize_bearer_jwt(  # type: ignore[misc]
+def authorize_bearer_jwt(  # type: ignore[explicit-any]
     authorizer: Authorizer,
 ) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[typing.Any]]], typing.Callable[_P, typing.Any]]:
-    def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[typing.Any]]) -> typing.Callable[_P, typing.Any]:  # type: ignore[misc]
+    def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[typing.Any]]) -> typing.Callable[_P, typing.Any]:  # type: ignore[explicit-any]
         @functools.wraps(func)
-        async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[misc]
+        async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
             authorization = request.headers.get('Authorization')
             if not authorization:
                 raise ForbiddenException(message='AUTH_NOT_PROVIDED')

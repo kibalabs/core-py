@@ -53,20 +53,8 @@ types = [
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev1",
+    "kiba-build==0.1.11.dev5",
     "pytest==8.3.4",
-    "fastapi==0.115.8",
-    "uvicorn[standard]==0.34.0",
-    "starlette==0.45.3",
-    "aiobotocore==2.19.0",
-    "azure-storage-queue[aio]==12.12.0",
-    "sqlalchemy[asyncio]==2.0.38",
-    "asyncpg==0.30.0",
-    "aiosqlite==0.21.0",
-    "httpx==0.28.1",
-    "web3==7.8.0",
-    "types-aiobotocore[essential]==2.19.0",
-    "types-aiofiles==24.1.0.20241221",
 ]
 
 [project.urls]
@@ -75,5 +63,12 @@ repository = "https://github.com/kibalabs/core-py"
 [tool.uv]
 package = true
 
+[build-system]
+requires = ["setuptools", "wheel", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.package-data]
-core = ["py.typed"]
+core = ["/py.typed", "**/config.toml"]

@@ -103,7 +103,7 @@ class Requester:
                 # if requestHeaders.get('content-type') and requestHeaders.get('content-type').lower() == 'application/json':
                 content = json.dumps(contentDict).encode()
         files: Optional[List[Tuple[str, HttpxFileTypes]]] = None
-        innerData: Optional[Dict[Any, Any]] = None  # type: ignore[misc]
+        innerData: Optional[Dict[Any, Any]] = None  # type: ignore[explicit-any]
         if formDataDict:
             if method == 'POST':
                 formDataDictCleaned: Dict[str, str] = {}

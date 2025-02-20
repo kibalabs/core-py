@@ -13,9 +13,9 @@ from pydantic.fields import ModelPrivateAttr
 from core.util import date_util
 
 
-class Message(BaseModel):  # type: ignore[misc]
+class Message(BaseModel):  # type: ignore[explicit-any]
     command: str
-    content: Dict[str, Any]  # type: ignore[misc]
+    content: Dict[str, Any]  # type: ignore[explicit-any]
     requestId: Optional[str]
     postCount: Optional[int]
     postDate: Optional[datetime.datetime]

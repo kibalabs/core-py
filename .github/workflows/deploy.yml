@@ -2,15 +2,12 @@ name: Deploy
 on:
   push:
     branches: [main]
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-deploy
-  cancel-in-progress: true
 jobs:
   deploy-package-next:
     runs-on: ubuntu-latest
     env:
       DOCKER_IMAGE: package
-      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      PYPI_PUBLISH_TOKEN: ${{ secrets.PYPI_PUBLISH_TOKEN }}
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
@@ -19,16 +16,5 @@ jobs:
           fetch-depth: 0
       - name: Build docker image
         run: docker build --tag $DOCKER_IMAGE .
-      - name: Calculate commit count since last tag
-        id: vars
-        run: echo ::set-output name=commit_count::$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)
-      - name: Create .pypirc file
-        run: echo -e "[pypi]\nusername=__token__\npassword=$PYPI_TOKEN" > .pypirc
       - name: Publish next package to pypi
-        if: steps.vars.outputs.commit_count != '0'
-        run: |
-          docker run -v $(pwd)/.pypirc:/root/.pypirc $DOCKER_IMAGE /bin/bash -c " \
-            version --part dev --count ${{ steps.vars.outputs.commit_count }} \
-            && python setup.py bdist_wheel \
-            && twine upload --non-interactive --disable-progress-bar dist/* \
-          "
+        run: docker run -e UV_PUBLISH_TOKEN=$PYPI_PUBLISH_TOKEN $DOCKER_IMAGE /bin/bash -c " make publish-dev"
