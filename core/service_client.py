@@ -1,7 +1,5 @@
 import json
 import os
-from typing import Optional
-from typing import Type
 
 from pydantic import BaseModel
 
@@ -9,12 +7,11 @@ from core.requester import Requester
 
 
 class ServiceClient:
-
-    def __init__(self, requester: Requester, baseUrl: str):
+    def __init__(self, requester: Requester, baseUrl: str) -> None:
         self.requester = requester
         self.baseUrl = baseUrl
 
-    async def make_request(self, method: str, path: str, responseClass: Optional[Type[BaseModel]] = None, request: Optional[BaseModel] = None) -> Optional[BaseModel]:
+    async def make_request(self, method: str, path: str, responseClass: type[BaseModel] | None = None, request: BaseModel | None = None) -> BaseModel | None:
         url = os.path.join(self.baseUrl, path)
-        response = await self.requester.make_request(method=method, url=url, dataDict=request.dict() if request else None)
+        response = await self.requester.make_request(method=method, url=url, dataDict=request.model_dump() if request else None)
         return responseClass.model_validate(json.loads(response.content)) if responseClass else None

@@ -6,7 +6,8 @@ import datetime
 import json
 import typing
 
-JwtType = typing.TypeVar('JwtType', bound='Jwt')  # pylint: disable=invalid-name
+JwtType = typing.TypeVar('JwtType', bound='Jwt')
+
 
 @dataclasses.dataclass
 class Jwt:
@@ -15,19 +16,19 @@ class Jwt:
     signatureBytes: bytes = b''
 
     @property
-    def headerBase64(self) -> str:
+    def headerBase64(self) -> str:  # noqa: N802
         return Jwt._base64encode_string(value=json.dumps(obj=self.headerDict, separators=(',', ':')))
 
     @property
-    def payloadBase64(self) -> str:
+    def payloadBase64(self) -> str:  # noqa: N802
         return Jwt._base64encode_string(value=json.dumps(obj=self.payloadDict, separators=(',', ':')))
 
     @property
-    def signatureBase64(self) -> str:
+    def signatureBase64(self) -> str:  # noqa: N802
         return Jwt._base64encode(value=self.signatureBytes).decode()
 
     @property
-    def verificationString(self) -> str:
+    def verificationString(self) -> str:  # noqa: N802
         return f'{self.headerBase64}.{self.payloadBase64}'
 
     def to_string(self) -> str:
@@ -71,7 +72,6 @@ class Jwt:
 
 @dataclasses.dataclass
 class KibaJwt(Jwt):
-
     class Key:
         ALGORITHM = 'alg'
         TYPE = 'typ'
@@ -88,48 +88,40 @@ class KibaJwt(Jwt):
         return self.headerDict.get(KibaJwt.Key.ALGORITHM)
 
     @property
-    def keyId(self) -> str | None:
+    def keyId(self) -> str | None:  # noqa: N802
         return self.headerDict.get(KibaJwt.Key.KEY_ID)
 
     @property
-    def tokenId(self) -> str | None:
+    def tokenId(self) -> str | None:  # noqa: N802
         return typing.cast(str, self.payloadDict[KibaJwt.Key.TOKEN_ID]) if self.payloadDict.get(KibaJwt.Key.TOKEN_ID) else None
 
     @property
-    def userId(self) -> str | None:
+    def userId(self) -> str | None:  # noqa: N802
         return typing.cast(str, self.payloadDict[KibaJwt.Key.USER_ID]) if self.payloadDict.get(KibaJwt.Key.USER_ID) else None
 
     @property
-    def expiryDate(self) -> datetime.datetime | None:
+    def expiryDate(self) -> datetime.datetime | None:  # noqa: N802
         expiryDateSeconds = typing.cast(int, self.payloadDict.get('exp') or 0)
-        return datetime.datetime.fromtimestamp(expiryDateSeconds, tz=datetime.timezone.utc) if expiryDateSeconds else None
+        return datetime.datetime.fromtimestamp(expiryDateSeconds, tz=datetime.UTC) if expiryDateSeconds else None
 
     @expiryDate.setter
-    def expiryDate(self, expiryDate: datetime.datetime) -> None:
+    def expiryDate(self, expiryDate: datetime.datetime) -> None:  # noqa: N802
         self.payloadDict[KibaJwt.Key.EXPIRY_DATE] = int(expiryDate.timestamp())
 
     @property
-    def issueDate(self) -> datetime.datetime | None:
+    def issueDate(self) -> datetime.datetime | None:  # noqa: N802
         issueDateSeconds = typing.cast(int, self.payloadDict.get(KibaJwt.Key.ISSUE_DATE) or 0)
-        return datetime.datetime.fromtimestamp(issueDateSeconds, tz=datetime.timezone.utc) if issueDateSeconds else None
+        return datetime.datetime.fromtimestamp(issueDateSeconds, tz=datetime.UTC) if issueDateSeconds else None
 
     @issueDate.setter
-    def issueDate(self, issueDate: datetime.datetime) -> None:
+    def issueDate(self, issueDate: datetime.datetime) -> None:  # noqa: N802
         self.payloadDict[KibaJwt.Key.ISSUE_DATE] = int(issueDate.timestamp())
 
     @property
-    def finalRefreshDate(self) -> datetime.datetime | None:
+    def finalRefreshDate(self) -> datetime.datetime | None:  # noqa: N802
         finalRefreshDateSeconds = typing.cast(int, self.payloadDict.get(KibaJwt.Key.FINAL_REFRESH_DATE) or 0)
-        return datetime.datetime.fromtimestamp(finalRefreshDateSeconds, tz=datetime.timezone.utc) if finalRefreshDateSeconds else None
+        return datetime.datetime.fromtimestamp(finalRefreshDateSeconds, tz=datetime.UTC) if finalRefreshDateSeconds else None
 
     @finalRefreshDate.setter
-    def finalRefreshDate(self, finalRefreshDate: datetime.datetime) -> None:
+    def finalRefreshDate(self, finalRefreshDate: datetime.datetime) -> None:  # noqa: N802
         self.payloadDict[KibaJwt.Key.FINAL_REFRESH_DATE] = int(finalRefreshDate.timestamp())
-
-    # @property
-    # def scopes(self) -> Sequence[str]:
-    #     return typing.cast(Sequence[str], self.payloadDict.get(KibaJwt.Key.SCOPES) or [])
-
-    # @scopes.setter
-    # def scopes(self, scopes: Sequence[str]) -> None:
-    #     self.payloadDict[KibaJwt.Key.SCOPES] = scopes

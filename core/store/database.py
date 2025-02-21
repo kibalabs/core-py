@@ -1,9 +1,7 @@
 import contextlib
 import contextvars
 import typing
-from typing import AsyncIterator
-from typing import Optional
-from typing import Tuple
+from collections.abc import AsyncIterator
 from typing import TypeVar
 
 from sqlalchemy.engine import Result
@@ -15,11 +13,10 @@ from sqlalchemy.sql.selectable import TypedReturnsRows
 from core.exceptions import InternalServerErrorException
 
 DatabaseConnection = AsyncConnection
-ResultType = TypeVar('ResultType', bound=Tuple)  # type: ignore[type-arg]  # pylint: disable=invalid-name
+ResultType = TypeVar('ResultType', bound=tuple)  # type: ignore[type-arg]
 
 
 class Database:
-
     @staticmethod
     def create_connection_string(engine: str, username: str, password: str, host: str, port: str, name: str) -> str:
         return f'{engine}://{username}:{password}@{host}:{port}/{name}'
@@ -32,10 +29,10 @@ class Database:
     def create_sqlite_connection_string(filename: str) -> str:
         return f'sqlite+aiosqlite:///{filename}'
 
-    def __init__(self, connectionString: str):
+    def __init__(self, connectionString: str) -> None:
         self.connectionString = connectionString
-        self._engine: Optional[AsyncEngine] = None
-        self._connectionContext = contextvars.ContextVar[DatabaseConnection | None]("_connectionContext")
+        self._engine: AsyncEngine | None = None
+        self._connectionContext = contextvars.ContextVar[DatabaseConnection | None]('_connectionContext')
 
     async def connect(self) -> None:
         if not self._engine:
@@ -53,8 +50,7 @@ class Database:
         async with self._engine.begin() as connection:
             yield connection
 
-
-    def _get_connection(self) -> Optional[DatabaseConnection]:
+    def _get_connection(self) -> DatabaseConnection | None:
         try:
             connection = self._connectionContext.get()
             if connection and not connection.closed:
@@ -76,7 +72,7 @@ class Database:
             finally:
                 self._connectionContext.set(None)
 
-    async def execute(self, query: TypedReturnsRows[ResultType], connection: Optional[DatabaseConnection] = None) -> Result[ResultType]:
+    async def execute(self, query: TypedReturnsRows[ResultType], connection: DatabaseConnection | None = None) -> Result[ResultType]:
         if not self._engine:
             raise InternalServerErrorException(message='Connection has not been established. Please called collect() first.')
         if connection:

@@ -8,6 +8,7 @@ dependencies = [
     "aiofiles>=24.1.0",
     "pydantic>=2.10.6",
     "orjson>=3.10.15",
+    "kiba-build",
 ]
 
 [project.optional-dependencies]
@@ -53,7 +54,7 @@ types = [
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev5",
+    "kiba-build==0.1.11.dev7",
     "pytest==8.3.4",
 ]
 

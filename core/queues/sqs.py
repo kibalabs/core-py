@@ -1,11 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from contextlib import AsyncExitStack
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import List
-from typing import Optional
-from typing import Sequence
 
 from aiobotocore.session import get_session as get_botocore_session
 
@@ -41,14 +39,13 @@ class SqsMessage(Message):  # type: ignore[explicit-any]
 
 
 class SqsMessageQueue(MessageQueue[SqsMessage]):
-
     def __init__(self, region: str, accessKeyId: str, accessKeySecret: str, queueUrl: str) -> None:
         self.region = region
         self._accessKeyId = accessKeyId
         self._accessKeySecret = accessKeySecret
         self.queueUrl = queueUrl
         self._exitStack = AsyncExitStack()
-        self._sqsClient: Optional[SQSClient] = None
+        self._sqsClient: SQSClient | None = None
 
     async def connect(self) -> None:
         session = get_botocore_session()
@@ -60,16 +57,16 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
 
     async def send_message(self, message: Message, delaySeconds: int = 0) -> None:
         if not self._sqsClient:
-            raise InternalServerErrorException("You need to call .connect() before trying to send messages")
+            raise InternalServerErrorException('You need to call .connect() before trying to send messages')
         message.prepare_for_send()
         await self._sqsClient.send_message(QueueUrl=self.queueUrl, DelaySeconds=delaySeconds, MessageAttributes={}, MessageBody=message.json())
 
     async def send_messages(self, messages: Sequence[Message], delaySeconds: int = 0) -> None:
         if not self._sqsClient:
-            raise InternalServerErrorException("You need to call .connect() before trying to send messages")
+            raise InternalServerErrorException('You need to call .connect() before trying to send messages')
         failures = []
         for messageChunk in list_util.generate_chunks(lst=messages, chunkSize=10):
-            requests: List[SendMessageBatchRequestEntryTypeDef] = []
+            requests: list[SendMessageBatchRequestEntryTypeDef] = []
             for index, message in enumerate(messageChunk):
                 message.prepare_for_send()
                 requests.append({'Id': str(index), 'DelaySeconds': int(delaySeconds), 'MessageAttributes': {}, 'MessageBody': message.json()})
@@ -82,18 +79,18 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
                 errorMessage += f'{failureType} fault: id {failure["Id"]}, code {failure["Code"]}, message {failure.get("Message")}\n'
             raise InternalServerErrorException(message=errorMessage)
 
-    async def get_message(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> Optional[SqsMessage]:
+    async def get_message(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> SqsMessage | None:
         messages = await self.get_messages(limit=1, expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds)
         return messages[0] if messages else None
 
-    async def get_messages(self, limit: int = 1, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> List[SqsMessage]:
+    async def get_messages(self, limit: int = 1, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> list[SqsMessage]:
         if not self._sqsClient:
-            raise InternalServerErrorException("You need to call .connect() before trying to get messages")
+            raise InternalServerErrorException('You need to call .connect() before trying to get messages')
         sqsResponse = await self._sqsClient.receive_message(QueueUrl=self.queueUrl, VisibilityTimeout=expectedProcessingSeconds, MaxNumberOfMessages=limit, WaitTimeSeconds=longPollSeconds)
         sqsMessages = [SqsMessage.from_sqs_message(sqsMessage=sqsMessage) for sqsMessage in sqsResponse.get('Messages', [])]
         return sqsMessages
 
     async def delete_message(self, message: SqsMessage) -> None:
         if not self._sqsClient:
-            raise InternalServerErrorException("You need to call .connect() before trying to delete messages")
+            raise InternalServerErrorException('You need to call .connect() before trying to delete messages')
         await self._sqsClient.delete_message(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle)

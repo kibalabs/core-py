@@ -10,7 +10,6 @@ from core.exceptions import RedirectException
 
 
 class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
-
     @staticmethod
     def _convert_exception(exception: KibaException) -> Response:
         response = JSONResponse(status_code=exception.statusCode, content=exception.to_dict())
@@ -28,7 +27,7 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
         except KibaException as exception:
             logging.exception(exception)
             response = self._convert_exception(exception=exception)
-        except Exception as exception:  # pylint: disable=broad-except
+        except Exception as exception:  # noqa: BLE001
             logging.exception(exception)
             response = self._convert_exception(exception=KibaException.from_exception(exception=exception))
         return response

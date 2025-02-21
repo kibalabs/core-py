@@ -1,13 +1,11 @@
 import contextvars
 from typing import Generic
-from typing import Optional
 from typing import TypeVar
 
 T = TypeVar('T')
 
 
 class ValueHolder(Generic[T]):
-
     def __init__(self, value: T) -> None:
         super().__init__()
         self._value = value
@@ -17,7 +15,6 @@ class ValueHolder(Generic[T]):
 
 
 class SettableValueHolder(ValueHolder[T]):
-
     def __init__(self, value: T) -> None:
         super().__init__(value=value)
 
@@ -26,10 +23,9 @@ class SettableValueHolder(ValueHolder[T]):
 
 
 class ContextSettableValueHolder(ValueHolder[T]):
-
     def __init__(self, defaultValue: T) -> None:
         super().__init__(value=defaultValue)
-        self._valueContext = contextvars.ContextVar[T]("_valueContext")
+        self._valueContext = contextvars.ContextVar[T]('_valueContext')
 
     def set_value(self, value: T) -> None:
         self._valueContext.set(value)
@@ -42,14 +38,13 @@ class ContextSettableValueHolder(ValueHolder[T]):
         return super().get_value()
 
 
-class RequestIdHolder(ContextSettableValueHolder[Optional[str]]):
-
-    def __init__(self, defaultValue: Optional[str] = None, separator: str = '-') -> None:
+class RequestIdHolder(ContextSettableValueHolder[str | None]):
+    def __init__(self, defaultValue: str | None = None, separator: str = '-') -> None:
         super().__init__(defaultValue=defaultValue)
         self.separator = separator
-        self._requestCounterContext = contextvars.ContextVar[int]("_requestCounterContext")
+        self._requestCounterContext = contextvars.ContextVar[int]('_requestCounterContext')
 
-    def set_value(self, value: Optional[str]) -> None:
+    def set_value(self, value: str | None) -> None:
         super().set_value(value=value)
         self._requestCounterContext.set(0)
 

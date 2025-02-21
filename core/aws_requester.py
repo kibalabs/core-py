@@ -2,12 +2,9 @@ import datetime
 import hashlib
 import hmac
 import json
-from typing import Dict
-from typing import Mapping
-from typing import MutableMapping
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
+from collections.abc import Mapping
+from collections.abc import MutableMapping
+from collections.abc import Sequence
 from typing import Union
 from urllib import parse as urlparse
 
@@ -22,10 +19,9 @@ from core.util.typing_util import Json
 
 # NOTE(krishan711): mostly adapted from https://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
 class AwsRequester(Requester):
-
     _SIGNING_ALGORITHM = 'AWS4-HMAC-SHA256'
 
-    def __init__(self, accessKeyId: str, accessKeySecret: str, headers: Optional[Dict[str, str]] = None):
+    def __init__(self, accessKeyId: str, accessKeySecret: str, headers: dict[str, str] | None = None) -> None:
         super().__init__(headers=headers)
         self.accessKeyId = accessKeyId
         self.accessKeySecret = accessKeySecret
@@ -46,7 +42,18 @@ class AwsRequester(Requester):
         key5 = self._sign(key=key4, message='aws4_request')
         return self._sign_hex(key=key5, message=stringToSign)
 
-    async def make_request(self, method: str, url: str, dataDict: Optional[Json] = None, data: Optional[bytes] = None, formDataDict: Optional[Mapping[str, Union[str, FileContent]]] = None, formFiles: Optional[Sequence[Tuple[str, HttpxFileTypes]]] = None, timeout: Optional[int] = 10, headers: Optional[MutableMapping[str, str]] = None, outputFilePath: Optional[str] = None) -> KibaResponse:
+    async def make_request(
+        self,
+        method: str,
+        url: str,
+        dataDict: Json | None = None,
+        data: bytes | None = None,
+        formDataDict: Mapping[str, Union[str, FileContent]] | None = None,
+        formFiles: Sequence[tuple[str, HttpxFileTypes]] | None = None,
+        timeout: int | None = 10,
+        headers: MutableMapping[str, str] | None = None,
+        outputFilePath: str | None = None,
+    ) -> KibaResponse:
         canonicalQueryString = ''
         if data is None and dataDict is not None:
             if method == 'GET':
@@ -70,17 +77,15 @@ class AwsRequester(Requester):
         headers = headers or {}
         headers['x-amz-date'] = amazonFormattedDate
         headers['host'] = host
-
         # NOTE(krishan711): headers always have to be sorted before signing
         headerKeysToSign = sorted(['host', 'x-amz-date'])
         signedHeadersString = ';'.join(headerKeysToSign)
         canonicalHeaders = ''.join(f'{headerKey}:{headers[headerKey]}\n' for headerKey in headerKeysToSign)
         payloadHash = hashlib.sha256(data).hexdigest()
-        canonicalRequest = '\n'.join([method, path, canonicalQueryString, canonicalHeaders, signedHeadersString, payloadHash])
+        canonicalRequest = '\n'.join([method, path, canonicalQueryString, canonicalHeaders, signedHeadersString, payloadHash])  # noqa: FLY002
         requestHash = hashlib.sha256(canonicalRequest.encode()).hexdigest()
-
         credentialScope = '/'.join([requestDate.strftime('%Y%m%d'), region, service, 'aws4_request'])
-        stringToSign = '\n'.join([self._SIGNING_ALGORITHM, amazonFormattedDate, credentialScope, requestHash])
+        stringToSign = '\n'.join([self._SIGNING_ALGORITHM, amazonFormattedDate, credentialScope, requestHash])  # noqa: FLY002
         signature = self._sign_string(stringToSign=stringToSign, requestDate=requestDate, service=service, region=region)
         headers['Authorization'] = f'{self._SIGNING_ALGORITHM} Credential={self.accessKeyId}/{credentialScope}, SignedHeaders={signedHeadersString}, Signature={signature}'
         return await super().make_request(method=method, url=url, dataDict=None, data=data, formDataDict=None, formFiles=None, timeout=timeout, headers=headers, outputFilePath=outputFilePath)

@@ -1,41 +1,39 @@
 import abc
 from abc import ABC
+from collections.abc import Sequence
 from typing import Generic
-from typing import List
-from typing import Optional
-from typing import Sequence
 from typing import TypeVar
 
 from core.queues.model import Message
 
-MessageType = TypeVar('MessageType', bound=Message)  # pylint: disable=invalid-name
+MessageType = TypeVar('MessageType', bound=Message)
+
 
 class MessageQueue(Generic[MessageType], ABC):
-
     @abc.abstractmethod
     async def connect(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abc.abstractmethod
     async def disconnect(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abc.abstractmethod
     async def send_message(self, message: MessageType, delaySeconds: int = 0) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abc.abstractmethod
     async def send_messages(self, messages: Sequence[MessageType], delaySeconds: int = 0) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abc.abstractmethod
-    async def get_message(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> Optional[MessageType]:
-        raise NotImplementedError()
+    async def get_message(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> MessageType | None:
+        raise NotImplementedError
 
     @abc.abstractmethod
-    async def get_messages(self, limit: int = 1, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> List[MessageType]:
-        raise NotImplementedError()
+    async def get_messages(self, limit: int = 1, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> list[MessageType]:
+        raise NotImplementedError
 
     @abc.abstractmethod
     async def delete_message(self, message: MessageType) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
