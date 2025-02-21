@@ -20,12 +20,25 @@ from web3.types import TxData
 from web3.types import TxReceipt
 
 from core.exceptions import BadRequestException
+from core.exceptions import KibaException
 from core.exceptions import NotFoundException
 from core.requester import Requester
 from core.util import chain_util
+from core.util.typing_util import Json
 
 ListAny = list[Any]  # type: ignore[explicit-any]
 DictStrAny = dict[str, Any]  # type: ignore[explicit-any]
+
+
+class TransactionFailedException(KibaException):
+    def __init__(self, transactionReceipt: TxReceipt) -> None:
+        super().__init__(message='Transaction failed')
+        self.transactionReceipt = transactionReceipt
+
+    def to_dict(self) -> dict[str, Json]:
+        output = super().to_dict()
+        output['fields']['transactionReceipt'] = dict(self.transactionReceipt)  # type: ignore[index, call-overload]
+        return output
 
 
 class EthClientInterface:
@@ -447,12 +460,15 @@ class RestEthClient(EthClientInterface):
             chainId=chainId,
         )
 
-    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
+    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2, raiseOnFailure: bool = True) -> TxReceipt:
         while True:
             try:
                 transactionReceipt = await self.get_transaction_receipt(transactionHash=transactionHash)
             except NotFoundException:
                 pass
             else:
-                return transactionReceipt
+                break
             await asyncio.sleep(sleepSeconds)
+        if raiseOnFailure and transactionReceipt['status'] == 0:
+            raise TransactionFailedException(transactionReceipt=transactionReceipt)
+        return transactionReceipt
