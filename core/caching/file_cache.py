@@ -13,24 +13,6 @@ class FileCache(Cache):
         super().__init__(isPrivate=isPrivate)
         self._cacheDirectory = cacheDirectory
 
-    # async def load_cache_file(
-    #     fileName: str,
-    #     expirySeconds: int = 3600,
-    # ) -> str | None:
-    #     cacheFileDirectory = os.path.join('./data/cache', fileName)
-    #     fileExists = await file_util.file_exists(filePath=cacheFileDirectory)
-    #     fileAgeMillis = await file_util.get_file_age_millis(filePath=cacheFileDirectory) if fileExists else 0
-    #     if fileExists and (fileAgeMillis / 1000) < expirySeconds:
-    #         return await file_util.read_file(filePath=cacheFileDirectory)
-    #     return None
-
-    # async def load_json_cache_file(  # type: ignore[explicit-any]
-    #     fileName: str,
-    #     expirySeconds: int = 3600,
-    # ) -> dict[str, Any] | list[Any] | None:
-    #     content = await load_cache_file(fileName=fileName, expirySeconds=expirySeconds)
-    #     return json.loads(content) if content is not None else None
-
     async def set(self, key: str, value: str, expirySeconds: float) -> bool:
         cacheFileDirectory = os.path.join(self._cacheDirectory, key)
         contentFilePath = os.path.join(cacheFileDirectory, 'content.txt')
