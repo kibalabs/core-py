@@ -39,7 +39,7 @@ class FileCache(Cache):
         expiryFilePath = os.path.join(cacheFileDirectory, 'expiryDate.txt')
         expiryDateString = date_util.datetime_to_string(dt=date_util.datetime_from_now(seconds=expirySeconds))
         with self._lock:
-            asyncio.gather(
+            await asyncio.gather(
                 *[
                     file_util.write_file(filePath=contentFilePath, content=value),
                     file_util.write_file(filePath=expiryFilePath, content=expiryDateString),
