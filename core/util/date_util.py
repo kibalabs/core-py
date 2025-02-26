@@ -48,7 +48,7 @@ def date_hour_from_datetime(dt: datetime.datetime | None = None) -> datetime.dat
 def generate_clock_hour_intervals(startDate: datetime.datetime, endDate: datetime.datetime) -> Iterator[tuple[datetime.datetime, datetime.datetime]]:
     # NOTE(krishan711) this has the results that look like [startDate, hourA:00]...[hourN:00, hourM:00]...[hourY:00, endDate]
     startDateNextHour = datetime_from_datetime(dt=date_hour_from_datetime(dt=datetime_from_datetime(dt=startDate, seconds=-1)), hours=1)
-    if endDate > startDate or startDateNextHour > endDate:
+    if startDateNextHour > endDate:
         yield (startDate, endDate)
         return
     if startDate < startDateNextHour:
@@ -85,10 +85,17 @@ def calculate_diff_days(startDate: datetime.datetime, endDate: datetime.datetime
 
 
 def calculate_diff_years(startDate: datetime.datetime, endDate: datetime.datetime) -> float:
-    diffDays = calculate_diff_days(startDate=startDate, endDate=endDate)
-    diffYears = diffDays / 365.25
-    return round(diffYears, 2)
+    years = endDate.year - startDate.year
+    start_ordinal = startDate.replace(year=2000).toordinal()
+    end_ordinal = endDate.replace(year=2000).toordinal()
+    if end_ordinal < start_ordinal:
+        years -= 1
+        fraction = (end_ordinal + 365 - start_ordinal) / 365
+    else:
+        fraction = (end_ordinal - start_ordinal) / 365
+
+    return round(years + fraction, 2)
 
 
-def datetime_to_utc(dt: datetime.datetime) -> datetime.datetime:
-    return dt.astimezone(datetime.UTC).replace(tzinfo=None) if dt.tzinfo else dt
+def datetime_from_date(date: datetime.date) -> datetime.datetime:
+    return datetime.datetime.combine(date=date, time=datetime.time.min, tzinfo=datetime.UTC)

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `url_util.encode_url`, `url_util.encode_url_part`, `url_util.decode_url` and `url_util.decode_url_part`
 - [MINOR] Added `http_util.CACHABLE_STATUS_CODES`
 - [PATCH] Moved `Requester` into a folder with same path as original
+- [MINOR] Added `date_util.datetime_from_date`
 
 ### Changed
 
