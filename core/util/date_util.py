@@ -97,9 +97,5 @@ def calculate_diff_years(startDate: datetime.datetime, endDate: datetime.datetim
     return round(years + fraction, 2)
 
 
-def datetime_to_utc(dt: datetime.datetime) -> datetime.datetime:
-    return dt.astimezone(datetime.UTC).replace(tzinfo=None) if dt.tzinfo else dt
-
-
 def datetime_from_date(date: datetime.date) -> datetime.datetime:
-    return datetime.datetime.combine(date, datetime.time.min)
+    return datetime.datetime.combine(date=date, time=datetime.time.min, tzinfo=datetime.UTC)
