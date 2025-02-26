@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `call_function_by_name`, `send_transaction_by_name` and `wait_for_transaction_receipt` to `RestEthClient`
 - [MINOR] Updated `RestEthClient` to use `maxPriorityFeePerGas` and `maxFeePerGas` instead of `gasPrice`
 - [MAJOR] Make all datetimes timezone aware
+- [MINOR] Added `Cache`, `FileCache` and `DictCache`
+- [PATCH] Moved `Requester` into a folder with same path as original
 
 ### Changed
 
