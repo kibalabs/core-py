@@ -13,15 +13,13 @@ from typing import Union
 import httpx
 
 from core import logging
-from core.caching.cache import Cache
 from core.exceptions import HTTP_EXCEPTIONS_MAP
 from core.exceptions import KibaException
-from core.requester.request import KibaRequest
-from core.requester.requester_cache import RequesterCache
-from core.requester.response import KibaResponse
 from core.util import dict_util
 from core.util import file_util
 from core.util.typing_util import Json
+
+KibaResponse = httpx.Response
 
 FileContent = Union[IO[bytes], bytes]
 File = Union[FileContent, tuple[str | None, FileContent]]
@@ -45,10 +43,9 @@ class ResponseException(KibaException):
 
 
 class Requester:
-    def __init__(self, headers: Mapping[str, str] | None = None, shouldFollowRedirects: bool = True, caches: Sequence[Cache] | None = None) -> None:
+    def __init__(self, headers: Mapping[str, str] | None = None, shouldFollowRedirects: bool = True) -> None:
         self.headers = headers or {}
         self.client = httpx.AsyncClient(follow_redirects=shouldFollowRedirects)
-        self._caches = [RequesterCache(cache=cache) for cache in caches] if caches else []
 
     async def get(self, url: str, dataDict: Json | None = None, data: bytes | None = None, timeout: int | None = 10, headers: MutableMapping[str, str] | None = None, outputFilePath: str | None = None) -> KibaResponse:
         return await self.make_request(method='GET', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
@@ -139,34 +136,23 @@ class Requester:
             else:
                 logging.error('Error: formFiles should only be passed into POST requests.')
         request = self.client.build_request(method=method, url=url, content=content, data=innerData, files=files, timeout=timeout, headers=requestHeaders)
-        response: KibaResponse | None = None
-        visitedCaches: list[RequesterCache] = []
-        for cache in self._caches:
-            response = await cache.get(request=typing.cast(KibaRequest, request))
-            if response:
-                break
-            visitedCaches.append(cache)
-        if not response:
-            httpxResponse = await self.client.send(request=request)
-            if 400 <= httpxResponse.status_code < 600:  # noqa: PLR2004
-                message = httpxResponse.text
-                if not message and httpxResponse.status_code == 401 and httpxResponse.headers.get('www-authenticate'):  # noqa: PLR2004
-                    message = httpxResponse.headers['www-authenticate']
-                if HTTP_EXCEPTIONS_MAP.get(httpxResponse.status_code) is not None:
-                    exceptionCls = HTTP_EXCEPTIONS_MAP[httpxResponse.status_code]
-                    exception: KibaException = exceptionCls(message=message)
-                else:
-                    exception = ResponseException(message=message, statusCode=httpxResponse.status_code, headers=httpxResponse.headers)
-                raise exception
-            response = KibaResponse.from_httpx_response(httpxResponse=httpxResponse)
-        for cache in visitedCaches:
-            await cache.add(request=typing.cast(KibaRequest, request), response=response)
+        httpxResponse = await self.client.send(request=request)
+        if 400 <= httpxResponse.status_code < 600:  # noqa: PLR2004
+            message = httpxResponse.text
+            if not message and httpxResponse.status_code == 401 and httpxResponse.headers.get('www-authenticate'):  # noqa: PLR2004
+                message = httpxResponse.headers['www-authenticate']
+            if HTTP_EXCEPTIONS_MAP.get(httpxResponse.status_code) is not None:
+                exceptionCls = HTTP_EXCEPTIONS_MAP[httpxResponse.status_code]
+                exception: KibaException = exceptionCls(message=message)
+            else:
+                exception = ResponseException(message=message, statusCode=httpxResponse.status_code, headers=httpxResponse.headers)
+            raise exception
         # TODO(krishan711): this would be more efficient if streamed
         if outputFilePath is not None:
             if os.path.dirname(outputFilePath):
                 os.makedirs(os.path.dirname(outputFilePath), exist_ok=True)
-            await file_util.write_file_bytes(filePath=outputFilePath, content=response.content)
-        return response
+            await file_util.write_file_bytes(filePath=outputFilePath, content=httpxResponse.content)
+        return httpxResponse
 
     async def close_connections(self) -> None:
         await self.client.aclose()
