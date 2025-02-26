@@ -1,5 +1,3 @@
-from typing import List
-
 from core.util import list_util
 
 
