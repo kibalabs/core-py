@@ -3,25 +3,27 @@ from __future__ import annotations
 import base64
 import dataclasses
 import datetime
-import json
 import typing
+
+from core.util import json_util
+from core.util.typing_util import JsonObject
 
 JwtType = typing.TypeVar('JwtType', bound='Jwt')
 
 
 @dataclasses.dataclass
 class Jwt:
-    headerDict: dict[str, str] = dataclasses.field(default_factory=dict)
-    payloadDict: dict[str, str | int] = dataclasses.field(default_factory=dict)
+    headerDict: JsonObject = dataclasses.field(default_factory=dict)
+    payloadDict: JsonObject = dataclasses.field(default_factory=dict)
     signatureBytes: bytes = b''
 
     @property
     def headerBase64(self) -> str:  # noqa: N802
-        return Jwt._base64encode_string(value=json.dumps(obj=self.headerDict, separators=(',', ':')))
+        return Jwt._base64encode_string(value=json_util.dumps(obj=self.headerDict))
 
     @property
     def payloadBase64(self) -> str:  # noqa: N802
-        return Jwt._base64encode_string(value=json.dumps(obj=self.payloadDict, separators=(',', ':')))
+        return Jwt._base64encode_string(value=json_util.dumps(obj=self.payloadDict))
 
     @property
     def signatureBase64(self) -> str:  # noqa: N802
@@ -39,8 +41,8 @@ class Jwt:
         # NOTE(krish): jwts should not have the b64 padding included (its lossless to remove).
         # python complains if its missing, but not if there's too much, hence the wierd command below
         jwtParts = jwtString.split('.')
-        headerDict = json.loads(s=Jwt._base64decode_string(value=jwtParts[0]))
-        payloadDict = json.loads(s=Jwt._base64decode_string(value=jwtParts[1]))
+        headerDict = typing.cast(JsonObject, json_util.loads(Jwt._base64decode_string(value=jwtParts[0])))
+        payloadDict = typing.cast(JsonObject, json_util.loads(Jwt._base64decode_string(value=jwtParts[1])))
         signatureBytes = Jwt._base64decode(value=jwtParts[2].encode())
         return cls(headerDict=headerDict, payloadDict=payloadDict, signatureBytes=signatureBytes)
 
@@ -85,11 +87,11 @@ class KibaJwt(Jwt):
 
     @property
     def algorithm(self) -> str | None:
-        return self.headerDict.get(KibaJwt.Key.ALGORITHM)
+        return typing.cast(str, self.headerDict.get(KibaJwt.Key.ALGORITHM))
 
     @property
     def keyId(self) -> str | None:  # noqa: N802
-        return self.headerDict.get(KibaJwt.Key.KEY_ID)
+        return typing.cast(str, self.headerDict.get(KibaJwt.Key.KEY_ID))
 
     @property
     def tokenId(self) -> str | None:  # noqa: N802

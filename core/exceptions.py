@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from core.util.typing_util import Json
+from core.util.typing_util import JsonObject
 
 
 class KibaException(Exception):  # noqa: N818
@@ -18,7 +18,7 @@ class KibaException(Exception):  # noqa: N818
             return exception
         return KibaException(message=str(exception), statusCode=statusCode, exceptionType=exception.__class__.__name__)
 
-    def to_dict(self) -> dict[str, Json]:
+    def to_dict(self) -> JsonObject:
         return {
             'exceptionType': self.exceptionType,
             'message': self.message,

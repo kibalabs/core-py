@@ -1,7 +1,6 @@
 import datetime
 import hashlib
 import hmac
-import json
 from collections.abc import Mapping
 from collections.abc import MutableMapping
 from collections.abc import Sequence
@@ -14,6 +13,7 @@ from core.requester import HttpxFileTypes
 from core.requester import KibaResponse
 from core.requester import Requester
 from core.util import date_util
+from core.util import json_util
 from core.util.typing_util import Json
 
 
@@ -59,7 +59,7 @@ class AwsRequester(Requester):
             if method == 'GET':
                 raise InternalServerErrorException('GET requests with parameters are not supported on AwsRequester yet.')
             if method == 'POST':
-                data = json.dumps(dataDict).encode()
+                data = json_util.dumps(dataDict).encode()
         if not data:
             raise InternalServerErrorException('requests without date are not supported on AwsRequester yet.')
         if formDataDict:

@@ -1,7 +1,6 @@
 # noqa: A005
 import dataclasses
 import datetime
-import json
 import logging
 import os
 import re
@@ -18,6 +17,7 @@ from typing import TextIO
 from typing import Union
 
 from core.exceptions import KibaException
+from core.util import json_util
 from core.util.value_holder import RequestIdHolder
 
 if TYPE_CHECKING:
@@ -113,7 +113,7 @@ class KibaJsonLoggingFormatter(KibaLoggingFormatter):
         }
         for fieldName, formatter in self.logFormat.jsonFieldFormatters.items():
             recordDict[fieldName] = formatter(record.__dict__[fieldName])
-        return json.dumps(recordDict)
+        return json_util.dumps(recordDict)
 
 
 def init_logger(logger: Logger, loggingLevel: int, handler: StreamHandler) -> None:
