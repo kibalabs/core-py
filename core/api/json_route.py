@@ -1,5 +1,4 @@
 import functools
-import json
 import typing
 from typing import ParamSpec
 
@@ -11,6 +10,8 @@ from core.api.api_request import KibaApiRequest
 from core.api.api_respnse import KibaJSONResponse
 from core.exceptions import BadRequestException
 from core.exceptions import InternalServerErrorException
+from core.util import json_util
+from core.util.typing_util import JsonObject
 
 _P = ParamSpec('_P')
 
@@ -31,11 +32,11 @@ def json_route(
             queryParams = receivedRequest.query_params
             bodyBytes = await args[0].body()
             if len(bodyBytes) == 0:
-                body = {}
+                body: JsonObject = {}
             else:
                 try:
-                    body = json.loads(bodyBytes.decode())
-                except json.JSONDecodeError as exception:
+                    body = typing.cast(JsonObject, json_util.loads(bodyBytes.decode()))
+                except json_util.JsonDecodeException as exception:
                     raise BadRequestException(f'Invalid JSON body: {exception}')
             allParams = {**pathParams, **body, **queryParams}
             try:

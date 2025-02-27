@@ -1,5 +1,4 @@
 import asyncio
-import json
 import typing
 from typing import Any
 
@@ -27,7 +26,8 @@ from core.exceptions import KibaException
 from core.exceptions import NotFoundException
 from core.requester import Requester
 from core.util import chain_util
-from core.util.typing_util import Json
+from core.util import json_util
+from core.util.typing_util import JsonObject
 
 ListAny = list[Any]  # type: ignore[explicit-any]
 DictStrAny = dict[str, Any]  # type: ignore[explicit-any]
@@ -38,9 +38,9 @@ class TransactionFailedException(KibaException):
         super().__init__(message='Transaction failed')
         self.transactionReceipt = transactionReceipt
 
-    def to_dict(self) -> dict[str, Json]:
+    def to_dict(self) -> JsonObject:
         output = super().to_dict()
-        output['fields']['transactionReceipt'] = dict(self.transactionReceipt)  # type: ignore[index, call-overload]
+        typing.cast(JsonObject, output['fields'])['transactionReceipt'] = json_util.loads(json_util.dumps(self.transactionReceipt))
         return output
 
 
@@ -225,7 +225,7 @@ class RestEthClient(EthClientInterface):
         response = await self.requester.post_json(url=self.url, dataDict={'jsonrpc': '2.0', 'method': method, 'params': params or [], 'id': 0}, timeout=100)
         jsonResponse = response.json()
         if jsonResponse.get('error'):
-            raise BadRequestException(message=jsonResponse['error'].get('message') or jsonResponse['error'].get('details') or json.dumps(jsonResponse['error']))
+            raise BadRequestException(message=jsonResponse['error'].get('message') or jsonResponse['error'].get('details') or json_util.dumps(jsonResponse['error']))
         return jsonResponse
 
     async def get_latest_block_number(self) -> int:

@@ -1,4 +1,3 @@
-import json
 import os
 import typing
 import urllib.parse as urlparse
@@ -17,6 +16,7 @@ from core.exceptions import HTTP_EXCEPTIONS_MAP
 from core.exceptions import KibaException
 from core.util import dict_util
 from core.util import file_util
+from core.util import json_util
 from core.util.typing_util import Json
 
 KibaResponse = httpx.Response
@@ -114,7 +114,7 @@ class Requester:
             if method in {'POST', 'PUT', 'PATCH'}:
                 # TODO(krishan711): this should only happen if json is in the content headers
                 # if requestHeaders.get('content-type') and requestHeaders.get('content-type').lower() == 'application/json':
-                content = json.dumps(contentDict).encode()
+                content = json_util.dumps(contentDict).encode()
         files: list[tuple[str, HttpxFileTypes]] | None = None
         innerData: dict[Any, Any] | None = None  # type: ignore[explicit-any]
         if formDataDict:
