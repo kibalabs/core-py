@@ -40,6 +40,12 @@ def datetime_to_string(dt: datetime.datetime, dateFormat: str = JSON_DATE_FORMAT
     return dt.strftime(dateFormat)
 
 
+def datetime_to_utc(dt: datetime.datetime) -> datetime.datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=datetime.UTC)
+    return dt.astimezone(datetime.UTC)
+
+
 def date_hour_from_datetime(dt: datetime.datetime | None = None) -> datetime.datetime:
     dt = dt if dt is not None else datetime.datetime.now(tz=datetime.UTC)
     return dt.replace(minute=0, second=0, microsecond=0)

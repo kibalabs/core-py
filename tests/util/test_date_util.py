@@ -297,3 +297,25 @@ class TestDateUtil:
         assert result.minute == 0
         assert result.second == 0
         assert result.microsecond == 0
+
+    def test_datetime_to_utc_with_naive_datetime(self):
+        dt = datetime.datetime(2025, 2, 26, 14, 30)
+        result = date_util.datetime_to_utc(dt=dt)
+        assert result == datetime.datetime(2025, 2, 26, 14, 30, tzinfo=datetime.UTC)
+
+    def test_datetime_to_utc_with_utc_datetime(self):
+        dt = datetime.datetime(2025, 2, 26, 14, 30, tzinfo=datetime.UTC)
+        result = date_util.datetime_to_utc(dt=dt)
+        assert result == dt
+
+    def test_datetime_to_utc_with_non_utc_timezone(self):
+        tz = datetime.timezone(datetime.timedelta(hours=2))
+        dt = datetime.datetime(2025, 2, 26, 14, 30, tzinfo=tz)
+        result = date_util.datetime_to_utc(dt=dt)
+        assert result == datetime.datetime(2025, 2, 26, 12, 30, tzinfo=datetime.UTC)
+
+    def test_datetime_to_utc_with_negative_offset_timezone(self):
+        tz = datetime.timezone(datetime.timedelta(hours=-5))
+        dt = datetime.datetime(2025, 2, 26, 14, 30, tzinfo=tz)
+        result = date_util.datetime_to_utc(dt=dt)
+        assert result == datetime.datetime(2025, 2, 26, 19, 30, tzinfo=datetime.UTC)
