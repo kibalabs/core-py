@@ -75,10 +75,8 @@ class Database:
     async def execute(self, query: TypedReturnsRows[ResultType], connection: DatabaseConnection | None = None) -> Result[ResultType]:
         if not self._engine:
             raise InternalServerErrorException(message='Connection has not been established. Please called collect() first.')
-        if connection:
-            return typing.cast(Result[ResultType], await connection.execute(statement=query))
-        newConnection = self._get_connection()
-        if newConnection:
-            return typing.cast(Result[ResultType], await newConnection.execute(statement=query))
-        async with self._engine.connect() as temporaryConnection:
-            return typing.cast(Result[ResultType], await temporaryConnection.execute(statement=query))
+        if not connection:
+            connection = self._get_connection()
+        if not connection:
+            raise InternalServerErrorException(message='No connection found. Please provide a connection or call create_context_connection() for the context.')
+        return typing.cast(Result[ResultType], await connection.execute(statement=query))
