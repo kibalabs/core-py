@@ -1,4 +1,3 @@
-# noqa: A005
 import dataclasses
 import datetime
 import logging
@@ -88,7 +87,7 @@ class KibaLoggingFormatter(Formatter):
         record.requestId = self.requestIdHolder.get_value() if self.requestIdHolder is not None else ''
         return super().format(record=record)
 
-    def formatTime(self, record: LogRecord, datefmt: str | None = None) -> str:  # noqa: N802]
+    def formatTime(self, record: LogRecord, datefmt: str | None = None) -> str:  # noqa: N802
         logDate = datetime.datetime.fromtimestamp(record.created, tz=datetime.UTC)
         return logDate.strftime(datefmt or '%Y-%m-%dT%H:%M:%S.%f')
 

@@ -37,7 +37,7 @@ class Jwt:
         return f'{self.headerBase64}.{self.payloadBase64}.{self.signatureBase64}'
 
     @classmethod
-    def from_string(cls: type[JwtType], jwtString: str) -> JwtType:
+    def from_string(cls, jwtString: str) -> typing.Self:
         # NOTE(krish): jwts should not have the b64 padding included (its lossless to remove).
         # python complains if its missing, but not if there's too much, hence the wierd command below
         jwtParts = jwtString.split('.')
@@ -47,7 +47,7 @@ class Jwt:
         return cls(headerDict=headerDict, payloadDict=payloadDict, signatureBytes=signatureBytes)
 
     @classmethod
-    def from_jwt(cls: type[JwtType], jwt: Jwt) -> JwtType:
+    def from_jwt(cls, jwt: Jwt) -> typing.Self:
         return cls.from_string(jwtString=jwt.to_string())
 
     @staticmethod

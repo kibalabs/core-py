@@ -34,18 +34,18 @@ queue-aqs = [
     "azure-storage-queue[aio]>=12.12.0",
 ]
 database-psql = [
-    "sqlalchemy[asyncio]>=2.0.38",
+    "sqlalchemy[asyncio]>=2.0.39",
     "asyncpg>=0.30.0",
 ]
 database-sqlite = [
-    "sqlalchemy[asyncio]>=2.0.38",
+    "sqlalchemy[asyncio]>=2.0.39",
     "aiosqlite>=0.21.0",
 ]
 requester = [
     "httpx>=0.28.1",
 ]
 web3 = [
-    "web3>=7.8.0",
+    "web3>=7.9.0",
 ]
 types = [
     "types-aiobotocore[essential]>=2.19.0",
@@ -54,8 +54,9 @@ types = [
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev7",
+    "kiba-build==0.1.11.dev9",
     "pytest==8.3.4",
+    "pytest-asyncio>=0.25.3",
 ]
 
 [project.urls]
@@ -73,3 +74,6 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 core = ["/py.typed", "**/config.toml"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
