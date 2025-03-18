@@ -54,7 +54,7 @@ types = [
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev7",
+    "kiba-build==0.1.11.dev9",
     "pytest==8.3.4",
 ]
 
@@ -63,9 +63,6 @@ repository = "https://github.com/kibalabs/core-py"
 
 [tool.uv]
 package = true
-
-[tool.uv.sources]
-kiba-build = { path = "../build-py", editable = true }
 
 [build-system]
 requires = ["setuptools", "wheel", "setuptools-scm"]

@@ -949,8 +949,8 @@ wheels = [
 
 [[package]]
 name = "kiba-build"
-version = "0.1.10"
-source = { editable = "../build-py" }
+version = "0.1.11.dev9"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asyncclick" },
     { name = "bandit" },
@@ -964,20 +964,9 @@ dependencies = [
     { name = "twine" },
     { name = "wheel" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "asyncclick", specifier = ">=8.1.8" },
-    { name = "bandit", specifier = ">=1.8.3" },
-    { name = "bump-my-version", specifier = ">=0.32.1" },
-    { name = "click", specifier = ">=8.1.7" },
-    { name = "isort", specifier = ">=6.0.0" },
-    { name = "mypy", specifier = ">=1.15.0" },
-    { name = "pylint", specifier = ">=3.3.4" },
-    { name = "ruff", specifier = ">=0.9.7" },
-    { name = "simple-chalk", specifier = ">=0.1.0" },
-    { name = "twine", specifier = ">=6.1.0" },
-    { name = "wheel", specifier = ">=0.45.1" },
+sdist = { url = "https://files.pythonhosted.org/packages/5f/5b/bf010fbb2f62bbd1bbdd335d52c0234b4dbc04ea968749d39eef9b51b3e5/kiba_build-0.1.11.dev9.tar.gz", hash = "sha256:624bed242278496f72d663780d2e495ae2b8008f886557aaf308f375d16a67a5", size = 46815 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/42/9a/2765b548c7902e44a7bb95cd4745aa95a408f401a45530342882558684f3/kiba_build-0.1.11.dev9-py3-none-any.whl", hash = "sha256:6fab8ccba920611688945f497722c2ce41b573ad5d776a90eac2775b3ca477b6", size = 11821 },
 ]
 
 [[package]]
@@ -1048,7 +1037,7 @@ requires-dist = [
     { name = "azure-storage-queue", extras = ["aio"], marker = "extra == 'queue-aqs'", specifier = ">=12.12.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115.8" },
     { name = "httpx", marker = "extra == 'requester'", specifier = ">=0.28.1" },
-    { name = "kiba-build", editable = "../build-py" },
+    { name = "kiba-build" },
     { name = "orjson", specifier = ">=3.10.15" },
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'database-psql'", specifier = ">=2.0.39" },
@@ -1064,7 +1053,7 @@ provides-extras = ["api", "core-api", "storage", "queues", "queue-sqs", "queue-a
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "kiba-build", editable = "../build-py" },
+    { name = "kiba-build", specifier = "==0.1.11.dev9" },
     { name = "pytest", specifier = "==8.3.4" },
 ]
 
