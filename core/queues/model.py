@@ -29,7 +29,7 @@ class MessageContent(BaseModel):
 
     @classmethod
     def get_command(cls) -> str:
-        return typing.cast(str, typing.cast(ModelPrivateAttr, cls._COMMAND).get_default())
+        return typing.cast('str', typing.cast('ModelPrivateAttr', cls._COMMAND).get_default())
 
     def to_message(self) -> Message:
         return Message(

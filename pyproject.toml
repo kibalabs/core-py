@@ -64,6 +64,9 @@ repository = "https://github.com/kibalabs/core-py"
 [tool.uv]
 package = true
 
+[tool.uv.sources]
+kiba-build = { path = "../build-py", editable = true }
+
 [build-system]
 requires = ["setuptools", "wheel", "setuptools-scm"]
 build-backend = "setuptools.build_meta"

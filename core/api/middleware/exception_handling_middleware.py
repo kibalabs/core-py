@@ -4,7 +4,6 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.responses import Response
 
-from core import logging
 from core.exceptions import KibaException
 from core.exceptions import RedirectException
 
@@ -12,7 +11,6 @@ from core.exceptions import RedirectException
 class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
     @staticmethod
     def _convert_exception(exception: KibaException) -> Response:
-        print('ExceptionHandlingMiddleware _convert_exception')
         response = JSONResponse(status_code=exception.statusCode, content=exception.to_dict())
         return response
 
@@ -26,12 +24,9 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
             if not hasattr(exception, 'shouldAddCacheHeader') or exception.shouldAddCacheHeader:
                 response.headers['Cache-Control'] = f'max-age={60 * 60 * 24 * 365}'
         except KibaException as exception:
-            print('ExceptionHandlingMiddleware KibaException')
             # logging.exception(exception)
             response = self._convert_exception(exception=exception)
         except Exception as exception:  # noqa: BLE001
-            print('ExceptionHandlingMiddleware Exception')
             # logging.exception(exception)
             response = self._convert_exception(exception=KibaException.from_exception(exception=exception))
-        print('ExceptionHandlingMiddleware dispatch end')
         return response

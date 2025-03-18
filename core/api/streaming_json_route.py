@@ -21,9 +21,7 @@ ApiResponse = typing.TypeVar('ApiResponse', bound=BaseModel)
 
 
 async def _convert_to_json_generator(func: AsyncIterator[ApiResponse], expectedType: typing.Type[ApiResponse]) -> AsyncIterator[bytes]:
-    print('_convert_to_json_generator')
     async for content in func:
-        print('_convert_to_json_generator content', content)
         if not isinstance(content, expectedType):
             raise InternalServerErrorException(f'Expected response to be of type {expectedType}, got {type(content)}')
         yield json_util.dumpb(content.model_dump())
@@ -44,7 +42,7 @@ def streaming_json_route(
                 body: JsonObject = {}
             else:
                 try:
-                    body = typing.cast(JsonObject, json_util.loads(bodyBytes.decode()))
+                    body = typing.cast('JsonObject', json_util.loads(bodyBytes.decode()))
                 except json_util.JsonDecodeException as exception:
                     raise BadRequestException(f'Invalid JSON body: {exception}')
             allParams = {**pathParams, **body, **queryParams}
@@ -55,10 +53,8 @@ def streaming_json_route(
                 raise BadRequestException(f'Invalid request: {validationErrorMessage}')
             kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # noqa: SLF001
             kibaRequest.data = requestParams
-            responseGenerator = await func(request=kibaRequest)
-            print('responseGenerator', responseGenerator)
+            responseGenerator = await func(request=kibaRequest)  # type: ignore[misc]
             wrappedGenerator = _convert_to_json_generator(func=responseGenerator, expectedType=responseType)
-            print('wrappedGenerator', wrappedGenerator)
             return StreamingResponse(content=wrappedGenerator, media_type='application/x-ndjson')
 
         # TODO(krishan711): figure out correct typing here

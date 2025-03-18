@@ -14,8 +14,6 @@ class DatabaseConnectionMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # isReadonly = request.method in {'GET', 'OPTIONS', 'HEAD'}
-        print('DatabaseConnectionMiddleware dispatch start')
         async with self.database.create_context_connection():
             response = await call_next(request)
-        print('DatabaseConnectionMiddleware dispatch end', response)
         return response
