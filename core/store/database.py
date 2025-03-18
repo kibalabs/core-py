@@ -50,7 +50,7 @@ class Database:
         async with self._engine.begin() as connection:
             yield connection
 
-    def _get_connection(self) -> DatabaseConnection | None:
+    def _get_context_connection(self) -> DatabaseConnection | None:
         try:
             connection = self._connectionContext.get()
             if connection and not connection.closed:
@@ -61,22 +61,27 @@ class Database:
 
     @contextlib.asynccontextmanager
     async def create_context_connection(self) -> AsyncIterator[DatabaseConnection]:
+        print('create_context_connection')
         if not self._engine:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
-        if self._get_connection() is not None:
+        if self._get_context_connection() is not None:
             raise InternalServerErrorException(message='Connection has already been established in this context.')
         async with self._engine.begin() as connection:
+            print('create_context_connection connection start')
             self._connectionContext.set(connection)
             try:
+                print('create_context_connection yield start')
                 yield connection
+                print('create_context_connection yield end')
             finally:
                 self._connectionContext.set(None)
+            print('create_context_connection connection end')
 
     async def execute(self, query: TypedReturnsRows[ResultType], connection: DatabaseConnection | None = None) -> Result[ResultType]:
         if not self._engine:
             raise InternalServerErrorException(message='Connection has not been established. Please called collect() first.')
         if not connection:
-            connection = self._get_connection()
+            connection = self._get_context_connection()
         if not connection:
             raise InternalServerErrorException(message='No connection found. Please provide a connection or call create_context_connection() for the context.')
         return typing.cast(Result[ResultType], await connection.execute(statement=query))

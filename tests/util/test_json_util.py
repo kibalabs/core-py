@@ -147,3 +147,9 @@ class TestJsonUtil:
         }
         '''
         assert json_util.loads(json_str) == {"a": 1, "b": 2}
+
+    def test_dumpb_with_very_long_integer(self):
+        veryLongInteger = 11111111111111111111111
+        result = json_util.dumpb(obj=veryLongInteger)
+        assert isinstance(result, bytes)
+        assert json_util.loads(result) == veryLongInteger
