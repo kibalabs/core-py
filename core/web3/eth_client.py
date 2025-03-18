@@ -40,7 +40,7 @@ class TransactionFailedException(KibaException):
 
     def to_dict(self) -> JsonObject:
         output = super().to_dict()
-        typing.cast('JsonObject', output['fields'])['transactionReceipt'] = json_util.loads(json_util.dumps(self.transactionReceipt))
+        typing.cast(JsonObject, output['fields'])['transactionReceipt'] = json_util.loads(json_util.dumps(self.transactionReceipt))
         return output
 
 
@@ -126,10 +126,10 @@ class Web3EthClient(EthClientInterface):
         return self.w3.eth.get_transaction_count(chain_util.normalize_address_checksum(value=address))
 
     async def get_transaction(self, transactionHash: str) -> TxData:
-        return self.w3.eth.get_transaction(typing.cast('HexStr', transactionHash))
+        return self.w3.eth.get_transaction(typing.cast(HexStr, transactionHash))
 
     async def get_transaction_receipt(self, transactionHash: str) -> TxReceipt:
-        return self.w3.eth.get_transaction_receipt(typing.cast('HexStr', transactionHash))
+        return self.w3.eth.get_transaction_receipt(typing.cast(HexStr, transactionHash))
 
     async def get_log_entries(
         self,
@@ -232,7 +232,7 @@ class RestEthClient(EthClientInterface):
         response = await self._make_request(method='eth_blockNumber')
         if response['result'] is None:
             raise NotFoundException
-        return typing.cast('int', method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_blockNumber](response['result']))
+        return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_blockNumber](response['result']))
 
     async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
         response = await self._make_request(method='eth_getBlockByNumber', params=[hex(blockNumber), shouldHydrateTransactions])
@@ -242,31 +242,31 @@ class RestEthClient(EthClientInterface):
             # NOTE(krishan711): In testnet strip out the extra data as done by web3
             # https://web3py.readthedocs.io/en/stable/middleware.html#why-is-geth-poa-middleware-necessary
             response['result']['extraData'] = HexBytes('0').hex()
-        return typing.cast('BlockData', method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getBlockByNumber](response['result']))
+        return typing.cast(BlockData, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getBlockByNumber](response['result']))
 
     async def get_block_uncle_count(self, blockNumber: int) -> int:
         response = await self._make_request(method='eth_getUncleCountByBlockNumber', params=[hex(blockNumber)])
         if response['result'] is None:
             raise NotFoundException
-        return typing.cast('int', method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getUncleCountByBlockNumber](response['result']))
+        return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getUncleCountByBlockNumber](response['result']))
 
     async def get_transaction_count(self, address: str) -> int:
         response = await self._make_request(method='eth_getTransactionCount', params=[address, 'latest'])
         if response['result'] is None:
             raise NotFoundException
-        return typing.cast('int', method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionCount](response['result']))
+        return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionCount](response['result']))
 
     async def get_transaction(self, transactionHash: str) -> TxData:
         response = await self._make_request(method='eth_getTransactionByHash', params=[transactionHash])
         if response['result'] is None:
             raise NotFoundException
-        return typing.cast('TxData', method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionByHash](response['result']))
+        return typing.cast(TxData, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionByHash](response['result']))
 
     async def get_transaction_receipt(self, transactionHash: str) -> TxReceipt:
         response = await self._make_request(method='eth_getTransactionReceipt', params=[transactionHash])
         if response['result'] is None:
             raise NotFoundException
-        return typing.cast('TxReceipt', method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionReceipt](response['result']))
+        return typing.cast(TxReceipt, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionReceipt](response['result']))
 
     async def get_log_entries(
         self,
@@ -287,7 +287,7 @@ class RestEthClient(EthClientInterface):
         if address:
             params['address'] = address
         response = await self._make_request(method='eth_getLogs', params=[params])
-        return typing.cast('list[LogReceipt]', method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getLogs](response['result']))
+        return typing.cast(list[LogReceipt], method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getLogs](response['result']))
 
     async def call_function(
         self,
@@ -317,7 +317,7 @@ class RestEthClient(EthClientInterface):
         return list(outputData)
 
     def _find_abi_by_name_args(self, contractAbi: ABI, functionName: str, arguments: DictStrAny | None = None) -> ABIFunction:
-        functionAbis = typing.cast('list[ABIFunction]', [abi for abi in contractAbi if abi.get('name') == functionName])
+        functionAbis = typing.cast(list[ABIFunction], [abi for abi in contractAbi if abi.get('name') == functionName])
         if len(functionAbis) == 0:
             raise BadRequestException(message='Function not found in ABI')
         functionAbi: ABIFunction | None = None
@@ -385,15 +385,15 @@ class RestEthClient(EthClientInterface):
         if maxPriorityFeePerGas is None:
             response = await self._make_request(method='eth_maxPriorityFeePerGas')
             maxPriorityFeePerGas = int(response['result'], 16)
-        params['maxPriorityFeePerGas'] = typing.cast('Wei', maxPriorityFeePerGas)
+        params['maxPriorityFeePerGas'] = typing.cast(Wei, maxPriorityFeePerGas)
         if maxFeePerGas is None:
             response = await self._make_request(method='eth_getBlockByNumber', params=['pending', False])
             baseFeePerGas = int(response['result']['baseFeePerGas'], 16)
             maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas
-        params['maxFeePerGas'] = typing.cast('Wei', maxFeePerGas)
+        params['maxFeePerGas'] = typing.cast(Wei, maxFeePerGas)
         if nonce is None:
             nonce = await self.get_transaction_count(address=fromAddress)
-        params['nonce'] = typing.cast('Nonce', nonce)
+        params['nonce'] = typing.cast(Nonce, nonce)
         if chainId is not None:
             params['chainId'] = chainId
         return params
@@ -402,7 +402,7 @@ class RestEthClient(EthClientInterface):
         if not transactionData.startswith('0x'):
             transactionData = '0x' + transactionData
         response = await self._make_request(method='eth_sendRawTransaction', params=[transactionData])
-        return typing.cast('str', response['result'])
+        return typing.cast(str, response['result'])
 
     async def send_transaction(
         self,

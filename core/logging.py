@@ -169,7 +169,7 @@ def stat(name: str, key: str, value: float = 1) -> None:
         nameValue = _serialize_string_value(value=str(name))
         keyValue = _serialize_string_value(value=str(key))
         statValue = _serialize_numeric_value(value=value)
-        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast('dict[str, str]', {'statName': nameValue, 'statKey': keyValue, 'statValue': statValue}))
+        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(dict[str, str], {'statName': nameValue, 'statKey': keyValue, 'statValue': statValue}))
 
 
 def api(action: str, path: str, query: str, response: int | None = None, duration: float | None = None) -> None:
@@ -179,7 +179,7 @@ def api(action: str, path: str, query: str, response: int | None = None, duratio
         queryString = _serialize_string_value(value=query)
         responseString = _serialize_numeric_value(value=response)
         durationString = _serialize_numeric_value(value=duration)
-        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast('dict[str, str]', {'apiAction': actionString, 'apiPath': pathString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''}))
+        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(dict[str, str], {'apiAction': actionString, 'apiPath': pathString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''}))
 
 
 # Wrappers around common python logging functions which go straight to the root logger

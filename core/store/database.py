@@ -79,4 +79,4 @@ class Database:
             connection = self._get_context_connection()
         if not connection:
             raise InternalServerErrorException(message='No connection found. Please provide a connection or call create_context_connection() for the context.')
-        return typing.cast('Result[ResultType]', await connection.execute(statement=query))
+        return typing.cast(Result[ResultType], await connection.execute(statement=query))

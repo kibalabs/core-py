@@ -42,7 +42,7 @@ def streaming_json_route(
                 body: JsonObject = {}
             else:
                 try:
-                    body = typing.cast('JsonObject', json_util.loads(bodyBytes.decode()))
+                    body = typing.cast(JsonObject, json_util.loads(bodyBytes.decode()))
                 except json_util.JsonDecodeException as exception:
                     raise BadRequestException(f'Invalid JSON body: {exception}')
             allParams = {**pathParams, **body, **queryParams}

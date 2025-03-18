@@ -41,8 +41,8 @@ class Jwt:
         # NOTE(krish): jwts should not have the b64 padding included (its lossless to remove).
         # python complains if its missing, but not if there's too much, hence the wierd command below
         jwtParts = jwtString.split('.')
-        headerDict = typing.cast('JsonObject', json_util.loads(Jwt._base64decode_string(value=jwtParts[0])))
-        payloadDict = typing.cast('JsonObject', json_util.loads(Jwt._base64decode_string(value=jwtParts[1])))
+        headerDict = typing.cast(JsonObject, json_util.loads(Jwt._base64decode_string(value=jwtParts[0])))
+        payloadDict = typing.cast(JsonObject, json_util.loads(Jwt._base64decode_string(value=jwtParts[1])))
         signatureBytes = Jwt._base64decode(value=jwtParts[2].encode())
         return cls(headerDict=headerDict, payloadDict=payloadDict, signatureBytes=signatureBytes)
 
@@ -87,23 +87,23 @@ class KibaJwt(Jwt):
 
     @property
     def algorithm(self) -> str | None:
-        return typing.cast('str', self.headerDict.get(KibaJwt.Key.ALGORITHM))
+        return typing.cast(str, self.headerDict.get(KibaJwt.Key.ALGORITHM))
 
     @property
     def keyId(self) -> str | None:  # noqa: N802
-        return typing.cast('str', self.headerDict.get(KibaJwt.Key.KEY_ID))
+        return typing.cast(str, self.headerDict.get(KibaJwt.Key.KEY_ID))
 
     @property
     def tokenId(self) -> str | None:  # noqa: N802
-        return typing.cast('str', self.payloadDict[KibaJwt.Key.TOKEN_ID]) if self.payloadDict.get(KibaJwt.Key.TOKEN_ID) else None
+        return typing.cast(str, self.payloadDict[KibaJwt.Key.TOKEN_ID]) if self.payloadDict.get(KibaJwt.Key.TOKEN_ID) else None
 
     @property
     def userId(self) -> str | None:  # noqa: N802
-        return typing.cast('str', self.payloadDict[KibaJwt.Key.USER_ID]) if self.payloadDict.get(KibaJwt.Key.USER_ID) else None
+        return typing.cast(str, self.payloadDict[KibaJwt.Key.USER_ID]) if self.payloadDict.get(KibaJwt.Key.USER_ID) else None
 
     @property
     def expiryDate(self) -> datetime.datetime | None:  # noqa: N802
-        expiryDateSeconds = typing.cast('int', self.payloadDict.get('exp') or 0)
+        expiryDateSeconds = typing.cast(int, self.payloadDict.get('exp') or 0)
         return datetime.datetime.fromtimestamp(expiryDateSeconds, tz=datetime.UTC) if expiryDateSeconds else None
 
     @expiryDate.setter
@@ -112,7 +112,7 @@ class KibaJwt(Jwt):
 
     @property
     def issueDate(self) -> datetime.datetime | None:  # noqa: N802
-        issueDateSeconds = typing.cast('int', self.payloadDict.get(KibaJwt.Key.ISSUE_DATE) or 0)
+        issueDateSeconds = typing.cast(int, self.payloadDict.get(KibaJwt.Key.ISSUE_DATE) or 0)
         return datetime.datetime.fromtimestamp(issueDateSeconds, tz=datetime.UTC) if issueDateSeconds else None
 
     @issueDate.setter
@@ -121,7 +121,7 @@ class KibaJwt(Jwt):
 
     @property
     def finalRefreshDate(self) -> datetime.datetime | None:  # noqa: N802
-        finalRefreshDateSeconds = typing.cast('int', self.payloadDict.get(KibaJwt.Key.FINAL_REFRESH_DATE) or 0)
+        finalRefreshDateSeconds = typing.cast(int, self.payloadDict.get(KibaJwt.Key.FINAL_REFRESH_DATE) or 0)
         return datetime.datetime.fromtimestamp(finalRefreshDateSeconds, tz=datetime.UTC) if finalRefreshDateSeconds else None
 
     @finalRefreshDate.setter
