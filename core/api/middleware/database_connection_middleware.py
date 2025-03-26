@@ -20,4 +20,4 @@ class DatabaseConnectionMiddleware(BaseHTTPMiddleware):
         # isReadonly = request.method in {'GET', 'OPTIONS', 'HEAD'}
         async with self.database.create_context_connection():
             response = await call_next(request)
-            return response
+        return response
