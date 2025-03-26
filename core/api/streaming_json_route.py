@@ -53,7 +53,7 @@ def streaming_json_route(
                 raise BadRequestException(f'Invalid request: {validationErrorMessage}')
             kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # noqa: SLF001
             kibaRequest.data = requestParams
-            responseGenerator = await func(request=kibaRequest)  # type: ignore[misc]
+            responseGenerator = func(request=kibaRequest)
             wrappedGenerator = _convert_to_json_generator(func=responseGenerator, expectedType=responseType)
             return StreamingResponse(content=wrappedGenerator, media_type='application/x-ndjson')
 

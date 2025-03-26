@@ -20,23 +20,27 @@ class Authorizer:
 ApiRequest = typing.TypeVar('ApiRequest', bound=BaseModel)
 
 
+async def _authorize_bearer_jwt(request: KibaApiRequest[ApiRequest], authorizer: Authorizer) -> Jwt:
+    authorization = request.headers.get('Authorization')
+    if not authorization:
+        raise ForbiddenException(message='AUTH_NOT_PROVIDED')
+    if not authorization.startswith('Bearer '):
+        raise ForbiddenException(message='AUTH_INVALID')
+    jwtString = authorization.replace('Bearer ', '')
+    try:
+        jwt = await authorizer.validate_jwt(jwtString=jwtString)
+    except BaseException:  # noqa: BLE001
+        raise ForbiddenException(message='AUTH_INVALID')
+    return jwt
+
+
 def authorize_bearer_jwt(  # type: ignore[explicit-any]
     authorizer: Authorizer,
 ) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[typing.Any]]], typing.Callable[_P, typing.Any]]:
     def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[typing.Any]]) -> typing.Callable[_P, typing.Any]:  # type: ignore[explicit-any]
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
-            authorization = request.headers.get('Authorization')
-            if not authorization:
-                raise ForbiddenException(message='AUTH_NOT_PROVIDED')
-            if not authorization.startswith('Bearer '):
-                raise ForbiddenException(message='AUTH_INVALID')
-            jwtString = authorization.replace('Bearer ', '')
-            try:
-                jwt = await authorizer.validate_jwt(jwtString=jwtString)
-            except BaseException:  # noqa: BLE001
-                raise ForbiddenException(message='AUTH_INVALID')
-            request.authJwt = jwt
+            request.authJwt = await _authorize_bearer_jwt(request=request, authorizer=authorizer)
             return await func(request=request)
 
         # TODO(krishan711): figure out correct typing here
