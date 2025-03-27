@@ -27,8 +27,8 @@ class ExampleResponse(BaseModel):
 
 
 def parse_ndjson_response(response):
-    content = response.content.decode()
-    content = f"[{'},{'.join(content.split('}{'))}]"
+    content = response.content.decode().strip()
+    content = f"[{','.join(content.split('\n'))}]"
     return json.loads(content)
 
 

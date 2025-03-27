@@ -24,7 +24,7 @@ async def _convert_to_json_generator(func: AsyncIterator[ApiResponse], expectedT
     async for content in func:
         if not isinstance(content, expectedType):
             raise InternalServerErrorException(f'Expected response to be of type {expectedType}, got {type(content)}')
-        yield json_util.dumpb(content.model_dump())
+        yield json_util.dumpb(content.model_dump()) + b'\n'
 
 
 def streaming_json_route(
