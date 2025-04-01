@@ -1,13 +1,14 @@
 import datetime
 import json
+import typing
 from typing import Any
 
 import orjson
 
 from core import logging
 from core.exceptions import KibaException
-from core.util.typing_util import Json
 from core.util import date_util
+from core.util.typing_util import Json
 
 
 class JsonDecodeException(KibaException):
@@ -22,14 +23,13 @@ _HAS_LOGGED_FOR_SERIALIZATION_ERROR = False
 
 
 class DatetimeEncoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: typing.Any) -> str:  # type: ignore[explicit-any]
         if isinstance(obj, datetime.datetime):
             return date_util.datetime_to_string(obj)
         try:
-            return super().default(obj)
+            return typing.cast(str, super().default(obj))
         except TypeError:
             return str(obj)
-
 
 
 def dumpb(obj: Any) -> bytes:  # type: ignore[explicit-any]
