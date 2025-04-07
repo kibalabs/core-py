@@ -364,20 +364,16 @@ class RestEthClient(EthClientInterface):
         }
         return params
 
-    async def _get_transaction_params(
+    async def fill_transaction_params(
         self,
-        toAddress: str,
-        contractAbi: ABI,
-        functionAbi: ABIFunction,
+        params: TxParams,
         fromAddress: str,
         nonce: int | None = None,
         gas: int | None = None,
         maxFeePerGas: int | None = None,
         maxPriorityFeePerGas: int | None = None,
-        arguments: DictStrAny | None = None,
         chainId: int | None = None,
     ) -> TxParams:
-        params = self._get_base_transaction_params(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments)
         if gas is None:
             response = await self._make_request(method='eth_estimateGas', params=[params])
             gas = int(response['result'], 16)
@@ -418,16 +414,14 @@ class RestEthClient(EthClientInterface):
         arguments: DictStrAny | None = None,
         chainId: int | None = None,
     ) -> str:
-        params = await self._get_transaction_params(
-            toAddress=toAddress,
-            contractAbi=contractAbi,
-            functionAbi=functionAbi,
+        params = self._get_base_transaction_params(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments)
+        params = await self.fill_transaction_params(
+            params=params,
             fromAddress=fromAddress,
             nonce=nonce,
             gas=gas,
             maxFeePerGas=maxFeePerGas,
             maxPriorityFeePerGas=maxPriorityFeePerGas,
-            arguments=arguments,
             chainId=chainId,
         )
         signedParams = self.w3.eth.account.sign_transaction(transaction_dict=params, private_key=privateKey)
