@@ -364,7 +364,7 @@ class RestEthClient(EthClientInterface):
         }
         return params
 
-    async def _fill_transaction_params(
+    async def fill_transaction_params(
         self,
         params: TxParams,
         fromAddress: str,
@@ -415,7 +415,7 @@ class RestEthClient(EthClientInterface):
         chainId: int | None = None,
     ) -> str:
         params = self._get_base_transaction_params(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments)
-        params = await self._fill_transaction_params(
+        params = await self.fill_transaction_params(
             params=params,
             fromAddress=fromAddress,
             nonce=nonce,
