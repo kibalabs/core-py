@@ -6,6 +6,7 @@ import os
 from core.caching.cache import Cache
 from core.util import date_util
 from core.util import file_util
+from core.util.date_util import DateConversionException
 
 
 class FileCache(Cache):
@@ -41,8 +42,13 @@ class FileCache(Cache):
                 await file_util.remove_file(filePath=contentFilePath)
             return None
         expiryDateString = await file_util.read_file(filePath=expiryFilePath)
-        expiryDate = date_util.datetime_from_string(dateString=expiryDateString.strip())
-        if expiryDate < date_util.datetime_from_now():
+        try:
+            expiryDate = date_util.datetime_from_string(dateString=expiryDateString.strip())
+            if expiryDate < date_util.datetime_from_now():
+                await file_util.remove_file(filePath=contentFilePath)
+                await file_util.remove_file(filePath=expiryFilePath)
+                return None
+        except DateConversionException:
             await file_util.remove_file(filePath=contentFilePath)
             await file_util.remove_file(filePath=expiryFilePath)
             return None

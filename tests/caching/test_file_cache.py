@@ -1,3 +1,4 @@
+import asyncio
 import os
 import tempfile
 import shutil
@@ -95,3 +96,57 @@ class TestFileCache:
         assert result is None
         content_file = os.path.join(cache_dir, key, 'content.txt')
         assert not os.path.exists(content_file)
+
+    async def test_set_with_existing_directory(self, cache: FileCache, cache_dir):
+        key = "existing_dir"
+        os.makedirs(os.path.join(cache_dir, key), exist_ok=True)
+        value = "test_value"
+        success = await cache.set(key=key, value=value, expirySeconds=60)
+        assert success is True
+        result = await cache.get(key=key)
+        assert result == value
+
+    async def test_expired_content(self, cache: FileCache, cache_dir, monkeypatch):
+        key = "expired_key"
+        value = "test_value"
+        await cache.set(key=key, value=value, expirySeconds=60)
+        expiry_file = os.path.join(cache_dir, key, 'expiryDate.txt')
+        past_time = date_util.datetime_to_string(dt=date_util.datetime_from_now(seconds=-10))
+        with open(expiry_file, 'w') as f:
+            f.write(past_time)
+        result = await cache.get(key=key)
+        assert result is None
+        content_file = os.path.join(cache_dir, key, 'content.txt')
+        assert not os.path.exists(content_file)
+        assert not os.path.exists(expiry_file)
+
+    async def test_malformed_expiry_file(self, cache: FileCache, cache_dir):
+        key = "malformed_key"
+        value = "test_value"
+        await cache.set(key=key, value=value, expirySeconds=60)
+        expiry_file = os.path.join(cache_dir, key, 'expiryDate.txt')
+        with open(expiry_file, 'w') as f:
+            f.write("invalid-date-format")
+        result = await cache.get(key=key)
+        assert result is None
+
+    async def test_concurrent_operations(self, cache: FileCache):
+        keys = [f"concurrent_key_{i}" for i in range(5)]
+        values = [f"concurrent_value_{i}" for i in range(5)]
+        tasks = [cache.set(key=keys[i], value=values[i], expirySeconds=60) for i in range(5)]
+        results = await asyncio.gather(*tasks)
+        assert all(results)
+        get_tasks = [cache.get(key=keys[i]) for i in range(5)]
+        get_results = await asyncio.gather(*get_tasks)
+        assert get_results == values
+        delete_tasks = [cache.delete(key=keys[i]) for i in range(5)]
+        delete_results = await asyncio.gather(*delete_tasks)
+        assert all(delete_results)
+
+    async def test_internal_get_behavior(self, cache: FileCache, cache_dir):
+        key = "internal_test"
+        value = "internal_value"
+        await cache.set(key=key, value=value, expirySeconds=60)
+        internal_result = await cache._internal_get(key=key)
+        regular_result = await cache.get(key=key)
+        assert internal_result == regular_result == value
