@@ -105,3 +105,12 @@ def calculate_diff_years(startDate: datetime.datetime, endDate: datetime.datetim
 
 def datetime_from_date(date: datetime.date) -> datetime.datetime:
     return datetime.datetime.combine(date=date, time=datetime.time.min, tzinfo=datetime.UTC)
+
+
+def datetime_to_utc_naive_datetime(dt: datetime.datetime) -> datetime.datetime:
+    utcDt = datetime_to_utc(dt=dt)
+    return utcDt.replace(tzinfo=None)
+
+
+def date_from_date(date: datetime.date, days: int) -> datetime.date:
+    return date + datetime.timedelta(days=days)
