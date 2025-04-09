@@ -31,16 +31,20 @@ class FileCache(Cache):
         contentFilePath = os.path.join(cacheFileDirectory, 'content.txt')
         expiryFilePath = os.path.join(cacheFileDirectory, 'expiryDate.txt')
         contentFileExists = await file_util.file_exists(filePath=contentFilePath)
-        if not contentFileExists:
-            return None
         expiryFileExists = await file_util.file_exists(filePath=expiryFilePath)
+        if not contentFileExists:
+            if expiryFileExists:
+                await file_util.remove_file(filePath=expiryFilePath)
+            return None
         if not expiryFileExists:
-            await file_util.remove_file(filePath=contentFilePath)
+            if contentFileExists:
+                await file_util.remove_file(filePath=contentFilePath)
             return None
         expiryDateString = await file_util.read_file(filePath=expiryFilePath)
-        expiryDate = date_util.datetime_from_string(dateString=expiryDateString)
+        expiryDate = date_util.datetime_from_string(dateString=expiryDateString.strip())
         if expiryDate < date_util.datetime_from_now():
             await file_util.remove_file(filePath=contentFilePath)
+            await file_util.remove_file(filePath=expiryFilePath)
             return None
         return await file_util.read_file(filePath=contentFilePath)
 

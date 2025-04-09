@@ -12,11 +12,9 @@ class TestFileCache:
 
     @pytest.fixture
     def cache_dir(self):
-        # Create a temporary directory for testing
-        temp_dir = tempfile.mkdtemp()
-        yield temp_dir
-        # Clean up after tests
-        shutil.rmtree(temp_dir)
+        tempDirectory = tempfile.mkdtemp()
+        yield tempDirectory
+        shutil.rmtree(tempDirectory)
 
     @pytest.fixture
     def cache(self, cache_dir) -> FileCache:

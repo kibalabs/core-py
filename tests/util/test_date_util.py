@@ -319,3 +319,42 @@ class TestDateUtil:
         dt = datetime.datetime(2025, 2, 26, 14, 30, tzinfo=tz)
         result = date_util.datetime_to_utc(dt=dt)
         assert result == datetime.datetime(2025, 2, 26, 19, 30, tzinfo=datetime.UTC)
+
+    def test_datetime_to_utc_naive_datetime_with_tzinfo(self):
+        dt = datetime.datetime(2025, 2, 26, 14, 30, tzinfo=datetime.UTC)
+        result = date_util.datetime_to_utc_naive_datetime(dt=dt)
+        assert result == datetime.datetime(2025, 2, 26, 14, 30)
+        assert result.tzinfo is None
+
+    def test_datetime_to_utc_naive_datetime_with_non_utc_timezone(self):
+        tz = datetime.timezone(datetime.timedelta(hours=2))
+        dt = datetime.datetime(2025, 2, 26, 14, 30, tzinfo=tz)
+        result = date_util.datetime_to_utc_naive_datetime(dt=dt)
+        assert result == datetime.datetime(2025, 2, 26, 12, 30)
+        assert result.tzinfo is None
+
+    def test_datetime_to_utc_naive_datetime_with_naive_datetime(self):
+        dt = datetime.datetime(2025, 2, 26, 14, 30)
+        result = date_util.datetime_to_utc_naive_datetime(dt=dt)
+        assert result == datetime.datetime(2025, 2, 26, 14, 30)
+        assert result.tzinfo is None
+
+    def test_date_from_date_with_positive_days(self):
+        test_date = datetime.date(2025, 2, 26)
+        result = date_util.date_from_date(date=test_date, days=5)
+        assert result == datetime.date(2025, 3, 3)
+
+    def test_date_from_date_with_negative_days(self):
+        test_date = datetime.date(2025, 2, 26)
+        result = date_util.date_from_date(date=test_date, days=-5)
+        assert result == datetime.date(2025, 2, 21)
+
+    def test_date_from_date_across_month_boundary(self):
+        test_date = datetime.date(2025, 2, 26)
+        result = date_util.date_from_date(date=test_date, days=10)
+        assert result == datetime.date(2025, 3, 8)
+
+    def test_date_from_date_across_year_boundary(self):
+        test_date = datetime.date(2025, 12, 26)
+        result = date_util.date_from_date(date=test_date, days=10)
+        assert result == datetime.date(2026, 1, 5)
