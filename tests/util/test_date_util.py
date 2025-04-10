@@ -330,7 +330,7 @@ class TestDateUtil:
         tz = datetime.timezone(datetime.timedelta(hours=2))
         dt = datetime.datetime(2025, 2, 26, 14, 30, tzinfo=tz)
         result = date_util.datetime_to_utc_naive_datetime(dt=dt)
-        assert result == datetime.datetime(2025, 2, 26, 12, 34)
+        assert result == datetime.datetime(2025, 2, 26, 12, 30)
         assert result.tzinfo is None
 
     def test_datetime_to_utc_naive_datetime_with_naive_datetime(self):
