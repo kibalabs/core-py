@@ -13,21 +13,37 @@ CACHE_CONTROL_TEMPORARY_FILE = 'public,max-age=1'
 CACHE_CONTROL_FINAL_FILE = 'public,max-age=31536000'
 
 
-async def remove_file(filePath: str) -> None:
-    await aiofiles.os.remove(filePath)
+async def remove_file(filePath: str, should_ignore_missing: bool = True) -> None:
+    try:
+        await aiofiles.os.remove(filePath)
+    except FileNotFoundError:
+        if not should_ignore_missing:
+            raise
 
 
-async def remove_directory(directory: str) -> None:
-    # TODO(krish): fix this to be async, command below doesn't work if the directory is not empty
-    shutil.rmtree(directory)
+async def remove_directory(directory: str, should_ignore_missing: bool = True) -> None:
+    try:
+        # TODO(krish): fix this to be async, command below doesn't work if the directory is not empty
+        shutil.rmtree(directory)
+    except FileNotFoundError:
+        if not should_ignore_missing:
+            raise
 
 
-def remove_file_sync(filePath: str) -> None:
-    os.remove(filePath)
+def remove_file_sync(filePath: str, should_ignore_missing: bool = True) -> None:
+    try:
+        os.remove(filePath)
+    except FileNotFoundError:
+        if not should_ignore_missing:
+            raise
 
 
-def remove_directory_sync(directory: str) -> None:
-    shutil.rmtree(directory)
+def remove_directory_sync(directory: str, should_ignore_missing: bool = True) -> None:
+    try:
+        shutil.rmtree(directory)
+    except FileNotFoundError:
+        if not should_ignore_missing:
+            raise
 
 
 async def file_exists(filePath: str) -> bool:
