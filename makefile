@@ -38,7 +38,7 @@ test:
 	@ uv run test-check tests
 
 test-ci:
-	@ uv run test-check tests
+	@ uv run test-check tests --output-file test-check-results.json --output-format annotations
 
 clean:
 	@ rm -rf ./.mypy_cache ./__pycache__ ./build ./dist
