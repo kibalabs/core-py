@@ -35,11 +35,10 @@ start-prod:
 	@ echo "Not Supported"
 
 test:
-	@ uv run pytest tests -v
+	@ uv run test-check tests
 
 test-ci:
-# NOTE(krishan711): implement this in build-py
-	@ uv run pytest tests -v
+	@ uv run test-check tests --output-file test-check-results.json --output-format annotations
 
 clean:
 	@ rm -rf ./.mypy_cache ./__pycache__ ./build ./dist
