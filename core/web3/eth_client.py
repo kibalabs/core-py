@@ -15,7 +15,6 @@ from web3.types import BlockData
 from web3.types import HexBytes
 from web3.types import HexStr
 from web3.types import LogReceipt
-from web3.types import Nonce
 from web3.types import TxData
 from web3.types import TxParams
 from web3.types import TxReceipt
@@ -374,24 +373,34 @@ class RestEthClient(EthClientInterface):
         maxPriorityFeePerGas: int | None = None,
         chainId: int | None = None,
     ) -> TxParams:
-        if gas is None:
-            response = await self._make_request(method='eth_estimateGas', params=[params])
-            gas = int(response['result'], 16)
-        params['gas'] = gas
-        if maxPriorityFeePerGas is None:
-            response = await self._make_request(method='eth_maxPriorityFeePerGas')
-            maxPriorityFeePerGas = int(response['result'], 16)
-        params['maxPriorityFeePerGas'] = typing.cast(Wei, maxPriorityFeePerGas)
-        if maxFeePerGas is None:
-            response = await self._make_request(method='eth_getBlockByNumber', params=['pending', False])
-            baseFeePerGas = int(response['result']['baseFeePerGas'], 16)
-            maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas
-        params['maxFeePerGas'] = typing.cast(Wei, maxFeePerGas)
-        if nonce is None:
-            nonce = await self.get_transaction_count(address=fromAddress)
-        params['nonce'] = typing.cast(Nonce, nonce)
-        if chainId is not None:
-            params['chainId'] = chainId
+        if 'chainId' not in params:
+            if chainId is None:
+                raise BadRequestException(message='chainId is required')
+            params['chainId'] = hex(chainId)  # type: ignore[typeddict-item]
+        if 'nonce' not in params:
+            if nonce is None:
+                nonce = await self.get_transaction_count(address=fromAddress)
+            params['nonce'] = hex(nonce)  # type: ignore[typeddict-item]
+        if 'gas' not in params:
+            if gas is None:
+                response = await self._make_request(method='eth_estimateGas', params=[params])
+                gas = int(response['result'], 16)
+            params['gas'] = hex(gas)  # type: ignore[typeddict-item]
+        if 'gasPrice' not in params:
+            if 'maxPriorityFeePerGas' not in params:
+                if maxPriorityFeePerGas is None:
+                    response = await self._make_request(method='eth_maxPriorityFeePerGas')
+                    maxPriorityFeePerGas = int(response['result'], 16)
+                params['maxPriorityFeePerGas'] = hex(maxPriorityFeePerGas)
+            if 'maxFeePerGas' not in params:
+                if maxFeePerGas is None:
+                    response = await self._make_request(method='eth_getBlockByNumber', params=['pending', False])
+                    baseFeePerGas = int(response['result']['baseFeePerGas'], 16)
+                    paramsMaxPriorityFeePerGas = params['maxPriorityFeePerGas']
+                    if isinstance(paramsMaxPriorityFeePerGas, str):
+                        paramsMaxPriorityFeePerGas = typing.cast(Wei, int(paramsMaxPriorityFeePerGas, 16))
+                    maxFeePerGas = baseFeePerGas + typing.cast(int, paramsMaxPriorityFeePerGas)
+                params['maxFeePerGas'] = hex(maxFeePerGas)
         return params
 
     async def send_raw_transaction(self, transactionData: str) -> str:
