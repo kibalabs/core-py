@@ -374,24 +374,31 @@ class RestEthClient(EthClientInterface):
         maxPriorityFeePerGas: int | None = None,
         chainId: int | None = None,
     ) -> TxParams:
-        if chainId is not None:
+        if 'chainId' not in params:
+            if chainId is None:
+                raise BadRequestException(message='chainId is required')
             params['chainId'] = hex(chainId)
-        if gas is None:
-            response = await self._make_request(method='eth_estimateGas', params=[params])
-            gas = int(response['result'], 16)
-        params['gas'] = gas
-        if maxPriorityFeePerGas is None:
-            response = await self._make_request(method='eth_maxPriorityFeePerGas')
-            maxPriorityFeePerGas = int(response['result'], 16)
-        params['maxPriorityFeePerGas'] = typing.cast(Wei, maxPriorityFeePerGas)
-        if maxFeePerGas is None:
-            response = await self._make_request(method='eth_getBlockByNumber', params=['pending', False])
-            baseFeePerGas = int(response['result']['baseFeePerGas'], 16)
-            maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas
-        params['maxFeePerGas'] = typing.cast(Wei, maxFeePerGas)
-        if nonce is None:
-            nonce = await self.get_transaction_count(address=fromAddress)
-        params['nonce'] = typing.cast(Nonce, nonce)
+        if 'nonce' not in params:
+            if nonce is None:
+                nonce = await self.get_transaction_count(address=fromAddress)
+            params['nonce'] = hex(nonce)
+        if 'gas' not in params:
+            if gas is None:
+                response = await self._make_request(method='eth_estimateGas', params=[params])
+                gas = int(response['result'], 16)
+            params['gas'] = gas
+        if 'gasPrice' not in params:
+            if 'maxPriorityFeePerGas' not in params:
+                if maxPriorityFeePerGas is None:
+                    response = await self._make_request(method='eth_maxPriorityFeePerGas')
+                    maxPriorityFeePerGas = int(response['result'], 16)
+                params['maxPriorityFeePerGas'] = typing.cast(Wei, maxPriorityFeePerGas)
+            if 'maxFeePerGas' not in params:
+                if maxFeePerGas is None:
+                    response = await self._make_request(method='eth_getBlockByNumber', params=['pending', False])
+                    baseFeePerGas = int(response['result']['baseFeePerGas'], 16)
+                    maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas
+                params['maxFeePerGas'] = typing.cast(Wei, maxFeePerGas)
         return params
 
     async def send_raw_transaction(self, transactionData: str) -> str:
