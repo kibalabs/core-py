@@ -374,6 +374,8 @@ class RestEthClient(EthClientInterface):
         maxPriorityFeePerGas: int | None = None,
         chainId: int | None = None,
     ) -> TxParams:
+        if chainId is not None:
+            params['chainId'] = hex(chainId)
         if gas is None:
             response = await self._make_request(method='eth_estimateGas', params=[params])
             gas = int(response['result'], 16)
@@ -390,8 +392,6 @@ class RestEthClient(EthClientInterface):
         if nonce is None:
             nonce = await self.get_transaction_count(address=fromAddress)
         params['nonce'] = typing.cast(Nonce, nonce)
-        if chainId is not None:
-            params['chainId'] = chainId
         return params
 
     async def send_raw_transaction(self, transactionData: str) -> str:
