@@ -1,3 +1,4 @@
+from core import logging
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
@@ -24,9 +25,9 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
             if not hasattr(exception, 'shouldAddCacheHeader') or exception.shouldAddCacheHeader:
                 response.headers['Cache-Control'] = f'max-age={60 * 60 * 24 * 365}'
         except KibaException as exception:
-            # logging.exception(exception)
+            logging.exception(exception)
             response = self._convert_exception(exception=exception)
         except Exception as exception:  # noqa: BLE001
-            # logging.exception(exception)
+            logging.exception(exception)
             response = self._convert_exception(exception=KibaException.from_exception(exception=exception))
         return response
