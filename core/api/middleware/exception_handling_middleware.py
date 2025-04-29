@@ -1,10 +1,10 @@
-from core import logging
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.responses import Response
 
+from core import logging
 from core.exceptions import KibaException
 from core.exceptions import RedirectException
 
