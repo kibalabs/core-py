@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `date_util.datetime_from_date`
 - [MINOR] Add `json_util.dumps` and `json_util.loads` to use faster json serialization
 - [MINOR] Update `DatabaseConnectionMiddleware` to not run for endpoints with `-streamed` suffix
+- [MINOR] Added `shouldBackoffRetryOnRateLimit` and `retryLimit` to `RestEthClient` to deal with 429s
 
 ### Changed
 

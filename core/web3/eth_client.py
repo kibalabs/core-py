@@ -20,9 +20,11 @@ from web3.types import TxParams
 from web3.types import TxReceipt
 from web3.types import Wei
 
+from core import logging
 from core.exceptions import BadRequestException
 from core.exceptions import KibaException
 from core.exceptions import NotFoundException
+from core.exceptions import TooManyRequestsException
 from core.requester import Requester
 from core.util import chain_util
 from core.util import json_util
@@ -210,22 +212,43 @@ class Web3EthClient(EthClientInterface):
 
 class RestEthClient(EthClientInterface):
     # NOTE(krishan711): find docs at https://eth.wiki/json-rpc/API
-    def __init__(self, url: str, requester: Requester, isTestnet: bool = False) -> None:
+    def __init__(self, url: str, requester: Requester, isTestnet: bool = False, shouldBackoffRetryOnRateLimit: bool = True, retryLimit: int = 10) -> None:
         self.url = url
         self.requester = requester
         self.isTestnet = isTestnet
+        self.shouldBackoffRetryOnRateLimit = shouldBackoffRetryOnRateLimit
+        self.retryLimit = retryLimit
         self.w3 = Web3()
 
     @staticmethod
     def _hex_to_int(value: str) -> int:
         return int(value, 16)
 
-    async def _make_request(self, method: str, params: ListAny | None = None) -> Any:  # type: ignore[explicit-any]
-        response = await self.requester.post_json(url=self.url, dataDict={'jsonrpc': '2.0', 'method': method, 'params': params or [], 'id': 0}, timeout=100)
-        jsonResponse = response.json()
-        if jsonResponse.get('error'):
-            raise BadRequestException(message=jsonResponse['error'].get('message') or jsonResponse['error'].get('details') or json_util.dumps(jsonResponse['error']))
-        return jsonResponse
+    async def _make_request(self, method: str, params: ListAny | None = None) -> DictStrAny:
+        retryCount = 0
+        initialBackoffSeconds = 1.0
+        responseDict: DictStrAny = {}
+        while True:
+            try:
+                response = await self.requester.post_json(
+                    url=self.url,
+                    dataDict={'jsonrpc': '2.0', 'method': method, 'params': params or [], 'id': None},
+                    timeout=10,
+                )
+                responseDict = response.json()
+                break
+            except TooManyRequestsException as exception:
+                if not self.shouldBackoffRetryOnRateLimit or retryCount >= self.retryLimit:
+                    raise
+                retryCount += 1
+                exponentialBackoffSeconds = initialBackoffSeconds * (2 ** (retryCount - 1))
+                logging.info(f'Retrying {method} after {exponentialBackoffSeconds} seconds due to rate limit exceeded: {exception!s}')
+                await asyncio.sleep(exponentialBackoffSeconds)
+                continue
+        if responseDict.get('error'):
+            errorMessage = responseDict['error'].get('message') or responseDict['error'].get('details') or json_util.dumps(responseDict['error'])
+            raise BadRequestException(message=errorMessage)
+        return responseDict
 
     async def get_latest_block_number(self) -> int:
         response = await self._make_request(method='eth_blockNumber')

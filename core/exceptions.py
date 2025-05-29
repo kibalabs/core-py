@@ -67,6 +67,12 @@ class NotFoundException(ClientException):
         super().__init__(message=message, statusCode=404)
 
 
+class TooManyRequestsException(ClientException):
+    def __init__(self, message: str | None = None) -> None:
+        message = message if message else 'Not Found'
+        super().__init__(message=message, statusCode=429)
+
+
 class ServerException(KibaException):
     pass
 
@@ -197,7 +203,7 @@ CLIENT_EXCEPTIONS_MAP = {
     # 424: FailedDependencyException,
     # 426: UpgradeRequiredException,
     # 428: PreconditionRequiredException,
-    # 429: TooManyRequestsException,
+    429: TooManyRequestsException,
     # 431: RequestHeaderFieldsTooLargeException,
     # 444: NoResponseException,
     # 451: UnavailableForLegalReasonsException,
