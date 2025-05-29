@@ -326,7 +326,7 @@ class RestEthClient(EthClientInterface):
             'to': toAddress,
             'data': data,
         }
-        response = await self._make_request(method='eth_call', params=[params, blockNumber or 'latest'])
+        response = await self._make_request(method='eth_call', params=[params, hex(blockNumber) if blockNumber else 'latest'])
         outputTypes = get_abi_output_types(abi_element=functionAbi)
         try:
             outputData = self.w3.codec.decode(types=outputTypes, data=HexBytes(response['result']))
