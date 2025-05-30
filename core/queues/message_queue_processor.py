@@ -56,11 +56,11 @@ class MessageQueueProcessor(Generic[MessageType]):
             await self.queue.send_message(message=message, delaySeconds=((message.postCount or 0) * exception.delaySeconds))
         except Exception as exception:  # noqa: BLE001
             statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
-            logging.error('Caught exception whilst processing message')
+            logging.error('Caught exception whilst processing message:')
             logging.exception(exception)
             for client in self.notificationClients:
                 await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{exception}```')
-            # TODO(krish): should possibly reset the visibility timeout
+            # TODO(krishan711): should possibly reset the visibility timeout
         duration = time.time() - startTime
         logging.api(action='MESSAGE', path=message.command, query=query, response=statusCode, duration=duration)
         if self.requestIdHolder:
