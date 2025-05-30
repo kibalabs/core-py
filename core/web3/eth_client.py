@@ -22,6 +22,7 @@ from web3.types import Wei
 
 from core import logging
 from core.exceptions import BadRequestException
+from core.exceptions import ClientException
 from core.exceptions import KibaException
 from core.exceptions import NotFoundException
 from core.exceptions import TooManyRequestsException
@@ -236,19 +237,28 @@ class RestEthClient(EthClientInterface):
                     timeout=10,
                 )
                 responseDict = response.json()
-                break
-            except TooManyRequestsException as exception:
-                if not self.shouldBackoffRetryOnRateLimit or retryCount >= self.retryLimit:
-                    raise
-                retryCount += 1
-                exponentialBackoffSeconds = initialBackoffSeconds * (2 ** (retryCount - 1))
-                logging.info(f'Retrying {method} after {exponentialBackoffSeconds} seconds due to rate limit exceeded: {exception!s}')
-                await asyncio.sleep(exponentialBackoffSeconds)
-                continue
-        if responseDict.get('error'):
-            errorMessage = responseDict['error'].get('message') or responseDict['error'].get('details') or json_util.dumps(responseDict['error'])
-            raise BadRequestException(message=errorMessage)
-        return responseDict
+                if responseDict.get('error'):
+                    errorMessage = responseDict['error'].get('message') or responseDict['error'].get('details') or json_util.dumps(responseDict['error'])
+                    raise BadRequestException(message=errorMessage)
+            except ClientException as exception:
+                # NOTE(krishan711): this is just here to debug 429s from coinbase, remove when done
+                logging.info(f'caught exception on _make_request: {exception!s}')
+                exceptionMessage = exception.message or ''
+                if (
+                    isinstance(exception, TooManyRequestsException)
+                    # NOTE(krishan711): sometimes coinbase returns an error message with 200 status
+                    or 'over rate limit' in exceptionMessage
+                    or '429 Too Many Requests' in exceptionMessage
+                ):
+                    if not self.shouldBackoffRetryOnRateLimit or retryCount >= self.retryLimit:
+                        raise
+                    retryCount += 1
+                    exponentialBackoffSeconds = initialBackoffSeconds * (2 ** (retryCount - 1))
+                    logging.info(f'Retrying {method} after {exponentialBackoffSeconds} seconds due to rate limit exceeded: {exception!s}')
+                    await asyncio.sleep(exponentialBackoffSeconds)
+                    continue
+                raise
+            return responseDict
 
     async def get_latest_block_number(self) -> int:
         response = await self._make_request(method='eth_blockNumber')
@@ -326,7 +336,7 @@ class RestEthClient(EthClientInterface):
             'to': toAddress,
             'data': data,
         }
-        response = await self._make_request(method='eth_call', params=[params, hex(blockNumber) if blockNumber else 'latest'])
+        response = await self._make_request(method='eth_call', params=[params, hex(blockNumber) if blockNumber is not None else 'latest'])
         outputTypes = get_abi_output_types(abi_element=functionAbi)
         try:
             outputData = self.w3.codec.decode(types=outputTypes, data=HexBytes(response['result']))
