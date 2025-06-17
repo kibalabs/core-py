@@ -1,17 +1,16 @@
 import typing
 
 import eth_utils
-from eth_typing import ABIComponent
 from eth_typing import ABIFunction
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix
-from eth_utils import keccak
 from web3 import Web3
-from web3._utils.contracts import encode_abi
+from web3._utils.contracts import encode_abi as web3_encode_abi
 from web3._utils.contracts import encode_transaction_data as web3_encode_transaction_data
 from web3.types import ChecksumAddress
 
 BURN_ADDRESS = '0x0000000000000000000000000000000000000000'
+_w3 = Web3()
 
 
 def normalize_address(value: str) -> str:
@@ -55,7 +54,6 @@ def _convert_tuple_parameter_values(abiInputs: list[typing.Any], argumentValues:
 
 
 def encode_transaction_data(  # type: ignore[explicit-any]
-    w3: Web3,
     functionAbi: ABIFunction,
     arguments: dict[str, typing.Any] | None = None,
 ) -> HexStr:
@@ -66,7 +64,7 @@ def encode_transaction_data(  # type: ignore[explicit-any]
             if paramName in arguments:
                 arguments[paramName] = _convert_parameter_value(abiInput=abiInput, value=arguments[paramName])
     return web3_encode_transaction_data(
-        w3=w3,
+        w3=_w3,
         abi_element_identifier=functionAbi['name'],
         contract_abi=[functionAbi],
         abi_callable=functionAbi,
@@ -77,31 +75,9 @@ def encode_transaction_data(  # type: ignore[explicit-any]
 
 def encode_function_params(functionAbi: ABIFunction, arguments: list[typing.Any]) -> str:  # type: ignore[explicit-any]
     return add_0x_prefix(
-        encode_abi(
-            w3=Web3(),
+        web3_encode_abi(
+            w3=_w3,
             abi=functionAbi,
             arguments=arguments,
         )
     )
-
-
-def _get_canonical_type(param: ABIComponent) -> str:
-    paramType = param['type']
-    if paramType == 'tuple' and 'components' in param:
-        componentTypes = [_get_canonical_type(component) for component in param['components']]
-        return f'({",".join(componentTypes)})'
-    if paramType == 'tuple[]' and 'components' in param:
-        componentTypes = [_get_canonical_type(component) for component in param['components']]
-        return f'({",".join(componentTypes)})[]'
-    return paramType
-
-
-# NOTE(krishan711): is this the exact same thing as encode_transaction_data??
-def encode_function_call(functionAbi: ABIFunction, arguments: list[typing.Any]) -> str:  # type: ignore[explicit-any]
-    functionName = functionAbi['name']
-    paramTypes = [_get_canonical_type(param=param) for param in functionAbi['inputs']]
-    signatureString = f'{functionName}({",".join(paramTypes)})'
-    keccakHash = keccak(text=signatureString).hex()
-    signature = '0x' + keccakHash[:8]
-    encodedParams = encode_function_params(functionAbi=functionAbi, arguments=arguments)
-    return signature + encodedParams[2:] if encodedParams.startswith('0x') else signature + encodedParams

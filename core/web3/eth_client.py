@@ -340,7 +340,7 @@ class RestEthClient(EthClientInterface):
         arguments: DictStrAny | None = None,
         blockNumber: int | None = None,
     ) -> ListAny:
-        data = chain_util.encode_transaction_data(w3=self.w3, functionAbi=functionAbi, arguments=arguments)
+        data = chain_util.encode_transaction_data(functionAbi=functionAbi, arguments=arguments)
         params = {
             'from': fromAddress or '0x0000000000000000000000000000000000000000',
             'to': toAddress,
@@ -401,7 +401,7 @@ class RestEthClient(EthClientInterface):
         params: TxParams = {
             'to': chain_util.normalize_address(value=toAddress),
             'from': chain_util.normalize_address(value=fromAddress),
-            'data': chain_util.encode_transaction_data(w3=self.w3, functionAbi=functionAbi, arguments=arguments),
+            'data': chain_util.encode_transaction_data(functionAbi=functionAbi, arguments=arguments),
         }
         return params
 
