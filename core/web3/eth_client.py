@@ -9,7 +9,6 @@ from eth_typing import ABIFunction
 from eth_utils.abi import get_abi_output_types
 from web3 import Web3
 from web3._utils import method_formatters
-from web3._utils.contracts import encode_transaction_data
 from web3._utils.rpc_abi import RPC
 from web3.types import BlockData
 from web3.types import HexBytes
@@ -266,6 +265,16 @@ class RestEthClient(EthClientInterface):
             raise NotFoundException
         return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_blockNumber](response['result']))
 
+    async def get_latest_block(self, shouldHydrateTransactions: bool = False) -> BlockData:
+        response = await self._make_request(method='eth_getBlockByNumber', params=['latest', shouldHydrateTransactions])
+        if response['result'] is None:
+            raise NotFoundException
+        if self.isTestnet:
+            # NOTE(krishan711): In testnet strip out the extra data as done by web3
+            # https://web3py.readthedocs.io/en/stable/middleware.html#why-is-geth-poa-middleware-necessary
+            response['result']['extraData'] = HexBytes('0').hex()
+        return typing.cast(BlockData, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getBlockByNumber](response['result']))
+
     async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
         response = await self._make_request(method='eth_getBlockByNumber', params=[hex(blockNumber), shouldHydrateTransactions])
         if response['result'] is None:
@@ -324,13 +333,14 @@ class RestEthClient(EthClientInterface):
     async def call_function(
         self,
         toAddress: str,
+        # TODO(krishan711): remove on major bump
         contractAbi: ABI,  # noqa: ARG002
         functionAbi: ABIFunction,
         fromAddress: str | None = None,
         arguments: DictStrAny | None = None,
         blockNumber: int | None = None,
     ) -> ListAny:
-        data = encode_transaction_data(w3=self.w3, abi_element_identifier=functionAbi['name'], contract_abi=[functionAbi], abi_callable=functionAbi, kwargs=(arguments or {}), args=[])
+        data = chain_util.encode_transaction_data(functionAbi=functionAbi, arguments=arguments)
         params = {
             'from': fromAddress or '0x0000000000000000000000000000000000000000',
             'to': toAddress,
@@ -384,7 +394,6 @@ class RestEthClient(EthClientInterface):
     def _get_base_transaction_params(
         self,
         toAddress: str,
-        contractAbi: ABI,
         functionAbi: ABIFunction,
         fromAddress: str,
         arguments: DictStrAny | None = None,
@@ -392,9 +401,21 @@ class RestEthClient(EthClientInterface):
         params: TxParams = {
             'to': chain_util.normalize_address(value=toAddress),
             'from': chain_util.normalize_address(value=fromAddress),
-            'data': encode_transaction_data(w3=self.w3, abi_element_identifier=functionAbi['name'], contract_abi=contractAbi, abi_callable=functionAbi, kwargs=(arguments or {}), args=[]),
+            'data': chain_util.encode_transaction_data(functionAbi=functionAbi, arguments=arguments),
         }
         return params
+
+    async def get_max_priotity_fee_per_gas(self) -> int:
+        response = await self._make_request(method='eth_maxPriorityFeePerGas')
+        maxPriorityFeePerGas = int(response['result'], 16)
+        return maxPriorityFeePerGas
+
+    async def get_max_fee_per_gas(self, maxPriorityFeePerGas: int | str) -> int:
+        response = await self._make_request(method='eth_getBlockByNumber', params=['pending', False])
+        baseFeePerGas = int(response['result']['baseFeePerGas'], 16)
+        intMaxPriorityFeePerGas: int = typing.cast(Wei, int(maxPriorityFeePerGas, 16)) if isinstance(maxPriorityFeePerGas, str) else maxPriorityFeePerGas
+        maxFeePerGas = baseFeePerGas + intMaxPriorityFeePerGas
+        return maxFeePerGas
 
     async def fill_transaction_params(
         self,
@@ -422,17 +443,11 @@ class RestEthClient(EthClientInterface):
         if 'gasPrice' not in params:
             if 'maxPriorityFeePerGas' not in params:
                 if maxPriorityFeePerGas is None:
-                    response = await self._make_request(method='eth_maxPriorityFeePerGas')
-                    maxPriorityFeePerGas = int(response['result'], 16)
+                    maxPriorityFeePerGas = await self.get_max_priotity_fee_per_gas()
                 params['maxPriorityFeePerGas'] = hex(maxPriorityFeePerGas)
             if 'maxFeePerGas' not in params:
                 if maxFeePerGas is None:
-                    response = await self._make_request(method='eth_getBlockByNumber', params=['pending', False])
-                    baseFeePerGas = int(response['result']['baseFeePerGas'], 16)
-                    paramsMaxPriorityFeePerGas = params['maxPriorityFeePerGas']
-                    if isinstance(paramsMaxPriorityFeePerGas, str):
-                        paramsMaxPriorityFeePerGas = typing.cast(Wei, int(paramsMaxPriorityFeePerGas, 16))
-                    maxFeePerGas = baseFeePerGas + typing.cast(int, paramsMaxPriorityFeePerGas)
+                    maxFeePerGas = await self.get_max_fee_per_gas(maxPriorityFeePerGas=params['maxPriorityFeePerGas'])
                 params['maxFeePerGas'] = hex(maxFeePerGas)
         return params
 
@@ -445,7 +460,8 @@ class RestEthClient(EthClientInterface):
     async def send_transaction(
         self,
         toAddress: str,
-        contractAbi: ABI,
+        # TODO(krishan711): remove on major bump
+        contractAbi: ABI,  # noqa: ARG002
         functionAbi: ABIFunction,
         privateKey: str,
         fromAddress: str,
@@ -456,7 +472,7 @@ class RestEthClient(EthClientInterface):
         arguments: DictStrAny | None = None,
         chainId: int | None = None,
     ) -> str:
-        params = self._get_base_transaction_params(toAddress=toAddress, contractAbi=contractAbi, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments)
+        params = self._get_base_transaction_params(toAddress=toAddress, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments)
         params = await self.fill_transaction_params(
             params=params,
             fromAddress=fromAddress,

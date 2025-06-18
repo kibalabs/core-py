@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Add `json_util.dumps` and `json_util.loads` to use faster json serialization
 - [MINOR] Update `DatabaseConnectionMiddleware` to not run for endpoints with `-streamed` suffix
 - [MINOR] Added `shouldBackoffRetryOnRateLimit` and `retryLimit` to `RestEthClient` to deal with 429s
+- [MINOR] Added `encode_transaction_data` to `chain_util` to support casting ints from hex-str when possible
 
 ### Changed
 
