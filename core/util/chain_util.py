@@ -1,6 +1,7 @@
 import typing
 
 import eth_utils
+from eth_typing import ABI
 from eth_typing import ABIFunction
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix
@@ -8,6 +9,10 @@ from web3 import Web3
 from web3._utils.contracts import encode_abi as web3_encode_abi
 from web3._utils.contracts import encode_transaction_data as web3_encode_transaction_data
 from web3.types import ChecksumAddress
+
+from core.exceptions import BadRequestException
+
+DictStrAny = dict[str, typing.Any]  # type: ignore[explicit-any]
 
 BURN_ADDRESS = '0x0000000000000000000000000000000000000000'
 _w3 = Web3()
@@ -73,6 +78,44 @@ def encode_transaction_data(  # type: ignore[explicit-any]
     )
 
 
+def find_abi_by_name_args(contractAbi: ABI, functionName: str, arguments: DictStrAny | None = None) -> ABIFunction:
+    functionAbis = typing.cast(list[ABIFunction], [abi for abi in contractAbi if abi.get('name') == functionName])
+    if len(functionAbis) == 0:
+        raise BadRequestException(message='Function not found in ABI')
+    functionAbi: ABIFunction | None = None
+    if len(functionAbis) == 1:
+        functionAbi = functionAbis[0]
+    else:
+        argumentCount = len(arguments or {})
+        functionAbi = next((abi for abi in functionAbis if len(abi['inputs']) == argumentCount), None)
+    if not functionAbi:
+        raise BadRequestException(message='Function not found in ABI')
+    return functionAbi
+
+
+def encode_transaction_data_by_name(  # type: ignore[explicit-any]
+    contractAbi: ABI,
+    functionName: str,
+    arguments: dict[str, typing.Any] | None = None,
+) -> HexStr:
+    # NOTE(krishan711): web3py doesn't like hex strings for ints but coinbase rpc expects it :(
+    functionAbi = _w3.eth.contract(abi=contractAbi).get_function_by_name(functionName).abi
+    if arguments is not None:
+        for abiInput in functionAbi['inputs']:
+            paramName = abiInput['name']
+            if paramName in arguments:
+                arguments[paramName] = _convert_parameter_value(abiInput=abiInput, value=arguments[paramName])
+    return web3_encode_transaction_data(
+        w3=_w3,
+        abi_element_identifier=functionAbi['name'],
+        contract_abi=[functionAbi],
+        abi_callable=functionAbi,
+        kwargs=arguments or {},
+        args=[],
+    )
+
+
+# NOTE(krishan711): not sure how difference this is from `encode_transaction_data`
 def encode_function_params(functionAbi: ABIFunction, arguments: list[typing.Any]) -> str:  # type: ignore[explicit-any]
     return add_0x_prefix(
         web3_encode_abi(

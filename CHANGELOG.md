@@ -21,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Update `DatabaseConnectionMiddleware` to not run for endpoints with `-streamed` suffix
 - [MINOR] Added `shouldBackoffRetryOnRateLimit` and `retryLimit` to `RestEthClient` to deal with 429s
 - [MINOR] Added `encode_transaction_data` to `chain_util` to support casting ints from hex-str when possible
+- [MAJOR] Removed `RestEthClient._find_abi_by_name_args` - use chain_util function instaad
+- [MINOR] Added `chain_util.encode_transaction_data_by_name`
+- [MINOR] Added `list_util.remove_nones`
 
 ### Changed
 

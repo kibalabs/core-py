@@ -7,6 +7,7 @@ from eth_abi.exceptions import InsufficientDataBytes
 from eth_typing import ABI
 from eth_typing import ABIFunction
 from eth_utils.abi import get_abi_output_types
+from pydantic import BaseModel
 from web3 import Web3
 from web3._utils import method_formatters
 from web3._utils.rpc_abi import RPC
@@ -32,6 +33,12 @@ from core.util.typing_util import JsonObject
 
 ListAny = list[Any]  # type: ignore[explicit-any]
 DictStrAny = dict[str, Any]  # type: ignore[explicit-any]
+
+
+class EncodedCall(BaseModel):
+    toAddress: str
+    value: int = 0
+    data: str = '0x'
 
 
 class TransactionFailedException(KibaException):
@@ -358,20 +365,6 @@ class RestEthClient(EthClientInterface):
             raise BadRequestException(message=str(exception))
         return list(outputData)
 
-    def _find_abi_by_name_args(self, contractAbi: ABI, functionName: str, arguments: DictStrAny | None = None) -> ABIFunction:
-        functionAbis = typing.cast(list[ABIFunction], [abi for abi in contractAbi if abi.get('name') == functionName])
-        if len(functionAbis) == 0:
-            raise BadRequestException(message='Function not found in ABI')
-        functionAbi: ABIFunction | None = None
-        if len(functionAbis) == 1:
-            functionAbi = functionAbis[0]
-        else:
-            argumentCount = len(arguments or {})
-            functionAbi = next((abi for abi in functionAbis if len(abi['inputs']) == argumentCount), None)
-        if not functionAbi:
-            raise BadRequestException(message='Function not found in ABI')
-        return functionAbi
-
     async def call_function_by_name(
         self,
         toAddress: str,
@@ -381,7 +374,7 @@ class RestEthClient(EthClientInterface):
         arguments: DictStrAny | None = None,
         blockNumber: int | None = None,
     ) -> ListAny:
-        functionAbi = self._find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
+        functionAbi = chain_util.find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
         return await self.call_function(
             toAddress=toAddress,
             contractAbi=contractAbi,
@@ -390,20 +383,6 @@ class RestEthClient(EthClientInterface):
             arguments=arguments,
             blockNumber=blockNumber,
         )
-
-    def _get_base_transaction_params(
-        self,
-        toAddress: str,
-        functionAbi: ABIFunction,
-        fromAddress: str,
-        arguments: DictStrAny | None = None,
-    ) -> TxParams:
-        params: TxParams = {
-            'to': chain_util.normalize_address(value=toAddress),
-            'from': chain_util.normalize_address(value=fromAddress),
-            'data': chain_util.encode_transaction_data(functionAbi=functionAbi, arguments=arguments),
-        }
-        return params
 
     async def get_max_priotity_fee_per_gas(self) -> int:
         response = await self._make_request(method='eth_maxPriorityFeePerGas')
@@ -472,7 +451,11 @@ class RestEthClient(EthClientInterface):
         arguments: DictStrAny | None = None,
         chainId: int | None = None,
     ) -> str:
-        params = self._get_base_transaction_params(toAddress=toAddress, functionAbi=functionAbi, fromAddress=fromAddress, arguments=arguments)
+        params: TxParams = {
+            'to': chain_util.normalize_address(value=toAddress),
+            'from': chain_util.normalize_address(value=fromAddress),
+            'data': chain_util.encode_transaction_data(functionAbi=functionAbi, arguments=arguments),
+        }
         params = await self.fill_transaction_params(
             params=params,
             fromAddress=fromAddress,
@@ -500,7 +483,7 @@ class RestEthClient(EthClientInterface):
         arguments: DictStrAny | None = None,
         chainId: int | None = None,
     ) -> str:
-        functionAbi = self._find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
+        functionAbi = chain_util.find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
         return await self.send_transaction(
             toAddress=toAddress,
             contractAbi=contractAbi,
