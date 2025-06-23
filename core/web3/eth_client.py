@@ -7,7 +7,6 @@ from eth_abi.exceptions import InsufficientDataBytes
 from eth_typing import ABI
 from eth_typing import ABIFunction
 from eth_utils.abi import get_abi_output_types
-from pydantic import BaseModel
 from web3 import Web3
 from web3._utils import method_formatters
 from web3._utils.rpc_abi import RPC
@@ -33,12 +32,6 @@ from core.util.typing_util import JsonObject
 
 ListAny = list[Any]  # type: ignore[explicit-any]
 DictStrAny = dict[str, Any]  # type: ignore[explicit-any]
-
-
-class EncodedCall(BaseModel):
-    toAddress: str
-    value: int = 0
-    data: str = '0x'
 
 
 class TransactionFailedException(KibaException):

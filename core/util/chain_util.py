@@ -5,6 +5,7 @@ from eth_typing import ABI
 from eth_typing import ABIFunction
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix
+from pydantic import BaseModel
 from web3 import Web3
 from web3._utils.contracts import encode_abi as web3_encode_abi
 from web3._utils.contracts import encode_transaction_data as web3_encode_transaction_data
@@ -16,6 +17,12 @@ DictStrAny = dict[str, typing.Any]  # type: ignore[explicit-any]
 
 BURN_ADDRESS = '0x0000000000000000000000000000000000000000'
 _w3 = Web3()
+
+
+class EncodedCall(BaseModel):
+    toAddress: str
+    value: int = 0
+    data: str = '0x'
 
 
 def normalize_address(value: str) -> str:
