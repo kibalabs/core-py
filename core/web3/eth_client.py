@@ -53,6 +53,10 @@ class TransactionFailedException(KibaException):
 
 
 class EthClientInterface:
+    def __init__(self, web3Connection: Web3, isTestnet: bool = False) -> None:
+        self.w3 = web3Connection
+        self.isTestnet = isTestnet
+
     async def get_latest_block_number(self) -> int:
         raise NotImplementedError
 
@@ -74,16 +78,45 @@ class EthClientInterface:
     async def call_function(self, toAddress: str, contractAbi: ABI, functionAbi: ABIFunction, fromAddress: str | None = None, arguments: DictStrAny | None = None, blockNumber: int | None = None) -> ListAny:
         raise NotImplementedError
 
-    async def call_function_by_name(self, toAddress: str, contractAbi: ABI, functionName: str, fromAddress: str | None = None, arguments: DictStrAny | None = None, blockNumber: int | None = None) -> ListAny:
+    async def fill_transaction_params(
+        self,
+        params: TxParams,
+        fromAddress: str,
+        nonce: int | None = None,
+        gas: int | None = None,
+        maxFeePerGas: int | None = None,
+        maxPriorityFeePerGas: int | None = None,
+        chainId: int | None = None,
+    ) -> TxParams:
         raise NotImplementedError
 
     async def send_raw_transaction(self, transactionData: str) -> str:
         raise NotImplementedError
 
-    async def send_transaction(
+    async def call_function_by_name(
         self,
         toAddress: str,
         contractAbi: ABI,
+        functionName: str,
+        fromAddress: str | None = None,
+        arguments: DictStrAny | None = None,
+        blockNumber: int | None = None,
+    ) -> ListAny:
+        functionAbi = chain_util.find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
+        return await self.call_function(
+            toAddress=toAddress,
+            contractAbi=contractAbi,
+            functionAbi=functionAbi,
+            fromAddress=fromAddress,
+            arguments=arguments,
+            blockNumber=blockNumber,
+        )
+
+    async def send_transaction(
+        self,
+        toAddress: str,
+        # TODO(krishan711): remove on major bump
+        contractAbi: ABI,  # noqa: ARG002
         functionAbi: ABIFunction,
         privateKey: str,
         fromAddress: str,
@@ -94,7 +127,23 @@ class EthClientInterface:
         arguments: DictStrAny | None = None,
         chainId: int | None = None,
     ) -> str:
-        raise NotImplementedError
+        params: TxParams = {
+            'to': chain_util.normalize_address(value=toAddress),
+            'from': chain_util.normalize_address(value=fromAddress),
+            'data': chain_util.encode_transaction_data(functionAbi=functionAbi, arguments=arguments),
+        }
+        params = await self.fill_transaction_params(
+            params=params,
+            fromAddress=fromAddress,
+            nonce=nonce,
+            gas=gas,
+            maxFeePerGas=maxFeePerGas,
+            maxPriorityFeePerGas=maxPriorityFeePerGas,
+            chainId=chainId,
+        )
+        signedParams = self.w3.eth.account.sign_transaction(transaction_dict=params, private_key=privateKey)
+        output = await self.send_raw_transaction(transactionData=signedParams.raw_transaction.hex())
+        return output
 
     async def send_transaction_by_name(
         self,
@@ -110,17 +159,40 @@ class EthClientInterface:
         arguments: DictStrAny | None = None,
         chainId: int | None = None,
     ) -> str:
-        raise NotImplementedError
+        functionAbi = chain_util.find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
+        return await self.send_transaction(
+            toAddress=toAddress,
+            contractAbi=contractAbi,
+            functionAbi=functionAbi,
+            privateKey=privateKey,
+            fromAddress=fromAddress,
+            nonce=nonce,
+            gas=gas,
+            maxFeePerGas=maxFeePerGas,
+            maxPriorityFeePerGas=maxPriorityFeePerGas,
+            arguments=arguments,
+            chainId=chainId,
+        )
 
-    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
-        raise NotImplementedError
+    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2, maxWaitSeconds: int = 120, raiseOnFailure: bool = True) -> TxReceipt:
+        startTime = asyncio.get_event_loop().time()
+        while True:
+            try:
+                transactionReceipt = await self.get_transaction_receipt(transactionHash=transactionHash)
+            except NotFoundException:
+                pass
+            else:
+                break
+            currentTime = asyncio.get_event_loop().time()
+            if currentTime - startTime >= maxWaitSeconds:
+                raise TimeoutError(f'Transaction receipt not found after {maxWaitSeconds} seconds')
+            await asyncio.sleep(sleepSeconds)
+        if raiseOnFailure and transactionReceipt['status'] == 0:
+            raise TransactionFailedException(transactionReceipt=transactionReceipt)
+        return transactionReceipt
 
 
 class Web3EthClient(EthClientInterface):
-    def __init__(self, web3Connection: Web3, isTestnet: bool = False) -> None:
-        self.w3 = web3Connection
-        self.isTestnet = isTestnet
-
     async def get_latest_block_number(self) -> int:
         return self.w3.eth.block_number
 
@@ -156,70 +228,11 @@ class Web3EthClient(EthClientInterface):
         )
         return contractFilter.get_all_entries()
 
-    async def call_function(
-        self,
-        toAddress: str,
-        contractAbi: ABI,
-        functionAbi: ABIFunction,
-        fromAddress: str | None = None,
-        arguments: DictStrAny | None = None,
-        blockNumber: int | None = None,
-    ) -> ListAny:
-        raise NotImplementedError
-
-    async def call_function_by_name(
-        self,
-        toAddress: str,
-        contractAbi: ABI,
-        functionName: str,
-        fromAddress: str | None = None,
-        arguments: DictStrAny | None = None,
-        blockNumber: int | None = None,
-    ) -> ListAny:
-        raise NotImplementedError
-
-    async def send_raw_transaction(self, transactionData: str) -> str:
-        raise NotImplementedError
-
-    async def send_transaction(
-        self,
-        toAddress: str,
-        contractAbi: ABI,
-        functionAbi: ABIFunction,
-        privateKey: str,
-        fromAddress: str,
-        nonce: int | None = None,
-        gas: int | None = None,
-        maxFeePerGas: int | None = None,
-        maxPriorityFeePerGas: int | None = None,
-        arguments: DictStrAny | None = None,
-        chainId: int | None = None,
-    ) -> str:
-        raise NotImplementedError
-
-    async def send_transaction_by_name(
-        self,
-        toAddress: str,
-        contractAbi: ABI,
-        functionName: str,
-        privateKey: str,
-        fromAddress: str,
-        nonce: int | None = None,
-        gas: int | None = None,
-        maxFeePerGas: int | None = None,
-        maxPriorityFeePerGas: int | None = None,
-        arguments: DictStrAny | None = None,
-        chainId: int | None = None,
-    ) -> str:
-        raise NotImplementedError
-
-    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2) -> TxReceipt:
-        raise NotImplementedError
-
 
 class RestEthClient(EthClientInterface):
     # NOTE(krishan711): find docs at https://eth.wiki/json-rpc/API
     def __init__(self, url: str, requester: Requester, isTestnet: bool = False, shouldBackoffRetryOnRateLimit: bool = True, retryLimit: int = 10) -> None:
+        super().__init__(web3Connection=Web3(), isTestnet=isTestnet)
         self.url = url
         self.requester = requester
         self.isTestnet = isTestnet
@@ -365,26 +378,7 @@ class RestEthClient(EthClientInterface):
             raise BadRequestException(message=str(exception))
         return list(outputData)
 
-    async def call_function_by_name(
-        self,
-        toAddress: str,
-        contractAbi: ABI,
-        functionName: str,
-        fromAddress: str | None = None,
-        arguments: DictStrAny | None = None,
-        blockNumber: int | None = None,
-    ) -> ListAny:
-        functionAbi = chain_util.find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
-        return await self.call_function(
-            toAddress=toAddress,
-            contractAbi=contractAbi,
-            functionAbi=functionAbi,
-            fromAddress=fromAddress,
-            arguments=arguments,
-            blockNumber=blockNumber,
-        )
-
-    async def get_max_priotity_fee_per_gas(self) -> int:
+    async def get_max_priority_fee_per_gas(self) -> int:
         response = await self._make_request(method='eth_maxPriorityFeePerGas')
         maxPriorityFeePerGas = int(response['result'], 16)
         return maxPriorityFeePerGas
@@ -422,7 +416,7 @@ class RestEthClient(EthClientInterface):
         if 'gasPrice' not in params:
             if 'maxPriorityFeePerGas' not in params:
                 if maxPriorityFeePerGas is None:
-                    maxPriorityFeePerGas = await self.get_max_priotity_fee_per_gas()
+                    maxPriorityFeePerGas = await self.get_max_priority_fee_per_gas()
                 params['maxPriorityFeePerGas'] = hex(maxPriorityFeePerGas)
             if 'maxFeePerGas' not in params:
                 if maxFeePerGas is None:
@@ -435,78 +429,3 @@ class RestEthClient(EthClientInterface):
             transactionData = '0x' + transactionData
         response = await self._make_request(method='eth_sendRawTransaction', params=[transactionData])
         return typing.cast(str, response['result'])
-
-    async def send_transaction(
-        self,
-        toAddress: str,
-        # TODO(krishan711): remove on major bump
-        contractAbi: ABI,  # noqa: ARG002
-        functionAbi: ABIFunction,
-        privateKey: str,
-        fromAddress: str,
-        nonce: int | None = None,
-        gas: int | None = None,
-        maxFeePerGas: int | None = None,
-        maxPriorityFeePerGas: int | None = None,
-        arguments: DictStrAny | None = None,
-        chainId: int | None = None,
-    ) -> str:
-        params: TxParams = {
-            'to': chain_util.normalize_address(value=toAddress),
-            'from': chain_util.normalize_address(value=fromAddress),
-            'data': chain_util.encode_transaction_data(functionAbi=functionAbi, arguments=arguments),
-        }
-        params = await self.fill_transaction_params(
-            params=params,
-            fromAddress=fromAddress,
-            nonce=nonce,
-            gas=gas,
-            maxFeePerGas=maxFeePerGas,
-            maxPriorityFeePerGas=maxPriorityFeePerGas,
-            chainId=chainId,
-        )
-        signedParams = self.w3.eth.account.sign_transaction(transaction_dict=params, private_key=privateKey)
-        output = await self.send_raw_transaction(transactionData=signedParams.raw_transaction.hex())
-        return output
-
-    async def send_transaction_by_name(
-        self,
-        toAddress: str,
-        contractAbi: ABI,
-        functionName: str,
-        privateKey: str,
-        fromAddress: str,
-        nonce: int | None = None,
-        gas: int | None = None,
-        maxFeePerGas: int | None = None,
-        maxPriorityFeePerGas: int | None = None,
-        arguments: DictStrAny | None = None,
-        chainId: int | None = None,
-    ) -> str:
-        functionAbi = chain_util.find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
-        return await self.send_transaction(
-            toAddress=toAddress,
-            contractAbi=contractAbi,
-            functionAbi=functionAbi,
-            privateKey=privateKey,
-            fromAddress=fromAddress,
-            nonce=nonce,
-            gas=gas,
-            maxFeePerGas=maxFeePerGas,
-            maxPriorityFeePerGas=maxPriorityFeePerGas,
-            arguments=arguments,
-            chainId=chainId,
-        )
-
-    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2, raiseOnFailure: bool = True) -> TxReceipt:
-        while True:
-            try:
-                transactionReceipt = await self.get_transaction_receipt(transactionHash=transactionHash)
-            except NotFoundException:
-                pass
-            else:
-                break
-            await asyncio.sleep(sleepSeconds)
-        if raiseOnFailure and transactionReceipt['status'] == 0:
-            raise TransactionFailedException(transactionReceipt=transactionReceipt)
-        return transactionReceipt
