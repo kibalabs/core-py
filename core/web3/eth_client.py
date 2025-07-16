@@ -53,7 +53,6 @@ class TransactionFailedException(KibaException):
 
 
 class EthClientInterface:
-
     def __init__(self, web3Connection: Web3, isTestnet: bool = False) -> None:
         self.w3 = web3Connection
         self.isTestnet = isTestnet
@@ -194,7 +193,6 @@ class EthClientInterface:
 
 
 class Web3EthClient(EthClientInterface):
-
     async def get_latest_block_number(self) -> int:
         return self.w3.eth.block_number
 
