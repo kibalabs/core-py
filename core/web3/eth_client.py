@@ -378,7 +378,7 @@ class RestEthClient(EthClientInterface):
             raise BadRequestException(message=str(exception))
         return list(outputData)
 
-    async def get_max_priotity_fee_per_gas(self) -> int:
+    async def get_max_priority_fee_per_gas(self) -> int:
         response = await self._make_request(method='eth_maxPriorityFeePerGas')
         maxPriorityFeePerGas = int(response['result'], 16)
         return maxPriorityFeePerGas
@@ -416,7 +416,7 @@ class RestEthClient(EthClientInterface):
         if 'gasPrice' not in params:
             if 'maxPriorityFeePerGas' not in params:
                 if maxPriorityFeePerGas is None:
-                    maxPriorityFeePerGas = await self.get_max_priotity_fee_per_gas()
+                    maxPriorityFeePerGas = await self.get_max_priority_fee_per_gas()
                 params['maxPriorityFeePerGas'] = hex(maxPriorityFeePerGas)
             if 'maxFeePerGas' not in params:
                 if maxFeePerGas is None:
