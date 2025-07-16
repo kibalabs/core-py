@@ -174,7 +174,7 @@ class EthClientInterface:
             chainId=chainId,
         )
 
-    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2, raiseOnFailure: bool = True, maxWaitSeconds: int = 120) -> TxReceipt:
+    async def wait_for_transaction_receipt(self, transactionHash: str, sleepSeconds: int = 2, maxWaitSeconds: int = 120, raiseOnFailure: bool = True) -> TxReceipt:
         startTime = asyncio.get_event_loop().time()
         while True:
             try:
