@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MAJOR] Removed `RestEthClient._find_abi_by_name_args` - use chain_util function instaad
 - [MINOR] Added `chain_util.encode_transaction_data_by_name`
 - [MINOR] Added `list_util.remove_nones`
+- [MAJOR] Added `maxWaitSeconds` with defualt=120 to `EthClient.wait_for_transaction_receipt`
 
 ### Changed
 
