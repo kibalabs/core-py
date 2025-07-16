@@ -316,7 +316,7 @@ class TestRestEthClient:
             'result': hex(1000000000),
             'id': None
         }
-        result = await client.get_max_priotity_fee_per_gas()
+        result = await client.get_max_priority_fee_per_gas()
         assert result == 1000000000
         assert len(mock_requester.requests_made) == 1
         request = mock_requester.requests_made[0]['dataDict']
