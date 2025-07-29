@@ -1,8 +1,5 @@
 from collections.abc import Iterator
 from collections.abc import Sequence
-from typing import TypeVar
-
-ListItemType = TypeVar('ListItemType')
 
 
 def generate_chunks[ListItemType](lst: Sequence[ListItemType], chunkSize: int) -> Iterator[Sequence[ListItemType]]:

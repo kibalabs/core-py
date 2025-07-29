@@ -1,14 +1,11 @@
 import abc
 from abc import ABC
 from collections.abc import Sequence
-from typing import TypeVar
 
 from core.queues.model import Message
 
-MessageType = TypeVar('MessageType', bound=Message)
 
-
-class MessageQueue[MessageType](ABC):
+class MessageQueue[MessageType: Message](ABC):
     @abc.abstractmethod
     async def connect(self) -> None:
         raise NotImplementedError

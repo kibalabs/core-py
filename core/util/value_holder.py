@@ -1,7 +1,4 @@
 import contextvars
-from typing import TypeVar
-
-T = TypeVar('T')
 
 
 class ValueHolder[T]:
@@ -13,7 +10,7 @@ class ValueHolder[T]:
         return self._value
 
 
-class SettableValueHolder(ValueHolder[T]):
+class SettableValueHolder[T](ValueHolder[T]):
     def __init__(self, value: T) -> None:
         super().__init__(value=value)
 
@@ -21,7 +18,7 @@ class SettableValueHolder(ValueHolder[T]):
         self._value = value
 
 
-class ContextSettableValueHolder(ValueHolder[T]):
+class ContextSettableValueHolder[T](ValueHolder[T]):
     def __init__(self, defaultValue: T) -> None:
         super().__init__(value=defaultValue)
         self._valueContext = contextvars.ContextVar[T]('_valueContext')

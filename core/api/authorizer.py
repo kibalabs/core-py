@@ -17,10 +17,7 @@ class Authorizer:
         raise NotImplementedError
 
 
-ApiRequest = typing.TypeVar('ApiRequest', bound=BaseModel)
-
-
-async def _authorize_bearer_jwt[ApiRequest](request: KibaApiRequest[ApiRequest], authorizer: Authorizer) -> Jwt:
+async def _authorize_bearer_jwt[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest], authorizer: Authorizer) -> Jwt:
     authorization = request.headers.get('Authorization')
     if not authorization:
         raise ForbiddenException(message='AUTH_NOT_PROVIDED')
@@ -34,7 +31,7 @@ async def _authorize_bearer_jwt[ApiRequest](request: KibaApiRequest[ApiRequest],
     return jwt
 
 
-def authorize_bearer_jwt(  # type: ignore[explicit-any]
+def authorize_bearer_jwt[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: Authorizer,
 ) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[typing.Any]]], typing.Callable[_P, typing.Any]]:
     def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[typing.Any]]) -> typing.Callable[_P, typing.Any]:  # type: ignore[explicit-any]
