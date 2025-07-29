@@ -3,7 +3,6 @@ import typing
 from collections.abc import AsyncIterator
 from typing import ParamSpec
 
-from mypy_extensions import Arg
 from pydantic import BaseModel
 from pydantic import ValidationError
 from starlette.responses import StreamingResponse
@@ -16,22 +15,19 @@ from core.util.typing_util import JsonObject
 
 _P = ParamSpec('_P')
 
-ApiRequest = typing.TypeVar('ApiRequest', bound=BaseModel)
-ApiResponse = typing.TypeVar('ApiResponse', bound=BaseModel)
 
-
-async def _convert_to_json_generator(func: AsyncIterator[ApiResponse], expectedType: typing.Type[ApiResponse]) -> AsyncIterator[bytes]:
-    async for content in func:
+async def _convert_to_json_generator[T: BaseModel](response_iterator: AsyncIterator[T], expectedType: typing.Type[T]) -> AsyncIterator[bytes]:
+    async for content in response_iterator:
         if not isinstance(content, expectedType):
             raise InternalServerErrorException(f'Expected response to be of type {expectedType}, got {type(content)}')
         yield json_util.dumpb(content.model_dump()) + b'\n'
 
 
-def streaming_json_route[ApiRequest, ApiResponse](
+def streaming_json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
     requestType: typing.Type[ApiRequest],
     responseType: typing.Type[ApiResponse],
-) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], AsyncIterator[ApiResponse]]], typing.Callable[_P, StreamingResponse]]:
-    def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], AsyncIterator[ApiResponse]]) -> typing.Callable[_P, StreamingResponse]:
+) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]], typing.Callable[_P, StreamingResponse]]:
+    def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]) -> typing.Callable[_P, StreamingResponse]:
         @functools.wraps(func)
         async def async_wrapper(*args: typing.Any) -> StreamingResponse:  # type: ignore[explicit-any, misc]
             receivedRequest = args[0]
@@ -53,8 +49,8 @@ def streaming_json_route[ApiRequest, ApiResponse](
                 raise BadRequestException(f'Invalid request: {validationErrorMessage}')
             kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # noqa: SLF001
             kibaRequest.data = requestParams
-            responseGenerator = func(request=kibaRequest)
-            wrappedGenerator = _convert_to_json_generator(func=responseGenerator, expectedType=responseType)
+            responseGenerator = func(kibaRequest)
+            wrappedGenerator = _convert_to_json_generator(typing.cast(AsyncIterator[BaseModel], responseGenerator), expectedType=typing.cast(typing.Type[BaseModel], responseType))
             return StreamingResponse(content=wrappedGenerator, media_type='application/x-ndjson')
 
         # TODO(krishan711): figure out correct typing here
