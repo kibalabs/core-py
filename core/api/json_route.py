@@ -19,7 +19,7 @@ ApiRequest = typing.TypeVar('ApiRequest', bound=BaseModel)
 ApiResponse = typing.TypeVar('ApiResponse', bound=BaseModel)
 
 
-def json_route(
+def json_route[ApiRequest, ApiResponse](
     requestType: typing.Type[ApiRequest],
     responseType: typing.Type[ApiResponse],
 ) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[ApiResponse]]], typing.Callable[_P, KibaJSONResponse]]:

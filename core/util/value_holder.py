@@ -1,11 +1,10 @@
 import contextvars
-from typing import Generic
 from typing import TypeVar
 
 T = TypeVar('T')
 
 
-class ValueHolder(Generic[T]):
+class ValueHolder[T]:
     def __init__(self, value: T) -> None:
         super().__init__()
         self._value = value

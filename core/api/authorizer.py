@@ -20,7 +20,7 @@ class Authorizer:
 ApiRequest = typing.TypeVar('ApiRequest', bound=BaseModel)
 
 
-async def _authorize_bearer_jwt(request: KibaApiRequest[ApiRequest], authorizer: Authorizer) -> Jwt:
+async def _authorize_bearer_jwt[ApiRequest](request: KibaApiRequest[ApiRequest], authorizer: Authorizer) -> Jwt:
     authorization = request.headers.get('Authorization')
     if not authorization:
         raise ForbiddenException(message='AUTH_NOT_PROVIDED')

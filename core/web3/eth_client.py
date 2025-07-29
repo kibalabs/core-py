@@ -200,7 +200,7 @@ class Web3EthClient(EthClientInterface):
         return self.w3.eth.get_block(blockNumber, shouldHydrateTransactions)
 
     async def get_block_uncle_count(self, blockNumber: int) -> int:
-        return self.w3.eth.get_uncle_count(blockNumber)
+        return typing.cast(int, self.w3.eth.get_uncle_count(blockNumber))
 
     async def get_transaction_count(self, address: str) -> int:
         return self.w3.eth.get_transaction_count(chain_util.normalize_address_checksum(value=address))

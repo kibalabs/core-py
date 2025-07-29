@@ -27,7 +27,7 @@ async def _convert_to_json_generator(func: AsyncIterator[ApiResponse], expectedT
         yield json_util.dumpb(content.model_dump()) + b'\n'
 
 
-def streaming_json_route(
+def streaming_json_route[ApiRequest, ApiResponse](
     requestType: typing.Type[ApiRequest],
     responseType: typing.Type[ApiResponse],
 ) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], AsyncIterator[ApiResponse]]], typing.Callable[_P, StreamingResponse]]:

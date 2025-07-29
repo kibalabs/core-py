@@ -4,7 +4,6 @@ import time
 import urllib.parse as urlparse
 import uuid
 from abc import ABC
-from typing import Generic
 from typing import TypeVar
 
 from core import logging
@@ -33,7 +32,7 @@ class MessageNeedsReprocessingException(InternalServerErrorException):
 MessageType = TypeVar('MessageType', bound=Message)
 
 
-class MessageQueueProcessor(Generic[MessageType]):
+class MessageQueueProcessor[MessageType]:
     def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, notificationClients: list[NotificationClient], requestIdHolder: RequestIdHolder | None = None) -> None:
         self.queue = queue
         self.messageProcessor = messageProcessor
