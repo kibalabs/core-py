@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `chain_util.encode_transaction_data_by_name`
 - [MINOR] Added `list_util.remove_nones`
 - [MAJOR] Added `maxWaitSeconds` with default=120 to `EthClient.wait_for_transaction_receipt`
+- [MINOR] Added `async_util.gather_batched` function to `async_util`
 
 ### Changed
 

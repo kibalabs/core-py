@@ -15,11 +15,8 @@ from core.util.typing_util import JsonObject
 
 _P = ParamSpec('_P')
 
-ApiRequest = typing.TypeVar('ApiRequest', bound=BaseModel)
-ApiResponse = typing.TypeVar('ApiResponse', bound=BaseModel)
 
-
-def json_route(
+def json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
     requestType: typing.Type[ApiRequest],
     responseType: typing.Type[ApiResponse],
 ) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[ApiResponse]]], typing.Callable[_P, KibaJSONResponse]]:

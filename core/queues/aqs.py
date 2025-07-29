@@ -46,7 +46,7 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
     async def disconnect(self) -> None:
         if not self._aqsClient:
             return
-        await self._aqsClient.close()  # type: ignore[no-untyped-call]
+        await self._aqsClient.close()
         self._aqsClient = None
 
     async def send_message(self, message: Message, delaySeconds: int = 0) -> None:
