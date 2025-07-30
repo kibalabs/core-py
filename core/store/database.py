@@ -36,13 +36,13 @@ class Database:
         self._engine: AsyncEngine | None = None
         self._connectionContext = contextvars.ContextVar[DatabaseConnection | None]('_connectionContext')
 
-    async def connect(self) -> None:
+    async def connect(self, poolSize: int = 100) -> None:
         if not self._engine:
             self._engine = create_async_engine(
                 self.connectionString,
                 # echo_pool=True,
                 # hide_parameters=False,
-                pool_size=20,
+                pool_size=poolSize,
                 pool_recycle=3600,
                 pool_pre_ping=True,
             )
