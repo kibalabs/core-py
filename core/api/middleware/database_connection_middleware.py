@@ -12,6 +12,7 @@ class DatabaseConnectionMiddleware(BaseHTTPMiddleware):
         super().__init__(app=app)
         self.database = database
 
+    # NOTE(krishan711): see note in database.py about why this can cause problems with concurrent operations
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # NOTE(krishan711): hack to prevent running this for streaming endpoints because streaming
         # endpoints return a response with a generator inside it so this middleware wouldn't work
