@@ -5,13 +5,13 @@ from collections.abc import AsyncIterator
 from typing import TypeVar
 
 import sqlalchemy
-from core import logging
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.sql.selectable import TypedReturnsRows
 
+from core import logging
 from core.exceptions import InternalServerErrorException
 
 DatabaseConnection = AsyncConnection
@@ -89,7 +89,7 @@ class Database:
                 finally:
                     self._connectionContext.set(None)
         except sqlalchemy.exc.InterfaceError as exception:
-            if not "cannot perform operation: another operation is in progress" in str(exception):
+            if 'cannot perform operation: another operation is in progress' not in str(exception):
                 raise
             logging.error(f'Database connection error (likely concurrent operations): {exception}. Forcing reconnect. You MUST ensure that you are not running parallel queries on the same connection.')
             await self.disconnect()
