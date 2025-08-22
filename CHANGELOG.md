@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MAJOR] Added `maxWaitSeconds` with default=120 to `EthClient.wait_for_transaction_receipt`
 - [MINOR] Added `async_util.gather_batched` function to `async_util`
 - [MINOR] Added more exception classes
+- [MAJOR] Added `apiPathPattern` to `logging.api`
 
 ### Changed
 
