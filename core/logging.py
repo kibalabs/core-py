@@ -61,7 +61,7 @@ API_FORMAT = LogFormat(
     loggerType='api',
     loggerName=f'KIBA_API_{_LOGGING_FORMAT_VERSION}',
     loggerFormat='%(apiAction)s:%(apiPath)s:%(apiQuery)s:%(apiResponse)s:%(apiDuration)s',
-    jsonFieldFormatters={'apiAction': json_parse_string_value, 'apiPath': json_parse_string_value, 'apiQuery': json_parse_string_value, 'apiResponse': json_parse_int_value, 'apiDuration': json_parse_float_value},
+    jsonFieldFormatters={'apiAction': json_parse_string_value, 'apiPath': json_parse_string_value, 'apiPathPattern': json_parse_string_value, 'apiQuery': json_parse_string_value, 'apiResponse': json_parse_int_value, 'apiDuration': json_parse_float_value},
 )
 ALL_LOGGER_FORMATS = [ROOT_FORMAT, STAT_FORMAT, API_FORMAT]
 
@@ -172,14 +172,20 @@ def stat(name: str, key: str, value: float = 1) -> None:
         STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(dict[str, str], {'statName': nameValue, 'statKey': keyValue, 'statValue': statValue}))
 
 
-def api(action: str, path: str, query: str, response: int | None = None, duration: float | None = None) -> None:
+# TODO(krishan711): make pathPattern mandatory in next major release
+def api(action: str, path: str, query: str, pathPattern: str | None = None, response: int | None = None, duration: float | None = None) -> None:
     if API_LOGGER.isEnabledFor(level=logging.INFO):
         actionString = _serialize_string_value(value=action)
         pathString = _serialize_string_value(value=path)
+        pathPatternString = _serialize_string_value(value=pathPattern if pathPattern is not None else path)
         queryString = _serialize_string_value(value=query)
         responseString = _serialize_numeric_value(value=response)
         durationString = _serialize_numeric_value(value=duration)
-        API_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(dict[str, str], {'apiAction': actionString, 'apiPath': pathString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''}))
+        API_LOGGER.log(
+            level=logging.INFO,
+            msg='',
+            extra=typing.cast(dict[str, str], {'apiAction': actionString, 'apiPath': pathString, 'apiPathPattern': pathPatternString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''}),
+        )
 
 
 # Wrappers around common python logging functions which go straight to the root logger

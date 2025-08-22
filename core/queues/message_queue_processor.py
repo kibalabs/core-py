@@ -40,7 +40,7 @@ class MessageQueueProcessor[MessageType: Message]:
         if self.requestIdHolder:
             self.requestIdHolder.set_value(value=requestId)
         query = urlparse.urlencode(message.content, doseq=True)
-        logging.api(action='MESSAGE', path=message.command, query=query)
+        logging.api(action='MESSAGE', path=message.command, pathPattern=message.command, query=query)
         startTime = time.time()
         statusCode = 200
         try:
@@ -57,7 +57,7 @@ class MessageQueueProcessor[MessageType: Message]:
                 await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{exception}```')
             # TODO(krishan711): should possibly reset the visibility timeout
         duration = time.time() - startTime
-        logging.api(action='MESSAGE', path=message.command, query=query, response=statusCode, duration=duration)
+        logging.api(action='MESSAGE', path=message.command, pathPattern=message.command, query=query, response=statusCode, duration=duration)
         if self.requestIdHolder:
             self.requestIdHolder.set_value(value=None)
 
