@@ -69,6 +69,7 @@ class TestRestEthClient:
         return RestEthClient(
             url='https://test-rpc-url.com',
             requester=mock_requester,
+            chainId=1,
             isTestnet=False
         )
 
@@ -146,6 +147,7 @@ class TestRestEthClient:
         client = RestEthClient(
             url='https://test-rpc-url.com',
             requester=mock_requester,
+            chainId=1,
             isTestnet=True
         )
         mock_requester.responses['eth_getBlockByNumber'] = {
@@ -440,6 +442,7 @@ class TestRestEthClient:
         client = RestEthClient(
             url='https://test-rpc-url.com',
             requester=mock_requester,
+            chainId=1,
             shouldBackoffRetryOnRateLimit=True,
             retryLimit=2
         )
@@ -466,6 +469,7 @@ class TestRestEthClient:
         client = RestEthClient(
             url='https://test-rpc-url.com',
             requester=mock_requester,
+            chainId=1,
             shouldBackoffRetryOnRateLimit=True,
             retryLimit=1
         )
@@ -480,6 +484,7 @@ class TestRestEthClient:
         client = RestEthClient(
             url='https://test-rpc-url.com',
             requester=mock_requester,
+            chainId=1,
             shouldBackoffRetryOnRateLimit=False
         )
         async def mock_post_json_rate_limit(*args, **kwargs):
@@ -510,19 +515,6 @@ class TestRestEthClient:
         )
         assert result == params
         assert len(mock_requester.requests_made) == 0
-
-    @pytest.mark.asyncio
-    async def test_fill_transaction_params_missing_chain_id_raises_error(self, client, mock_requester):
-        params = {
-            'to': '0x1234567890123456789012345678901234567890',
-            'from': '0x0987654321098765432109876543210987654321'
-        }
-        with pytest.raises(BadRequestException) as exc_info:
-            await client.fill_transaction_params(
-                params=params,
-                fromAddress='0x0987654321098765432109876543210987654321'
-            )
-        assert 'chainId is required' in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_fill_transaction_params_fetches_missing_values(self, client, mock_requester):
@@ -590,3 +582,255 @@ class TestRestEthClient:
         assert 'eth_estimateGas' in methods_called
         assert 'eth_maxPriorityFeePerGas' in methods_called
         assert 'eth_getBlockByNumber' in methods_called
+
+    @pytest.mark.asyncio
+    async def test_call_function_success(self, client, mock_requester):
+        mock_requester.responses['eth_call'] = {
+            'jsonrpc': '2.0',
+            'result': '0x000000000000000000000000000000000000000000000000000000000000007b',
+            'id': None
+        }
+        function_abi = {
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }
+        result = await client.call_function(
+            toAddress='0x1234567890123456789012345678901234567890',
+            contractAbi=[function_abi],
+            functionAbi=function_abi,
+            fromAddress='0x0987654321098765432109876543210987654321'
+        )
+        assert len(result) == 1
+        assert result[0] == 123
+        assert len(mock_requester.requests_made) == 1
+        request = mock_requester.requests_made[0]['dataDict']
+        assert request['method'] == 'eth_call'
+        assert request['params'][0]['to'] == '0x1234567890123456789012345678901234567890'
+        assert request['params'][0]['from'] == '0x0987654321098765432109876543210987654321'
+        assert request['params'][1] == 'latest'
+
+    @pytest.mark.asyncio
+    async def test_call_function_with_block_number(self, client, mock_requester):
+        mock_requester.responses['eth_call'] = {
+            'jsonrpc': '2.0',
+            'result': '0x000000000000000000000000000000000000000000000000000000000000007b',
+            'id': None
+        }
+        function_abi = {
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }
+        result = await client.call_function(
+            toAddress='0x1234567890123456789012345678901234567890',
+            contractAbi=[function_abi],
+            functionAbi=function_abi,
+            blockNumber=0x100
+        )
+        assert len(result) == 1
+        assert result[0] == 123
+        request = mock_requester.requests_made[0]['dataDict']
+        assert request['params'][1] == hex(0x100)
+
+    @pytest.mark.asyncio
+    async def test_call_function_with_arguments(self, client, mock_requester):
+        mock_requester.responses['eth_call'] = {
+            'jsonrpc': '2.0',
+            'result': '0x0000000000000000000000000000000000000000000000000000000000000001',
+            'id': None
+        }
+        function_abi = {
+            'inputs': [{'name': 'amount', 'type': 'uint256'}],
+            'name': 'hasEnoughBalance',
+            'outputs': [{'name': '', 'type': 'bool'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }
+        result = await client.call_function(
+            toAddress='0x1234567890123456789012345678901234567890',
+            contractAbi=[function_abi],
+            functionAbi=function_abi,
+            arguments={'amount': 1000}
+        )
+        assert result[0] is True
+
+    @pytest.mark.asyncio
+    async def test_call_function_by_name_success(self, client, mock_requester):
+        mock_requester.responses['eth_call'] = {
+            'jsonrpc': '2.0',
+            'result': '0x000000000000000000000000000000000000000000000000000000000000007b',
+            'id': None
+        }
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        result = await client.call_function_by_name(
+            toAddress='0x1234567890123456789012345678901234567890',
+            contractAbi=contract_abi,
+            functionName='getValue'
+        )
+        assert result[0] == 123
+
+    @pytest.mark.asyncio  
+    async def test_call_success(self, client, mock_requester):
+        from core.web3.eth_client import ContractCall
+        mock_requester.responses['eth_call'] = {
+            'jsonrpc': '2.0',
+            'result': '0x000000000000000000000000000000000000000000000000000000000000007b',
+            'id': None
+        }
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        contract_call = ContractCall(
+            toAddress='0x1234567890123456789012345678901234567890',
+            functionName='getValue',
+            contractAbi=contract_abi,
+            fromAddress='0x0987654321098765432109876543210987654321'
+        )
+        result = await client.call(contractCall=contract_call)
+        assert result[0] == 123
+
+    @pytest.mark.asyncio
+    async def test_call_with_block_number(self, client, mock_requester):
+        from core.web3.eth_client import ContractCall
+        mock_requester.responses['eth_call'] = {
+            'jsonrpc': '2.0',
+            'result': '0x000000000000000000000000000000000000000000000000000000000000007b',
+            'id': None
+        }
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        contract_call = ContractCall(
+            toAddress='0x1234567890123456789012345678901234567890',
+            functionName='getValue',
+            contractAbi=contract_abi
+        )
+        result = await client.call(contractCall=contract_call, blockNumber=436)
+        assert result[0] == 123
+        request = mock_requester.requests_made[0]['dataDict']
+        assert request['params'][1] == hex(436)
+
+
+    @pytest.mark.asyncio
+    async def test_multicall_fallback_to_individual_calls(self, client, mock_requester):
+        from core.web3.eth_client import ContractCall
+        unsupported_client = RestEthClient(
+            url='https://test-rpc-url.com',
+            requester=mock_requester,
+            chainId=999,
+            isTestnet=False
+        )
+        call_responses = [
+            '0x000000000000000000000000000000000000000000000000000000000000007b',
+            '0x00000000000000000000000000000000000000000000000000000000000000c8'
+        ]
+        call_count = 0
+        async def mock_post_json(url, dataDict, timeout=None):
+            nonlocal call_count
+            response_data = call_responses[call_count]
+            call_count += 1
+            class MockResponse:
+                def json(self):
+                    return {
+                        'jsonrpc': '2.0',
+                        'result': response_data,
+                        'id': None
+                    }
+            return MockResponse()
+        mock_requester.post_json = mock_post_json
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        contract_calls = [
+            ContractCall(
+                toAddress='0x1234567890123456789012345678901234567890',
+                functionName='getValue',
+                contractAbi=contract_abi
+            ),
+            ContractCall(
+                toAddress='0x1234567890123456789012345678901234567890',
+                functionName='getValue',
+                contractAbi=contract_abi
+            )
+        ]
+        result = await unsupported_client.multicall(contractCalls=contract_calls)
+        assert len(result) == 2
+        assert result[0][0] == 123
+        assert result[1][0] == 200
+        assert call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_multicall_disabled_explicitly(self, client, mock_requester):
+        from core.web3.eth_client import ContractCall
+        mock_requester.responses['eth_call'] = {
+            'jsonrpc': '2.0',
+            'result': '0x000000000000000000000000000000000000000000000000000000000000007b',
+            'id': None
+        }
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        contract_calls = [
+            ContractCall(
+                toAddress='0x1234567890123456789012345678901234567890',
+                functionName='getValue',
+                contractAbi=contract_abi
+            )
+        ]
+        result = await client.multicall(contractCalls=contract_calls, shouldUseMulticall3=False)
+        assert len(result) == 1
+        assert result[0][0] == 123
+        assert len(mock_requester.requests_made) == 1
+        request = mock_requester.requests_made[0]['dataDict']
+        assert request['params'][0]['to'] == '0x1234567890123456789012345678901234567890'
+
+    @pytest.mark.asyncio
+    async def test_call_function_empty_response_error(self, client, mock_requester):
+        # Mock empty response (0x)
+        mock_requester.responses['eth_call'] = {
+            'jsonrpc': '2.0',
+            'result': '0x',
+            'id': None
+        }
+        function_abi = {
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }
+        with pytest.raises(BadRequestException) as exc_info:
+            await client.call_function(
+                toAddress='0x1234567890123456789012345678901234567890',
+                contractAbi=[function_abi],
+                functionAbi=function_abi
+            )
+        assert 'Empty response' in str(exc_info.value)
+        assert 'Maybe the method does not exist on this contract' in str(exc_info.value)
