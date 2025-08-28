@@ -1,10 +1,12 @@
 import typing
 
 import eth_utils
+from eth_abi.exceptions import DecodingError
 from eth_typing import ABI
 from eth_typing import ABIFunction
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix
+from eth_utils.abi import get_abi_output_types
 from web3 import Web3
 from web3._utils.contracts import encode_abi as web3_encode_abi
 from web3._utils.contracts import encode_transaction_data as web3_encode_transaction_data
@@ -115,7 +117,7 @@ def encode_transaction_data_by_name(  # type: ignore[explicit-any]
     )
 
 
-# NOTE(krishan711): not sure how difference this is from `encode_transaction_data`
+# NOTE(krishan711): not sure how different this is from `encode_transaction_data`
 def encode_function_params(functionAbi: ABIFunction, arguments: list[typing.Any]) -> str:  # type: ignore[explicit-any]
     return add_0x_prefix(
         web3_encode_abi(
@@ -124,3 +126,17 @@ def encode_function_params(functionAbi: ABIFunction, arguments: list[typing.Any]
             arguments=arguments,
         )
     )
+
+
+def decode_function_result(functionAbi: ABIFunction, resultData: bytes) -> list[typing.Any]:  # type: ignore[explicit-any]
+    if resultData == b'' or resultData.hex() == '0x':
+        outputs = functionAbi.get('outputs', [])
+        if len(outputs) == 0:
+            return []
+        raise BadRequestException(message=f'Empty response. Maybe the method does not exist on this contract.')
+    outputTypes = get_abi_output_types(abi_element=functionAbi)
+    try:
+        outputData = _w3.codec.decode(types=outputTypes, data=bytes.fromhex(resultData.hex()))
+    except DecodingError as exception:
+        raise BadRequestException(message=str(exception))
+    return list(outputData)
