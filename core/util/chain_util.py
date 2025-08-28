@@ -101,7 +101,7 @@ def encode_transaction_data_by_name(  # type: ignore[explicit-any]
     arguments: dict[str, typing.Any] | None = None,
 ) -> HexStr:
     # NOTE(krishan711): web3py doesn't like hex strings for ints but coinbase rpc expects it :(
-    functionAbi = _w3.eth.contract(abi=contractAbi).get_function_by_name(functionName).abi
+    functionAbi = find_abi_by_name_args(contractAbi=contractAbi, functionName=functionName, arguments=arguments)
     if arguments is not None:
         for abiInput in functionAbi['inputs']:
             paramName = abiInput['name']
