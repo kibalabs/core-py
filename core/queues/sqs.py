@@ -39,17 +39,18 @@ class SqsMessage(Message):  # type: ignore[explicit-any]
 
 
 class SqsMessageQueue(MessageQueue[SqsMessage]):
-    def __init__(self, region: str, accessKeyId: str, accessKeySecret: str, queueUrl: str) -> None:
+    def __init__(self, region: str, accessKeyId: str, accessKeySecret: str, queueUrl: str, sessionToken: str | None = None) -> None:
         self.region = region
         self._accessKeyId = accessKeyId
         self._accessKeySecret = accessKeySecret
+        self._sessionToken = sessionToken
         self.queueUrl = queueUrl
         self._exitStack = AsyncExitStack()
         self._sqsClient: SQSClient | None = None
 
     async def connect(self) -> None:
         session = get_botocore_session()
-        self._sqsClient = await self._exitStack.enter_async_context(session.create_client('sqs', region_name=self.region, aws_access_key_id=self._accessKeyId, aws_secret_access_key=self._accessKeySecret))
+        self._sqsClient = await self._exitStack.enter_async_context(session.create_client('sqs', region_name=self.region, aws_access_key_id=self._accessKeyId, aws_secret_access_key=self._accessKeySecret, aws_session_token=self._sessionToken))
 
     async def disconnect(self) -> None:
         await self._exitStack.aclose()
