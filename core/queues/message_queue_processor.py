@@ -53,8 +53,9 @@ class MessageQueueProcessor[MessageType: Message]:
             statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
             logging.error('Caught exception whilst processing message:')
             logging.exception(exception)
+            kibaException = KibaException.from_exception(exception=exception)
             for client in self.notificationClients:
-                await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{exception}```')
+                await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{kibaException.message}```')
             # TODO(krishan711): should possibly reset the visibility timeout
         duration = time.time() - startTime
         logging.api(action='MESSAGE', path=message.command, pathPattern=message.command, query=query, response=statusCode, duration=duration)
