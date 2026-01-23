@@ -12,7 +12,7 @@ from core.exceptions import RedirectException
 
 
 class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: ASGIApp, shouldSquashClientExceptions: bool = True):
+    def __init__(self, app: ASGIApp, shouldSquashClientExceptions: bool = True) -> None:
         super().__init__(app=app)
         self.shouldSquashClientExceptions = shouldSquashClientExceptions
 
