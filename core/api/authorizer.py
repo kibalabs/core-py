@@ -38,7 +38,11 @@ def authorize_bearer_jwt[ApiRequest: BaseModel](  # type: ignore[explicit-any]
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
             request.authJwt = await _authorize_bearer_jwt(request=request, authorizer=authorizer)
-            return await func(request=request)
+            result = func(request=request)
+            # NOTE(krishan711): this is here to support streaming responses which return an async generator
+            if hasattr(result, '__aiter__'):
+                return result
+            return await result
 
         # TODO(krishan711): figure out correct typing here
         return async_wrapper  # type: ignore[return-value]

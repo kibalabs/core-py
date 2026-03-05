@@ -1,4 +1,5 @@
 import functools
+import inspect
 import typing
 from collections.abc import AsyncIterator
 from typing import ParamSpec
@@ -29,11 +30,13 @@ def streaming_json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]], typing.Callable[_P, StreamingResponse]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]) -> typing.Callable[_P, StreamingResponse]:
         @functools.wraps(func)
-        async def async_wrapper(*args: typing.Any) -> StreamingResponse:  # type: ignore[explicit-any, misc]
-            receivedRequest = args[0]
+        async def async_wrapper(*args: typing.Any, **kwargs: typing.Any) -> StreamingResponse:  # type: ignore[explicit-any, misc]
+            receivedRequest = kwargs.get('request', args[0] if args else None)
+            if receivedRequest is None:
+                raise BadRequestException('Missing request')
             pathParams = receivedRequest.path_params
             queryParams = receivedRequest.query_params
-            bodyBytes = await args[0].body()
+            bodyBytes = await receivedRequest.body()
             if len(bodyBytes) == 0:
                 body: JsonObject = {}
             else:
@@ -49,9 +52,11 @@ def streaming_json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
                 raise BadRequestException(f'Invalid request: {validationErrorMessage}')
             kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # noqa: SLF001
             kibaRequest.data = requestParams
-            responseGenerator = func(kibaRequest)
+            responseGeneratorOrAwaitable = func(kibaRequest)
+            responseGenerator = await responseGeneratorOrAwaitable if inspect.isawaitable(responseGeneratorOrAwaitable) else responseGeneratorOrAwaitable
             wrappedGenerator = _convert_to_json_generator(typing.cast(AsyncIterator[BaseModel], responseGenerator), expectedType=typing.cast(typing.Type[BaseModel], responseType))
-            return StreamingResponse(content=wrappedGenerator, media_type='application/x-ndjson')
+            # NOTE(krishan711): we set content-encoding to identity to prevent gzip from trying to process it (cos it buffers all the content)
+            return StreamingResponse(content=wrappedGenerator, media_type='application/x-ndjson', headers={'Content-Encoding': 'identity'})
 
         # TODO(krishan711): figure out correct typing here
         return async_wrapper  # type: ignore[return-value]
