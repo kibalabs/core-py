@@ -51,7 +51,11 @@ def streaming_json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
             kibaRequest.data = requestParams
             responseGenerator = func(kibaRequest)
             wrappedGenerator = _convert_to_json_generator(typing.cast(AsyncIterator[BaseModel], responseGenerator), expectedType=typing.cast(typing.Type[BaseModel], responseType))
-            return StreamingResponse(content=wrappedGenerator, media_type='application/x-ndjson')
+            return StreamingResponse(
+                content=wrappedGenerator,
+                media_type='application/x-ndjson',
+                headers={'Content-Encoding': 'identity'},
+            )
 
         # TODO(krishan711): figure out correct typing here
         return async_wrapper  # type: ignore[return-value]

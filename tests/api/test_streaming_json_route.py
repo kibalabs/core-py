@@ -84,6 +84,7 @@ def test_streaming_json_route_with_valid_body(client):
     )
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/x-ndjson"
+    assert response.headers["content-encoding"] == "identity"
     dataList = parse_ndjson_response(response)
     assert len(dataList) == 2
     first_message = dataList[0]
