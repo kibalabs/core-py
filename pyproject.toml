@@ -54,7 +54,6 @@ types = [
 [dependency-groups]
 dev = [
     "kiba-build==0.1.11.dev10",
-    "pytest-only>=2.1.2",
 ]
 
 [project.urls]

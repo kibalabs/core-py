@@ -288,7 +288,7 @@ class Web3EthClient(EthClientInterface):
         if topics is not None:
             params['topics'] = topics
         if address is not None:
-            params['address'] = typing.cast(ChecksumAddress, address)  # type: ignore[typeddict-item]
+            params['address'] = typing.cast(ChecksumAddress, address)
         contractFilter = self.w3.eth.filter(params)
         return contractFilter.get_all_entries()
 
