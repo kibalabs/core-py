@@ -10,7 +10,7 @@ class KibaException(Exception):  # noqa: N818
         super().__init__(message)
         self.message = message
         self.statusCode = statusCode or 500
-        self.exceptionType = exceptionType if exceptionType else self.__class__.__name__
+        self.exceptionType = exceptionType or self.__class__.__name__
 
     @staticmethod
     def from_exception(exception: Exception, statusCode: int = 500) -> KibaException:
@@ -45,205 +45,205 @@ class ClientException(KibaException):
 
 class BadRequestException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Bad Request'
+        message = message or 'Bad Request'
         super().__init__(message=message, statusCode=400)
 
 
 class UnauthorizedException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Unauthorized'
+        message = message or 'Unauthorized'
         super().__init__(message=message, statusCode=401)
 
 
 class PaymentRequiredException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Payment Required'
+        message = message or 'Payment Required'
         super().__init__(message=message, statusCode=402)
 
 
 class ForbiddenException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Forbidden'
+        message = message or 'Forbidden'
         super().__init__(message=message, statusCode=403)
 
 
 class NotFoundException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Not Found'
+        message = message or 'Not Found'
         super().__init__(message=message, statusCode=404)
 
 
 class MethodNotAllowedException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Method Not Allowed'
+        message = message or 'Method Not Allowed'
         super().__init__(message=message, statusCode=405)
 
 
 class NotAcceptableException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Not Acceptable'
+        message = message or 'Not Acceptable'
         super().__init__(message=message, statusCode=406)
 
 
 class ProxyAuthenticationRequiredException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Proxy Authentication Required'
+        message = message or 'Proxy Authentication Required'
         super().__init__(message=message, statusCode=407)
 
 
 class RequestTimeoutException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Request Timeout'
+        message = message or 'Request Timeout'
         super().__init__(message=message, statusCode=408)
 
 
 class ConflictException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Conflict'
+        message = message or 'Conflict'
         super().__init__(message=message, statusCode=409)
 
 
 class GoneException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Gone'
+        message = message or 'Gone'
         super().__init__(message=message, statusCode=410)
 
 
 class LengthRequiredException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Length Required'
+        message = message or 'Length Required'
         super().__init__(message=message, statusCode=411)
 
 
 class PreconditionFailedException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Precondition Failed'
+        message = message or 'Precondition Failed'
         super().__init__(message=message, statusCode=412)
 
 
 class PayloadTooLargeException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Payload Too Large'
+        message = message or 'Payload Too Large'
         super().__init__(message=message, statusCode=413)
 
 
 class UriTooLongException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'URI Too Long'
+        message = message or 'URI Too Long'
         super().__init__(message=message, statusCode=414)
 
 
 class UnsupportedMediaTypeException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Unsupported Media Type'
+        message = message or 'Unsupported Media Type'
         super().__init__(message=message, statusCode=415)
 
 
 class RangeNotSatisfiableException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Range Not Satisfiable'
+        message = message or 'Range Not Satisfiable'
         super().__init__(message=message, statusCode=416)
 
 
 class ExpectationFailedException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Expectation Failed'
+        message = message or 'Expectation Failed'
         super().__init__(message=message, statusCode=417)
 
 
 class ImATeapotException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else "I'm a teapot"
+        message = message or "I'm a teapot"
         super().__init__(message=message, statusCode=418)
 
 
 class MisdirectedRequestException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Misdirected Request'
+        message = message or 'Misdirected Request'
         super().__init__(message=message, statusCode=421)
 
 
 class UnprocessableEntityException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Unprocessable Entity'
+        message = message or 'Unprocessable Entity'
         super().__init__(message=message, statusCode=422)
 
 
 class LockedException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Locked'
+        message = message or 'Locked'
         super().__init__(message=message, statusCode=423)
 
 
 class FailedDependencyException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Failed Dependency'
+        message = message or 'Failed Dependency'
         super().__init__(message=message, statusCode=424)
 
 
 class UpgradeRequiredException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Upgrade Required'
+        message = message or 'Upgrade Required'
         super().__init__(message=message, statusCode=426)
 
 
 class PreconditionRequiredException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Precondition Required'
+        message = message or 'Precondition Required'
         super().__init__(message=message, statusCode=428)
 
 
 class TooManyRequestsException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Too Many Requests'
+        message = message or 'Too Many Requests'
         super().__init__(message=message, statusCode=429)
 
 
 class RequestHeaderFieldsTooLargeException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Request Header Fields Too Large'
+        message = message or 'Request Header Fields Too Large'
         super().__init__(message=message, statusCode=431)
 
 
 class UnavailableForLegalReasonsException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Unavailable For Legal Reasons'
+        message = message or 'Unavailable For Legal Reasons'
         super().__init__(message=message, statusCode=451)
 
 
 class NoResponseException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'No Response'
+        message = message or 'No Response'
         super().__init__(message=message, statusCode=444)
 
 
 class RequestHeaderTooLargeException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Request Header Too Large'
+        message = message or 'Request Header Too Large'
         super().__init__(message=message, statusCode=494)
 
 
 class SSLCertificateErrorException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'SSL Certificate Error'
+        message = message or 'SSL Certificate Error'
         super().__init__(message=message, statusCode=495)
 
 
 class SSLCertificateRequiredException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'SSL Certificate Required'
+        message = message or 'SSL Certificate Required'
         super().__init__(message=message, statusCode=496)
 
 
 class HttpRequestSentToHttpsException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'HTTP Request Sent to HTTPS Port'
+        message = message or 'HTTP Request Sent to HTTPS Port'
         super().__init__(message=message, statusCode=497)
 
 
 class ClientClosedRequestException(ClientException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Client Closed Request'
+        message = message or 'Client Closed Request'
         super().__init__(message=message, statusCode=499)
 
 
@@ -253,133 +253,133 @@ class ServerException(KibaException):
 
 class InternalServerErrorException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Internal Server Error'
+        message = message or 'Internal Server Error'
         super().__init__(message=message, statusCode=500)
 
 
 class NotImplementedException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Not Implemented'
+        message = message or 'Not Implemented'
         super().__init__(message=message, statusCode=501)
 
 
 class BadGatewayException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Bad Gateway'
+        message = message or 'Bad Gateway'
         super().__init__(message=message, statusCode=502)
 
 
 class ServiceUnavailableException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Service Unavailable'
+        message = message or 'Service Unavailable'
         super().__init__(message=message, statusCode=503)
 
 
 class GatewayTimeoutException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Gateway Timeout'
+        message = message or 'Gateway Timeout'
         super().__init__(message=message, statusCode=504)
 
 
 class HttpVersionNotSupportedException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'HTTP Version Not Supported'
+        message = message or 'HTTP Version Not Supported'
         super().__init__(message=message, statusCode=505)
 
 
 class VariantAlsoNegotiatesException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Variant Also Negotiates'
+        message = message or 'Variant Also Negotiates'
         super().__init__(message=message, statusCode=506)
 
 
 class InsufficientStorageException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Insufficient Storage'
+        message = message or 'Insufficient Storage'
         super().__init__(message=message, statusCode=507)
 
 
 class LoopDetectedException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Loop Detected'
+        message = message or 'Loop Detected'
         super().__init__(message=message, statusCode=508)
 
 
 class BandwidthLimitExceededException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Bandwidth Limit Exceeded'
+        message = message or 'Bandwidth Limit Exceeded'
         super().__init__(message=message, statusCode=509)
 
 
 class NotExtendedException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Not Extended'
+        message = message or 'Not Extended'
         super().__init__(message=message, statusCode=510)
 
 
 class NetworkAuthenticationRequiredException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Network Authentication Required'
+        message = message or 'Network Authentication Required'
         super().__init__(message=message, statusCode=511)
 
 
 class UnknownErrorException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Unknown Error'
+        message = message or 'Unknown Error'
         super().__init__(message=message, statusCode=520)
 
 
 class WebServerIsDownException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Web Server Is Down'
+        message = message or 'Web Server Is Down'
         super().__init__(message=message, statusCode=521)
 
 
 class ConnectionTimeoutException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Connection Timeout'
+        message = message or 'Connection Timeout'
         super().__init__(message=message, statusCode=522)
 
 
 class UnreachableOriginException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Origin Is Unreachable'
+        message = message or 'Origin Is Unreachable'
         super().__init__(message=message, statusCode=523)
 
 
 class TimeoutOccurredException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'A Timeout Occurred'
+        message = message or 'A Timeout Occurred'
         super().__init__(message=message, statusCode=524)
 
 
 class SSLHandshakeFailedException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'SSL Handshake Failed'
+        message = message or 'SSL Handshake Failed'
         super().__init__(message=message, statusCode=525)
 
 
 class InvalidSSLCertificateException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Invalid SSL Certificate'
+        message = message or 'Invalid SSL Certificate'
         super().__init__(message=message, statusCode=526)
 
 
 class RailgunErrorException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Railgun Error'
+        message = message or 'Railgun Error'
         super().__init__(message=message, statusCode=527)
 
 
 class OriginDNSErrorException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Origin DNS Error'
+        message = message or 'Origin DNS Error'
         super().__init__(message=message, statusCode=530)
 
 
 class NetworkReadTimeoutException(ServerException):
     def __init__(self, message: str | None = None) -> None:
-        message = message if message else 'Network Read Timeout'
+        message = message or 'Network Read Timeout'
         super().__init__(message=message, statusCode=598)
 
 
@@ -389,7 +389,7 @@ class DuplicateValueException(BadRequestException):
 
 class RedirectException(KibaException):
     def __init__(self, location: str, statusCode: int, message: str | None = None, shouldAddCacheHeader: bool | None = True) -> None:
-        message = message if message else 'RedirectException'
+        message = message or 'RedirectException'
         super().__init__(message=message, statusCode=statusCode)
         self.location = location
         self.shouldAddCacheHeader = shouldAddCacheHeader
@@ -397,19 +397,19 @@ class RedirectException(KibaException):
 
 class MovedPermanentlyRedirectException(RedirectException):
     def __init__(self, location: str, message: str | None = None, shouldAddCacheHeader: bool | None = True) -> None:
-        message = message if message else 'Moved Permanently'
+        message = message or 'Moved Permanently'
         super().__init__(location=location, message=message, statusCode=301, shouldAddCacheHeader=shouldAddCacheHeader)
 
 
 class FoundRedirectException(RedirectException):
     def __init__(self, location: str, message: str | None = None) -> None:
-        message = message if message else 'Found Redirect'
+        message = message or 'Found Redirect'
         super().__init__(location=location, message=message, statusCode=302, shouldAddCacheHeader=False)
 
 
 class PermanentRedirectException(RedirectException):
     def __init__(self, location: str, message: str | None = None, shouldAddCacheHeader: bool | None = True) -> None:
-        message = message if message else 'Permanent Redirect'
+        message = message or 'Permanent Redirect'
         super().__init__(location=location, message=message, statusCode=308, shouldAddCacheHeader=shouldAddCacheHeader)
 
 

@@ -4,11 +4,13 @@ from typing import Any
 
 from eth_typing import ABI
 from eth_typing import ABIFunction
+from eth_typing import ChecksumAddress
 from pydantic import BaseModel
 from web3 import Web3
 from web3._utils import method_formatters
 from web3._utils.rpc_abi import RPC
 from web3.types import BlockData
+from web3.types import FilterParams
 from web3.types import HexBytes
 from web3.types import HexStr
 from web3.types import LogReceipt
@@ -220,10 +222,10 @@ class EthClientInterface:
             raise TransactionFailedException(transactionReceipt=transactionReceipt)
         return transactionReceipt
 
-    async def multicall(self, contractCalls: list[ContractCall], shouldUseMulticall3: bool = True) -> list[ListAny]:
+    async def multicall(self, contractCalls: list[ContractCall], shouldUseMulticall3: bool = True, blockNumber: int | None = None) -> list[ListAny]:
         multicall3Address = CHAIN_ID_MULTICALL3_ADDRESS_MAP.get(self.chainId) if shouldUseMulticall3 else None
         if not multicall3Address or not shouldUseMulticall3:
-            results = await asyncio.gather(*[self.call(contractCall=contractCall) for contractCall in contractCalls])
+            results = await asyncio.gather(*[self.call(contractCall=contractCall, blockNumber=blockNumber) for contractCall in contractCalls])
             return results
         multicallResponse = await self.call_function_by_name(
             toAddress=multicall3Address,
@@ -235,6 +237,7 @@ class EthClientInterface:
                     for contractCall in contractCalls
                 ]
             },
+            blockNumber=blockNumber,
         )
         multicallResults = multicallResponse[0]
         decodedResults: list[ListAny] = []
@@ -277,14 +280,16 @@ class Web3EthClient(EthClientInterface):
         endBlockNumber: int | None = None,
         address: str | None = None,
     ) -> list[LogReceipt]:
-        contractFilter = self.w3.eth.filter(
-            {
-                'fromBlock': startBlockNumber,  # type: ignore[typeddict-item]
-                'toBlock': endBlockNumber,  # type: ignore[typeddict-item]
-                'topics': topics,  # type: ignore[typeddict-item]
-                'address': address,  # type: ignore[typeddict-item]
-            }
-        )
+        params: FilterParams = {}
+        if startBlockNumber is not None:
+            params['fromBlock'] = startBlockNumber
+        if endBlockNumber is not None:
+            params['toBlock'] = endBlockNumber
+        if topics is not None:
+            params['topics'] = topics
+        if address is not None:
+            params['address'] = typing.cast('ChecksumAddress', address)
+        contractFilter = self.w3.eth.filter(params)
         return contractFilter.get_all_entries()
 
 
