@@ -3,7 +3,7 @@ name = "kiba-core"
 version = "0.5.2"
 description = "Kiba Labs' python utilities"
 readme = "README.md"
-requires-python = "~=3.12"
+requires-python = ">=3.12, <4"
 dependencies = [
     "aiofiles>=24.1.0",
     "pydantic>=2.11.7",

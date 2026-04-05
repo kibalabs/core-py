@@ -812,6 +812,119 @@ class TestRestEthClient:
         assert request['params'][0]['to'] == '0x1234567890123456789012345678901234567890'
 
     @pytest.mark.asyncio
+    async def test_multicall_fallback_with_block_number(self, mock_requester):
+        from core.web3.eth_client import ContractCall
+        unsupported_client = RestEthClient(
+            url='https://test-rpc-url.com',
+            requester=mock_requester,
+            chainId=999,
+            isTestnet=False
+        )
+        requests_made: list[dict[str, Any]] = []
+        async def mock_post_json(url, dataDict, timeout=None, **kwargs):
+            requests_made.append(dataDict)
+            class MockResp:
+                def json(self):
+                    return {
+                        'jsonrpc': '2.0',
+                        'result': '0x000000000000000000000000000000000000000000000000000000000000007b',
+                        'id': None
+                    }
+            return MockResp()
+        mock_requester.post_json = mock_post_json
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        contract_calls = [
+            ContractCall(toAddress='0x1234567890123456789012345678901234567890', functionName='getValue', contractAbi=contract_abi),
+            ContractCall(toAddress='0x1234567890123456789012345678901234567890', functionName='getValue', contractAbi=contract_abi),
+        ]
+        result = await unsupported_client.multicall(contractCalls=contract_calls, blockNumber=12345)
+        assert len(result) == 2
+        assert result[0][0] == 123
+        assert result[1][0] == 123
+        assert len(requests_made) == 2
+        # Both individual eth_call requests must use the specified block number
+        for req in requests_made:
+            assert req['method'] == 'eth_call'
+            assert req['params'][1] == hex(12345)
+
+    @pytest.mark.asyncio
+    async def test_multicall_disabled_with_block_number(self, client, mock_requester):
+        from core.web3.eth_client import ContractCall
+        requests_made: list[dict[str, Any]] = []
+        async def mock_post_json(url, dataDict, timeout=None, **kwargs):
+            requests_made.append(dataDict)
+            class MockResp:
+                def json(self):
+                    return {
+                        'jsonrpc': '2.0',
+                        'result': '0x000000000000000000000000000000000000000000000000000000000000007b',
+                        'id': None
+                    }
+            return MockResp()
+        mock_requester.post_json = mock_post_json
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        contract_calls = [
+            ContractCall(toAddress='0x1234567890123456789012345678901234567890', functionName='getValue', contractAbi=contract_abi),
+        ]
+        result = await client.multicall(contractCalls=contract_calls, shouldUseMulticall3=False, blockNumber=99999)
+        assert result[0][0] == 123
+        assert len(requests_made) == 1
+        assert requests_made[0]['method'] == 'eth_call'
+        assert requests_made[0]['params'][1] == hex(99999)
+
+    @pytest.mark.asyncio
+    async def test_multicall3_with_block_number(self, client, mock_requester):
+        from core.web3.eth_client import ContractCall
+        from eth_abi import encode
+        requests_made: list[dict[str, Any]] = []
+        # Encode a valid aggregate3 response: list of (success, returnData) tuples
+        # Each returnData is abi-encoded uint256(123)
+        inner_encoded = encode(['uint256'], [123])
+        aggregate3_result = encode(
+            ['(bool,bytes)[]'],
+            [[(True, inner_encoded)]]
+        )
+        async def mock_post_json(url, dataDict, timeout=None, **kwargs):
+            requests_made.append(dataDict)
+            class MockResp:
+                def json(self):
+                    return {
+                        'jsonrpc': '2.0',
+                        'result': '0x' + aggregate3_result.hex(),
+                        'id': None
+                    }
+            return MockResp()
+        mock_requester.post_json = mock_post_json
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        contract_calls = [
+            ContractCall(toAddress='0x1234567890123456789012345678901234567890', functionName='getValue', contractAbi=contract_abi),
+        ]
+        result = await client.multicall(contractCalls=contract_calls, blockNumber=55555)
+        assert result[0][0] == 123
+        assert len(requests_made) == 1
+        # The single eth_call to multicall3 must use the specified block number
+        assert requests_made[0]['method'] == 'eth_call'
+        assert requests_made[0]['params'][1] == hex(55555)
+
+    @pytest.mark.asyncio
     async def test_call_function_empty_response_error(self, client, mock_requester):
         # Mock empty response (0x)
         mock_requester.responses['eth_call'] = {
