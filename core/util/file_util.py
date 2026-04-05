@@ -56,7 +56,7 @@ def file_exists_sync(filePath: str) -> bool:
 
 async def get_file_age_millis(filePath: str) -> int:
     # NOTE(krishan711): is there an async verison of this?
-    return int((time.time() - os.path.getmtime(filePath)) * 1000)
+    return int((time.time() - os.path.getmtime(filePath)) * 1000)  # noqa: ASYNC240
 
 
 def get_file_age_millis_sync(filePath: str) -> int:
@@ -112,7 +112,7 @@ def write_file_bytes_sync(filePath: str, content: bytes, shouldCreateParentDirec
 
 
 async def create_directory(directory: str, shouldAllowExisting: bool = True) -> None:
-    pathlib.Path(directory).mkdir(parents=True, exist_ok=shouldAllowExisting)
+    pathlib.Path(directory).mkdir(parents=True, exist_ok=shouldAllowExisting)  # noqa: ASYNC240
 
 
 def create_directory_sync(directory: str, shouldAllowExisting: bool = True) -> None:
