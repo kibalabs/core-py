@@ -12,9 +12,10 @@ from core.exceptions import RedirectException
 
 
 class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: ASGIApp, shouldSquashClientExceptions: bool = True) -> None:
+    def __init__(self, app: ASGIApp, shouldSquashClientExceptions: bool = True, shouldHideInternalErrors: bool = True) -> None:
         super().__init__(app=app)
         self.shouldSquashClientExceptions = shouldSquashClientExceptions
+        self.shouldHideInternalErrors = shouldHideInternalErrors
 
     @staticmethod
     def _convert_exception(exception: KibaException) -> Response:
@@ -41,5 +42,8 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
             response = self._convert_exception(exception=exception)
         except Exception as exception:  # noqa: BLE001
             logging.exception(exception)
-            response = self._convert_exception(exception=KibaException.from_exception(exception=exception))
+            kibaException = KibaException.from_exception(exception=exception)
+            if self.shouldHideInternalErrors:
+                kibaException = KibaException(message='Internal Server Error', statusCode=kibaException.statusCode)
+            response = self._convert_exception(exception=kibaException)
         return response
