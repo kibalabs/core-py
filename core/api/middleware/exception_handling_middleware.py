@@ -40,7 +40,7 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
         except KibaException as exception:
             logging.exception(exception)
             if self.shouldHideInternalErrors:
-                exception = KibaException(message='Internal Server Error', statusCode=exception.statusCode)
+                exception = KibaException(message='Internal Server Error', statusCode=exception.statusCode, exceptionType=exception.exceptionType)
             response = self._convert_exception(exception=exception)
         except Exception as exception:  # noqa: BLE001
             logging.exception(exception)
