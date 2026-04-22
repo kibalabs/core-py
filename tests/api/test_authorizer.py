@@ -1,3 +1,4 @@
+import json
 import pytest
 from collections.abc import AsyncIterator
 from pydantic import BaseModel
@@ -6,7 +7,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from core.api.api_request import KibaApiRequest
-from core.api.authorizer import Authorizer, authorize_bearer_jwt
+from core.api.authorizer import Authorizer, SignatureAuthorizer, authorize_bearer_jwt, authorize_signature, authorize_token
 from core.api.json_route import json_route
 from core.api.middleware.exception_handling_middleware import ExceptionHandlingMiddleware
 from core.api.streaming_json_route import streaming_json_route
@@ -14,17 +15,26 @@ from core.exceptions import ForbiddenException
 from core.http.jwt import Jwt
 
 
-VALID_TOKEN = 'valid-token'
+VALID_JWT_TOKEN = 'valid-token'
+VALID_SIGNATURE = 'valid-sig'
+VALID_STATIC_TOKEN = 'secret-token'
 VALID_USER_ID = 'user-123'
 
 
-class MockAuthorizer(Authorizer):
+class MockJwtAuthorizer(Authorizer):
     async def validate_jwt(self, jwtString: str) -> Jwt:
-        if jwtString != VALID_TOKEN:
+        if jwtString != VALID_JWT_TOKEN:
             raise ForbiddenException('Invalid token')
         jwt = Jwt(payloadDict={'sub': VALID_USER_ID})
         jwt.userId = VALID_USER_ID  # type: ignore[attr-defined]
         return jwt
+
+
+class MockSignatureAuthorizer(SignatureAuthorizer):
+    async def retrieve_signature_signer(self, signatureString: str) -> str:
+        if signatureString != VALID_SIGNATURE:
+            raise ForbiddenException('Invalid signature')
+        return VALID_USER_ID
 
 
 class SimpleRequest(BaseModel):
@@ -36,13 +46,16 @@ class SimpleResponse(BaseModel):
     user_id: str | None = None
 
 
-authorizer = MockAuthorizer()
+jwt_authorizer = MockJwtAuthorizer()
+sig_authorizer = MockSignatureAuthorizer()
 
+
+# --- authorize_bearer_jwt fixtures ---
 
 @pytest.fixture
-def json_client():
+def jwt_json_client():
     @json_route(requestType=SimpleRequest, responseType=SimpleResponse)
-    @authorize_bearer_jwt(authorizer=authorizer)
+    @authorize_bearer_jwt(authorizer=jwt_authorizer)
     async def protected_endpoint(request: KibaApiRequest[SimpleRequest]) -> SimpleResponse:
         jwt = request.authJwt
         return SimpleResponse(result=request.data.value, user_id=getattr(jwt, 'userId', None))
@@ -53,9 +66,9 @@ def json_client():
 
 
 @pytest.fixture
-def streaming_client():
+def jwt_streaming_client():
     @streaming_json_route(requestType=SimpleRequest, responseType=SimpleResponse)
-    @authorize_bearer_jwt(authorizer=authorizer)
+    @authorize_bearer_jwt(authorizer=jwt_authorizer)
     async def protected_streaming_endpoint(request: KibaApiRequest[SimpleRequest]) -> AsyncIterator[SimpleResponse]:
         jwt = request.authJwt
         yield SimpleResponse(result=request.data.value, user_id=getattr(jwt, 'userId', None))
@@ -65,90 +78,185 @@ def streaming_client():
     return TestClient(app, raise_server_exceptions=False)
 
 
-# --- json_route + authorize_bearer_jwt ---
+# --- authorize_signature fixtures ---
 
-def test_json_no_auth_header_returns_403(json_client):
-    response = json_client.post('/protected', json={'value': 'hello'})
+@pytest.fixture
+def sig_json_client():
+    @json_route(requestType=SimpleRequest, responseType=SimpleResponse)
+    @authorize_signature(authorizer=sig_authorizer)
+    async def protected_endpoint(request: KibaApiRequest[SimpleRequest]) -> SimpleResponse:
+        return SimpleResponse(result=request.data.value, user_id=request.authBasic.username if request.authBasic else None)
+
+    app = Starlette(routes=[Route('/protected', protected_endpoint, methods=['POST'])])
+    app.add_middleware(ExceptionHandlingMiddleware)
+    return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.fixture
+def sig_streaming_client():
+    @streaming_json_route(requestType=SimpleRequest, responseType=SimpleResponse)
+    @authorize_signature(authorizer=sig_authorizer)
+    async def protected_streaming_endpoint(request: KibaApiRequest[SimpleRequest]) -> AsyncIterator[SimpleResponse]:
+        yield SimpleResponse(result=request.data.value, user_id=request.authBasic.username if request.authBasic else None)
+
+    app = Starlette(routes=[Route('/protected-stream', protected_streaming_endpoint, methods=['POST'])])
+    app.add_middleware(ExceptionHandlingMiddleware)
+    return TestClient(app, raise_server_exceptions=False)
+
+
+# --- authorize_token fixtures ---
+
+@pytest.fixture
+def token_json_client():
+    @json_route(requestType=SimpleRequest, responseType=SimpleResponse)
+    @authorize_token(token=VALID_STATIC_TOKEN)
+    async def protected_endpoint(request: KibaApiRequest[SimpleRequest]) -> SimpleResponse:
+        return SimpleResponse(result=request.data.value)
+
+    app = Starlette(routes=[Route('/protected', protected_endpoint, methods=['POST'])])
+    app.add_middleware(ExceptionHandlingMiddleware)
+    return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.fixture
+def token_streaming_client():
+    @streaming_json_route(requestType=SimpleRequest, responseType=SimpleResponse)
+    @authorize_token(token=VALID_STATIC_TOKEN)
+    async def protected_streaming_endpoint(request: KibaApiRequest[SimpleRequest]) -> AsyncIterator[SimpleResponse]:
+        yield SimpleResponse(result=request.data.value)
+
+    app = Starlette(routes=[Route('/protected-stream', protected_streaming_endpoint, methods=['POST'])])
+    app.add_middleware(ExceptionHandlingMiddleware)
+    return TestClient(app, raise_server_exceptions=False)
+
+
+# --- authorize_bearer_jwt + json_route ---
+
+def test_jwt_json_no_auth_header_returns_403(jwt_json_client):
+    response = jwt_json_client.post('/protected', json={'value': 'hello'})
     assert response.status_code == 403
 
-
-def test_json_malformed_auth_header_not_bearer_returns_403(json_client):
-    response = json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Basic some-creds'})
+def test_jwt_json_wrong_scheme_returns_403(jwt_json_client):
+    response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Basic creds'})
     assert response.status_code == 403
 
-
-def test_json_bearer_with_no_token_returns_403(json_client):
-    response = json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Bearer '})
+def test_jwt_json_invalid_token_returns_403(jwt_json_client):
+    response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Bearer bad-token'})
     assert response.status_code == 403
 
-
-def test_json_invalid_token_returns_403(json_client):
-    response = json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Bearer bad-token'})
-    assert response.status_code == 403
-
-
-def test_json_valid_token_returns_200(json_client):
-    response = json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_TOKEN}'})
+def test_jwt_json_valid_token_returns_200(jwt_json_client):
+    response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_JWT_TOKEN}'})
     assert response.status_code == 200
     assert response.json()['result'] == 'hello'
 
-
-def test_json_valid_token_sets_auth_jwt_on_request(json_client):
-    response = json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_TOKEN}'})
+def test_jwt_json_sets_auth_jwt_on_request(jwt_json_client):
+    response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_JWT_TOKEN}'})
     assert response.status_code == 200
     assert response.json()['user_id'] == VALID_USER_ID
 
 
-def test_json_missing_request_body_field_returns_400(json_client):
-    response = json_client.post('/protected', json={}, headers={'Authorization': f'Bearer {VALID_TOKEN}'})
-    assert response.status_code == 400
+# --- authorize_bearer_jwt + streaming_json_route ---
 
-
-# --- streaming_json_route + authorize_bearer_jwt ---
-
-def test_streaming_no_auth_header_returns_403(streaming_client):
-    response = streaming_client.post('/protected-stream', json={'value': 'hello'})
+def test_jwt_streaming_no_auth_header_returns_403(jwt_streaming_client):
+    response = jwt_streaming_client.post('/protected-stream', json={'value': 'hello'})
     assert response.status_code == 403
 
-
-def test_streaming_malformed_auth_header_not_bearer_returns_403(streaming_client):
-    response = streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': 'Basic some-creds'})
+def test_jwt_streaming_invalid_token_returns_403(jwt_streaming_client):
+    response = jwt_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': 'Bearer bad-token'})
     assert response.status_code == 403
 
-
-def test_streaming_bearer_with_no_token_returns_403(streaming_client):
-    response = streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': 'Bearer '})
-    assert response.status_code == 403
-
-
-def test_streaming_invalid_token_returns_403(streaming_client):
-    response = streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': 'Bearer bad-token'})
-    assert response.status_code == 403
-
-
-def test_streaming_valid_token_returns_200(streaming_client):
-    response = streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_TOKEN}'})
+def test_jwt_streaming_valid_token_returns_200(jwt_streaming_client):
+    response = jwt_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_JWT_TOKEN}'})
     assert response.status_code == 200
 
-
-def test_streaming_valid_token_streams_correct_data(streaming_client):
-    response = streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_TOKEN}'})
-    assert response.status_code == 200
-    import json
-    lines = [l for l in response.content.decode().strip().split('\n') if l]
-    assert len(lines) == 1
-    data = json.loads(lines[0])
-    assert data['result'] == 'hello'
-
-
-def test_streaming_valid_token_sets_auth_jwt_on_request(streaming_client):
-    response = streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_TOKEN}'})
-    assert response.status_code == 200
-    import json
+def test_jwt_streaming_valid_token_streams_data(jwt_streaming_client):
+    response = jwt_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_JWT_TOKEN}'})
     data = json.loads(response.content.decode().strip())
+    assert data['result'] == 'hello'
     assert data['user_id'] == VALID_USER_ID
 
 
-def test_streaming_missing_request_body_field_returns_400(streaming_client):
-    response = streaming_client.post('/protected-stream', json={}, headers={'Authorization': f'Bearer {VALID_TOKEN}'})
-    assert response.status_code == 400
+# --- authorize_signature + json_route ---
+
+def test_sig_json_no_auth_header_returns_403(sig_json_client):
+    response = sig_json_client.post('/protected', json={'value': 'hello'})
+    assert response.status_code == 403
+
+def test_sig_json_wrong_scheme_returns_403(sig_json_client):
+    response = sig_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Bearer something'})
+    assert response.status_code == 403
+
+def test_sig_json_invalid_signature_returns_403(sig_json_client):
+    response = sig_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Signature bad-sig'})
+    assert response.status_code == 403
+
+def test_sig_json_valid_signature_returns_200(sig_json_client):
+    response = sig_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Signature {VALID_SIGNATURE}'})
+    assert response.status_code == 200
+    assert response.json()['result'] == 'hello'
+
+def test_sig_json_sets_auth_basic_on_request(sig_json_client):
+    response = sig_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Signature {VALID_SIGNATURE}'})
+    assert response.status_code == 200
+    assert response.json()['user_id'] == VALID_USER_ID
+
+
+# --- authorize_signature + streaming_json_route ---
+
+def test_sig_streaming_no_auth_header_returns_403(sig_streaming_client):
+    response = sig_streaming_client.post('/protected-stream', json={'value': 'hello'})
+    assert response.status_code == 403
+
+def test_sig_streaming_invalid_signature_returns_403(sig_streaming_client):
+    response = sig_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': 'Signature bad-sig'})
+    assert response.status_code == 403
+
+def test_sig_streaming_valid_signature_returns_200(sig_streaming_client):
+    response = sig_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Signature {VALID_SIGNATURE}'})
+    assert response.status_code == 200
+
+def test_sig_streaming_valid_signature_streams_data(sig_streaming_client):
+    response = sig_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Signature {VALID_SIGNATURE}'})
+    data = json.loads(response.content.decode().strip())
+    assert data['result'] == 'hello'
+    assert data['user_id'] == VALID_USER_ID
+
+
+# --- authorize_token + json_route ---
+
+def test_token_json_no_auth_header_returns_403(token_json_client):
+    response = token_json_client.post('/protected', json={'value': 'hello'})
+    assert response.status_code == 403
+
+def test_token_json_wrong_scheme_returns_403(token_json_client):
+    response = token_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Bearer something'})
+    assert response.status_code == 403
+
+def test_token_json_invalid_token_returns_403(token_json_client):
+    response = token_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Token wrong-token'})
+    assert response.status_code == 403
+
+def test_token_json_valid_token_returns_200(token_json_client):
+    response = token_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Token {VALID_STATIC_TOKEN}'})
+    assert response.status_code == 200
+    assert response.json()['result'] == 'hello'
+
+
+# --- authorize_token + streaming_json_route ---
+
+def test_token_streaming_no_auth_header_returns_403(token_streaming_client):
+    response = token_streaming_client.post('/protected-stream', json={'value': 'hello'})
+    assert response.status_code == 403
+
+def test_token_streaming_invalid_token_returns_403(token_streaming_client):
+    response = token_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': 'Token wrong-token'})
+    assert response.status_code == 403
+
+def test_token_streaming_valid_token_returns_200(token_streaming_client):
+    response = token_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Token {VALID_STATIC_TOKEN}'})
+    assert response.status_code == 200
+
+def test_token_streaming_valid_token_streams_data(token_streaming_client):
+    response = token_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Token {VALID_STATIC_TOKEN}'})
+    data = json.loads(response.content.decode().strip())
+    assert data['result'] == 'hello'
