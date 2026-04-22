@@ -96,8 +96,22 @@ def authorize_signature[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     return decorator
 
 
+class TokenAuthorizer:
+    async def validate_token(self, token: str) -> None:
+        raise NotImplementedError
+
+
+class StaticTokenAuthorizer(TokenAuthorizer):
+    def __init__(self, token: str) -> None:
+        self._token = token
+
+    async def validate_token(self, token: str) -> None:
+        if token != self._token:
+            raise ForbiddenException(message='AUTH_INVALID')
+
+
 def authorize_token[ApiRequest: BaseModel](  # type: ignore[explicit-any]
-    token: str,
+    authorizer: TokenAuthorizer,
 ) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], _AnyReturn]], typing.Callable[_P, typing.Any]]:
     def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], _AnyReturn]) -> typing.Callable[_P, typing.Any]:  # type: ignore[explicit-any]
         @functools.wraps(func)
@@ -107,8 +121,7 @@ def authorize_token[ApiRequest: BaseModel](  # type: ignore[explicit-any]
                 raise ForbiddenException(message='AUTH_NOT_PROVIDED')
             if not authorization.startswith('Token '):
                 raise ForbiddenException(message='AUTH_INVALID')
-            if authorization[6:] != token:
-                raise ForbiddenException(message='AUTH_INVALID')
+            await authorizer.validate_token(authorization[6:])
             result = func(request=request)
             # NOTE(krishan711): this is here to support streaming responses which return an async generator
             if hasattr(result, '__aiter__'):

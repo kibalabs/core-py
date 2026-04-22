@@ -7,7 +7,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from core.api.api_request import KibaApiRequest
-from core.api.authorizer import Authorizer, SignatureAuthorizer, authorize_bearer_jwt, authorize_signature, authorize_token
+from core.api.authorizer import Authorizer, SignatureAuthorizer, StaticTokenAuthorizer, authorize_bearer_jwt, authorize_signature, authorize_token
 from core.api.json_route import json_route
 from core.api.middleware.exception_handling_middleware import ExceptionHandlingMiddleware
 from core.api.streaming_json_route import streaming_json_route
@@ -106,10 +106,13 @@ def sig_streaming_client():
 
 # --- authorize_token fixtures ---
 
+token_authorizer = StaticTokenAuthorizer(token=VALID_STATIC_TOKEN)
+
+
 @pytest.fixture
 def token_json_client():
     @json_route(requestType=SimpleRequest, responseType=SimpleResponse)
-    @authorize_token(token=VALID_STATIC_TOKEN)
+    @authorize_token(authorizer=token_authorizer)
     async def protected_endpoint(request: KibaApiRequest[SimpleRequest]) -> SimpleResponse:
         return SimpleResponse(result=request.data.value)
 
@@ -121,7 +124,7 @@ def token_json_client():
 @pytest.fixture
 def token_streaming_client():
     @streaming_json_route(requestType=SimpleRequest, responseType=SimpleResponse)
-    @authorize_token(token=VALID_STATIC_TOKEN)
+    @authorize_token(authorizer=token_authorizer)
     async def protected_streaming_endpoint(request: KibaApiRequest[SimpleRequest]) -> AsyncIterator[SimpleResponse]:
         yield SimpleResponse(result=request.data.value)
 
