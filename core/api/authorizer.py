@@ -1,5 +1,6 @@
 import functools
 import typing
+from collections.abc import AsyncIterator
 from typing import ParamSpec
 
 from mypy_extensions import Arg
@@ -10,6 +11,7 @@ from core.exceptions import ForbiddenException
 from core.http.jwt import Jwt
 
 _P = ParamSpec('_P')
+_AnyReturn = typing.Awaitable[typing.Any] | AsyncIterator[typing.Any]  # type: ignore[explicit-any]
 
 
 class Authorizer:
@@ -33,8 +35,8 @@ async def _authorize_bearer_jwt[ApiRequest: BaseModel](request: KibaApiRequest[A
 
 def authorize_bearer_jwt[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: Authorizer,
-) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[typing.Any]]], typing.Callable[_P, typing.Any]]:
-    def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[typing.Any]]) -> typing.Callable[_P, typing.Any]:  # type: ignore[explicit-any]
+) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], _AnyReturn]], typing.Callable[_P, typing.Any]]:
+    def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], _AnyReturn]) -> typing.Callable[_P, typing.Any]:  # type: ignore[explicit-any]
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
             request.authJwt = await _authorize_bearer_jwt(request=request, authorizer=authorizer)
