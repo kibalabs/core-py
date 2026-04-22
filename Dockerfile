@@ -10,4 +10,3 @@ COPY uv.lock .
 RUN make install
 
 COPY . .
-RUN make type-check

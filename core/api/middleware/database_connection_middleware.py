@@ -1,24 +1,21 @@
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
-from starlette.requests import Request
-from starlette.responses import Response
 from starlette.types import ASGIApp
+from starlette.types import Receive
+from starlette.types import Scope
+from starlette.types import Send
 
 from core.store.database import Database
 
 
-class DatabaseConnectionMiddleware(BaseHTTPMiddleware):
+class DatabaseConnectionMiddleware:
     def __init__(self, app: ASGIApp, database: Database) -> None:
-        super().__init__(app=app)
+        self.app = app
         self.database = database
 
     # NOTE(krishan711): see note in database.py about why this can cause problems with concurrent operations
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        # NOTE(krishan711): hack to prevent running this for streaming endpoints because streaming
-        # endpoints return a response with a generator inside it so this middleware wouldn't work
-        if request.scope['path'].endswith('-streamed'):
-            return await call_next(request)
-        # isReadonly = request.method in {'GET', 'OPTIONS', 'HEAD'}
+    # NOTE(krishan711): raw ASGI (not BaseHTTPMiddleware) so the DB connection stays open across streaming body
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope['type'] != 'http':
+            await self.app(scope, receive, send)
+            return
         async with self.database.create_context_connection():
-            response = await call_next(request)
-        return response
+            await self.app(scope, receive, send)
