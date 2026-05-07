@@ -30,6 +30,11 @@ def datetime_from_now(days: int = 0, seconds: float = 0, milliseconds: int = 0, 
 
 def datetime_from_string(dateString: str, dateFormat: str = JSON_DATE_FORMAT) -> datetime.datetime:
     try:
+        dt = datetime.datetime.fromisoformat(dateString)
+        return dt.astimezone(datetime.UTC) if dt.tzinfo is not None else dt.replace(tzinfo=datetime.UTC)
+    except (TypeError, ValueError):
+        pass
+    try:
         dt = datetime.datetime.strptime(dateString, dateFormat).replace(tzinfo=datetime.UTC)
     except (TypeError, ValueError) as exception:
         raise DateConversionException(message=f'Invalid dateString passed to datetime_from_string: {dateString}') from exception
