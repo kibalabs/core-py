@@ -22,7 +22,7 @@ else:
     RawSqsMessageTypeDef = Any
 
 
-class SqsMessage(Message):  # type: ignore[explicit-any]
+class SqsMessage(Message):
     receiptHandle: str
 
     @classmethod
@@ -34,6 +34,7 @@ class SqsMessage(Message):  # type: ignore[explicit-any]
             requestId=message.requestId,
             postCount=message.postCount,
             postDate=message.postDate,
+            deduplicationId=message.deduplicationId,
             receiptHandle=sqsMessage['ReceiptHandle'],
         )
 

@@ -32,6 +32,9 @@ queue-sqs = [
 queue-aqs = [
     "azure-storage-queue[aio]>=12.13.0",
 ]
+queue-cosmos = [
+    "azure-cosmos>=4.15.0",
+]
 database-psql = [
     "sqlalchemy[asyncio]>=2.0.39",
     "asyncpg>=0.30.0",

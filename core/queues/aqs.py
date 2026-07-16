@@ -12,7 +12,7 @@ from core.queues.model import Message
 from core.util import list_util
 
 
-class AqsMessage(Message):  # type: ignore[explicit-any]
+class AqsMessage(Message):
     aqsId: str
     popReceipt: str | None
 
@@ -25,6 +25,7 @@ class AqsMessage(Message):  # type: ignore[explicit-any]
             requestId=message.requestId,
             postCount=message.postCount,
             postDate=message.postDate,
+            deduplicationId=message.deduplicationId,
             aqsId=aqsMessage.id,
             popReceipt=aqsMessage.pop_receipt,
         )
