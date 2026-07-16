@@ -335,15 +335,15 @@ aio = [
 
 [[package]]
 name = "azure-cosmos"
-version = "4.16.1"
+version = "4.16.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/2a/0f2bba256e56626ba2cec97ab81dd002ff47ead1329767760b619afd927a/azure_cosmos-4.16.1.tar.gz", hash = "sha256:fa15d13702b470265a67e2dd9c0794021e6b776856dac6c223dcacc4d8e1d8d1", size = 2377651, upload-time = "2026-06-02T01:08:07.656Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2f/3a/ca8b210b5e77aabde174749e69f25073b2a212fe45a50157538d06151242/azure_cosmos-4.16.2.tar.gz", hash = "sha256:2586cf98b736ffd5147cd76fe610d9ffc6fbd2abce4864edb1b364655f7d4b88", size = 2457693, upload-time = "2026-07-16T12:20:49.004Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/b4/9c984ad33ca9e5c378ea472fc9aa38e719c245a4fa58a99d6dabbe0f9a17/azure_cosmos-4.16.1-py3-none-any.whl", hash = "sha256:43717215ec1433c1ea0f0e3d465f9182fb5afff3ae2331e595367122297872f1", size = 499044, upload-time = "2026-06-02T01:08:10.111Z" },
+    { url = "https://files.pythonhosted.org/packages/82/26/675496a21a225529510f0755e9ea4ebd8dda348dcbf8b4a2842e1e281446/azure_cosmos-4.16.2-py3-none-any.whl", hash = "sha256:bff91af867e1a6b47df215e9ed153fa5192da6ac4bae07ceb5c53632fcf9aceb", size = 502404, upload-time = "2026-07-16T12:20:51.716Z" },
 ]
 
 [[package]]
@@ -1017,7 +1017,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.139.0"
+version = "0.139.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -1026,9 +1026,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d3/af/a5f50ccfa659ec1802cb4ca842c23f06d906a8cc9aef6016a2caeea3d4ed/fastapi-0.139.0.tar.gz", hash = "sha256:99ab7b2d92223c76d6cf10757ab3f89d45b38267fc20b2a136cf02f6beac3145", size = 423016, upload-time = "2026-07-01T16:35:33.436Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d0/71/f4cfcd72fd94af40d1c76141b69c3d27acaa3641e8fd64872929ff6998b9/fastapi-0.139.1.tar.gz", hash = "sha256:99461bde7ac3fc34c78443da1f4dad3ca8f3182580029a2827692db216a8d7ae", size = 422782, upload-time = "2026-07-16T09:18:34.222Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/7c/8e3c6ad324ea5cb36604fc3f968554887891c316d9dfde57761611d907ad/fastapi-0.139.0-py3-none-any.whl", hash = "sha256:cf15e1e9e667ddb0ad63811e60bd11390d1aac838ca4a7a23f421807b2308189", size = 130339, upload-time = "2026-07-01T16:35:32.19Z" },
+    { url = "https://files.pythonhosted.org/packages/b4/4d/73d2e5e891d56722f5b6def27f67e91332342a18468f2ea20aa5da9ff64d/fastapi-0.139.1-py3-none-any.whl", hash = "sha256:17faa81907751a8a85cd44c46f37fb576bde0078cb37de40bf1cd55de7104d87", size = 130147, upload-time = "2026-07-16T09:18:32.723Z" },
 ]
 
 [[package]]
@@ -1499,26 +1499,26 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiobotocore", marker = "extra == 'queue-sqs'", specifier = ">=2.23.2" },
-    { name = "aiobotocore", marker = "extra == 'queues'", specifier = ">=2.23.2" },
-    { name = "aiobotocore", marker = "extra == 'storage'", specifier = ">=2.23.2" },
-    { name = "aiofiles", specifier = ">=24.1.0" },
-    { name = "aiosqlite", marker = "extra == 'database-sqlite'", specifier = ">=0.21.0" },
-    { name = "asyncpg", marker = "extra == 'database-psql'", specifier = ">=0.30.0" },
-    { name = "azure-cosmos", marker = "extra == 'queue-cosmos'", specifier = ">=4.15.0" },
-    { name = "azure-storage-queue", extras = ["aio"], marker = "extra == 'queue-aqs'", specifier = ">=12.13.0" },
-    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.116.1" },
+    { name = "aiobotocore", marker = "extra == 'queue-sqs'", specifier = ">=3.7.0" },
+    { name = "aiobotocore", marker = "extra == 'queues'", specifier = ">=3.7.0" },
+    { name = "aiobotocore", marker = "extra == 'storage'", specifier = ">=3.7.0" },
+    { name = "aiofiles", specifier = ">=25.1.0" },
+    { name = "aiosqlite", marker = "extra == 'database-sqlite'", specifier = ">=0.22.1" },
+    { name = "asyncpg", marker = "extra == 'database-psql'", specifier = ">=0.31.0" },
+    { name = "azure-cosmos", marker = "extra == 'queue-cosmos'", specifier = ">=4.16.2" },
+    { name = "azure-storage-queue", extras = ["aio"], marker = "extra == 'queue-aqs'", specifier = ">=12.17.0" },
+    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.139.1" },
     { name = "httpx", marker = "extra == 'requester'", specifier = ">=0.28.1" },
-    { name = "orjson", specifier = ">=3.11.1" },
-    { name = "pydantic", specifier = ">=2.11.7" },
-    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'database-psql'", specifier = ">=2.0.39" },
-    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'database-sqlite'", specifier = ">=2.0.39" },
-    { name = "starlette", marker = "extra == 'core-api'", specifier = ">=0.47.2" },
-    { name = "types-aiobotocore", extras = ["essential"], marker = "extra == 'types'", specifier = ">=2.23.2" },
-    { name = "types-aiofiles", marker = "extra == 'types'", specifier = ">=24.1.0.20250708" },
-    { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.35.0" },
-    { name = "uvicorn", extras = ["standard"], marker = "extra == 'core-api'", specifier = ">=0.35.0" },
-    { name = "web3", marker = "extra == 'web3'", specifier = ">=7.12.1" },
+    { name = "orjson", specifier = ">=3.11.9" },
+    { name = "pydantic", specifier = ">=2.13.4" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'database-psql'", specifier = ">=2.0.51" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'database-sqlite'", specifier = ">=2.0.51" },
+    { name = "starlette", marker = "extra == 'core-api'", specifier = ">=1.3.1" },
+    { name = "types-aiobotocore", extras = ["essential"], marker = "extra == 'types'", specifier = ">=3.7.0" },
+    { name = "types-aiofiles", marker = "extra == 'types'", specifier = ">=25.1.0.20260518" },
+    { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.51.0" },
+    { name = "uvicorn", extras = ["standard"], marker = "extra == 'core-api'", specifier = ">=0.51.0" },
+    { name = "web3", marker = "extra == 'web3'", specifier = ">=7.16.0" },
 ]
 provides-extras = ["api", "core-api", "storage", "queues", "queue-sqs", "queue-aqs", "queue-cosmos", "database-psql", "database-sqlite", "requester", "web3", "types"]
 
