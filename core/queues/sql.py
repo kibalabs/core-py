@@ -42,17 +42,23 @@ class SqlMessage(Message):
     id: int
     lockToken: str
 
+    @staticmethod
+    def _get_row_value(row: Mapping[str, Any], key: str, databaseKey: str) -> Any:  # type: ignore[explicit-any]
+        if key in row:
+            return row[key]
+        return row[databaseKey]
+
     @classmethod
     def from_row(cls, row: Mapping[str, Any]) -> SqlMessage:  # type: ignore[explicit-any]
         return cls(
-            id=row['id'],
-            command=row['command'],
-            content=row['content'],
-            requestId=row['request_id'],
-            postCount=row['post_count'],
-            postDate=row['post_date'],
-            deduplicationId=row['deduplication_id'],
-            lockToken=row['lock_token'],
+            id=cls._get_row_value(row, 'id', 'id'),
+            command=cls._get_row_value(row, 'command', 'command'),
+            content=cls._get_row_value(row, 'content', 'content'),
+            requestId=cls._get_row_value(row, 'requestId', 'request_id'),
+            postCount=cls._get_row_value(row, 'postCount', 'post_count'),
+            postDate=cls._get_row_value(row, 'postDate', 'post_date'),
+            deduplicationId=cls._get_row_value(row, 'deduplicationId', 'deduplication_id'),
+            lockToken=cls._get_row_value(row, 'lockToken', 'lock_token'),
         )
 
 
@@ -68,6 +74,26 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
 
     async def disconnect(self) -> None:
         pass
+
+    def _is_deduplication_conflict(self, exception: sqlalchemy.exc.IntegrityError) -> bool:
+        deduplicationConstraintName = next(
+            (constraint.name for constraint in self.table.constraints if isinstance(constraint, sqlalchemy.UniqueConstraint) and {column.key for column in constraint.columns} == {'queueName', 'deduplicationId'}),
+            None,
+        )
+        original = exception.orig
+        originalConstraintName = getattr(original, 'constraint_name', None)
+        if originalConstraintName is None:
+            originalConstraintName = getattr(getattr(original, 'diag', None), 'constraint_name', None)
+        if deduplicationConstraintName is not None:
+            constraintName = str(deduplicationConstraintName)
+            if originalConstraintName == constraintName:
+                return True
+            errorMessage = str(original)
+            if constraintName in errorMessage:
+                return True
+        errorMessage = str(original)
+        sqliteColumns = f'{self.table.name}.{self.table.c.queueName.name}, {self.table.name}.{self.table.c.deduplicationId.name}'
+        return 'unique constraint failed:' in errorMessage.lower() and sqliteColumns in errorMessage
 
     async def send_message(self, message: Message, delaySeconds: int = 0) -> None:
         await self.send_messages(messages=[message], delaySeconds=delaySeconds)
@@ -99,8 +125,9 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                     try:
                         async with connection.begin_nested():
                             await self.database.execute(query=insertQuery, connection=connection)  # type: ignore[arg-type]
-                    except sqlalchemy.exc.IntegrityError:
-                        pass
+                    except sqlalchemy.exc.IntegrityError as exception:
+                        if not self._is_deduplication_conflict(exception):
+                            raise
                 else:
                     await self.database.execute(query=insertQuery, connection=connection)  # type: ignore[arg-type]
 
@@ -128,7 +155,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                 lockToken = str(uuid.uuid4())
                 updateQuery = sqlalchemy.update(self.table).where(self.table.c.id == row['id']).values(lockToken=lockToken, visibleDate=newVisibleDate)
                 await self.database.execute(query=updateQuery, connection=connection)  # type: ignore[arg-type]
-                messages.append(SqlMessage.from_row(row={**row, 'lock_token': lockToken}))
+                messages.append(SqlMessage.from_row(row={**row, 'lockToken': lockToken}))
             return messages
 
     async def delete_message(self, message: SqlMessage) -> None:

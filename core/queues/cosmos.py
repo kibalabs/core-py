@@ -156,6 +156,9 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
                     body=item,
                     etag=candidate['_etag'],
                     match_condition=MatchConditions.IfNotModified,
+                    # The async SDK derives this from the body, but explicitly pass it in
+                    # request options so the replace is targeted to this logical partition.
+                    request_options={'partitionKey': self.queueName},
                 )
             except cosmos_exceptions.CosmosHttpResponseError as exception:
                 if exception.status_code == 412:  # noqa: PLR2004
