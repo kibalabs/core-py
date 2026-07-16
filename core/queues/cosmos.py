@@ -8,8 +8,8 @@ from collections.abc import Sequence
 from typing import Any
 
 from azure.core import MatchConditions
-from azure.cosmos import exceptions as cosmos_exceptions  # type: ignore[import-untyped]
-from azure.cosmos.aio import ContainerProxy  # type: ignore[import-untyped]
+from azure.cosmos import exceptions as cosmos_exceptions
+from azure.cosmos.aio import ContainerProxy
 
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
@@ -59,7 +59,6 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
     async def disconnect(self) -> None:
         # The caller supplies a shared ContainerProxy and owns CosmosClient lifecycle.
         return None
-
 
     @staticmethod
     def _item_body(message: Message, queueName: str, itemId: str, visibleDate: float, createdDate: float) -> dict[str, Any]:  # type: ignore[explicit-any]
