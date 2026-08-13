@@ -1489,7 +1489,7 @@ wheels = [
 
 [[package]]
 name = "kiba-build"
-version = "0.1.11.dev14"
+version = "0.1.11.dev15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asyncclick" },
@@ -1505,9 +1505,9 @@ dependencies = [
     { name = "ty" },
     { name = "wheel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/77/29/1f223fc15bc78f32c5dd78b0c3577abe24fe35675a6da6227c03549589bf/kiba_build-0.1.11.dev14.tar.gz", hash = "sha256:1de774ea582325a8a0a10b2f35d09525a8f9c452179eb277554bc8393feef191", size = 89589, upload-time = "2026-08-13T17:32:48.526Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fd/9f/0bd0000bbf5a013f15d8afb07645d6df685d067872f490b028700d74f1e4/kiba_build-0.1.11.dev15.tar.gz", hash = "sha256:4f7e7062268615564a09828d9a4676fd1cef977cb11b6395c7ab4197fe2025d3", size = 89587, upload-time = "2026-08-13T17:47:21.837Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/dd/153969caa2bb091066019ff8a4cf0956ee58c0f55b885cc17d4eaece13c3/kiba_build-0.1.11.dev14-py3-none-any.whl", hash = "sha256:950982b4472c4bdcde29cbf34209f592c011108314f97062bb9c129f13c8e187", size = 11995, upload-time = "2026-08-13T17:32:47.714Z" },
+    { url = "https://files.pythonhosted.org/packages/31/b7/ac34afc4c623ea9087884fa859498c06e5794f46e47ab540bb0969f16dab/kiba_build-0.1.11.dev15-py3-none-any.whl", hash = "sha256:ffae135c7ca2bcaa8f525c60e6f82831e0c902a27ba6dfe0686c1c9f23b29586", size = 11992, upload-time = "2026-08-13T17:47:20.892Z" },
 ]
 
 [[package]]
@@ -1594,7 +1594,7 @@ requires-dist = [
 provides-extras = ["api", "core-api", "storage", "queues", "queue-sqs", "queue-aqs", "queue-cosmos", "database-psql", "database-sqlite", "requester", "web3", "types"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "kiba-build", specifier = "==0.1.11.dev14" }]
+dev = [{ name = "kiba-build", specifier = "==0.1.11.dev15" }]
 
 [[package]]
 name = "librt"
