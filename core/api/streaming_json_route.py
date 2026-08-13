@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 
 from pydantic import BaseModel
 from pydantic import ValidationError
+from starlette.requests import Request
 from starlette.responses import StreamingResponse
 
 from core.api.api_request import KibaApiRequest
@@ -24,13 +25,10 @@ async def _convert_to_json_generator[T: BaseModel](response_iterator: AsyncItera
 def streaming_json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
     requestType: typing.Type[ApiRequest],
     responseType: typing.Type[ApiResponse],
-) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]], typing.Callable[..., typing.Awaitable[StreamingResponse]]]:
-    def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]) -> typing.Callable[..., typing.Awaitable[StreamingResponse]]:
+) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]], typing.Callable[[Request], typing.Awaitable[StreamingResponse]]]:
+    def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]) -> typing.Callable[[Request], typing.Awaitable[StreamingResponse]]:
         @functools.wraps(func)
-        async def async_wrapper(*args: typing.Any, **kwargs: typing.Any) -> StreamingResponse:  # type: ignore[explicit-any, misc]
-            receivedRequest = kwargs.get('request', args[0] if args else None)
-            if receivedRequest is None:
-                raise BadRequestException('Missing request')
+        async def async_wrapper(receivedRequest: Request) -> StreamingResponse:
             pathParams = receivedRequest.path_params
             queryParams = receivedRequest.query_params
             bodyBytes = await receivedRequest.body()

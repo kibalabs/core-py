@@ -3,6 +3,7 @@ import typing
 
 from pydantic import BaseModel
 from pydantic import ValidationError
+from starlette.requests import Request
 
 from core.api.api_request import KibaApiRequest
 from core.api.api_response import KibaJSONResponse
@@ -15,14 +16,13 @@ from core.util.typing_util import JsonObject
 def json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
     requestType: typing.Type[ApiRequest],
     responseType: typing.Type[ApiResponse],
-) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], typing.Awaitable[ApiResponse]]], typing.Callable[..., typing.Awaitable[KibaJSONResponse]]]:
-    def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], typing.Awaitable[ApiResponse]]) -> typing.Callable[..., typing.Awaitable[KibaJSONResponse]]:
+) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], typing.Awaitable[ApiResponse]]], typing.Callable[[Request], typing.Awaitable[KibaJSONResponse]]]:
+    def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], typing.Awaitable[ApiResponse]]) -> typing.Callable[[Request], typing.Awaitable[KibaJSONResponse]]:
         @functools.wraps(func)
-        async def async_wrapper(*args: typing.Any) -> KibaJSONResponse:  # type: ignore[explicit-any, misc]
-            receivedRequest = args[0]
+        async def async_wrapper(receivedRequest: Request) -> KibaJSONResponse:
             pathParams = receivedRequest.path_params
             queryParams = receivedRequest.query_params
-            bodyBytes = await args[0].body()
+            bodyBytes = await receivedRequest.body()
             if len(bodyBytes) == 0:
                 body: JsonObject = {}
             else:
