@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from enum import Enum
 
 import sqlalchemy
+import sqlalchemy.sql.functions
 from sqlalchemy import Table
 from sqlalchemy.sql import Select
 

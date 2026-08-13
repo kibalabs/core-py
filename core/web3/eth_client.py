@@ -222,7 +222,9 @@ class EthClientInterface:
             raise TransactionFailedException(transactionReceipt=transactionReceipt)
         return transactionReceipt
 
-    async def multicall(self, contractCalls: list[ContractCall], shouldUseMulticall3: bool = True, blockNumber: int | None = None) -> list[ListAny]:
+    async def multicall(self, contractCalls: list[ContractCall], shouldUseMulticall3: bool = True, blockNumber: int | None = None, shouldAllowFailures: bool = False) -> list[ListAny]:
+        # NOTE: when shouldAllowFailures=True, a call that reverts on-chain does not fail the whole batch -
+        # its slot in the returned list is [None] instead of a decoded value. Callers must check for that per-slot.
         multicall3Address = CHAIN_ID_MULTICALL3_ADDRESS_MAP.get(self.chainId) if shouldUseMulticall3 else None
         if not multicall3Address or not shouldUseMulticall3:
             results = await asyncio.gather(*[self.call(contractCall=contractCall, blockNumber=blockNumber) for contractCall in contractCalls])
@@ -233,7 +235,7 @@ class EthClientInterface:
             functionName='aggregate3',
             arguments={
                 'calls': [
-                    {'target': contractCall.toAddress, 'allowFailure': False, 'callData': chain_util.encode_transaction_data_by_name(contractAbi=contractCall.contractAbi, functionName=contractCall.functionName, arguments=contractCall.arguments)}
+                    {'target': contractCall.toAddress, 'allowFailure': shouldAllowFailures, 'callData': chain_util.encode_transaction_data_by_name(contractAbi=contractCall.contractAbi, functionName=contractCall.functionName, arguments=contractCall.arguments)}
                     for contractCall in contractCalls
                 ]
             },
@@ -453,16 +455,16 @@ class RestEthClient(EthClientInterface):
         if 'chainId' not in params:
             if chainId is None:
                 chainId = self.chainId
-            params['chainId'] = hex(chainId)  # type: ignore[typeddict-item]
+            params['chainId'] = hex(chainId)  # type: ignore[typeddict-item, ty:invalid-assignment]
         if 'nonce' not in params:
             if nonce is None:
                 nonce = await self.get_transaction_count(address=fromAddress)
-            params['nonce'] = hex(nonce)  # type: ignore[typeddict-item]
+            params['nonce'] = hex(nonce)  # type: ignore[typeddict-item, ty:invalid-assignment]
         if 'gas' not in params:
             if gas is None:
                 response = await self._make_request(method='eth_estimateGas', params=[params])
                 gas = int(response['result'], 16)
-            params['gas'] = hex(gas)  # type: ignore[typeddict-item]
+            params['gas'] = hex(gas)  # type: ignore[typeddict-item, ty:invalid-assignment]
         if 'gasPrice' not in params:
             if 'maxPriorityFeePerGas' not in params:
                 if maxPriorityFeePerGas is None:

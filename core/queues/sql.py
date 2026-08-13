@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from typing import Any
 
 import sqlalchemy
+import sqlalchemy.exc
 from sqlalchemy.dialects import postgresql as sqlalchemy_psql
 
 from core.queues.message_queue import MessageQueue

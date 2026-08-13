@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from typing import TypeVar
 
 import sqlalchemy
+import sqlalchemy.exc
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -95,11 +96,15 @@ class Database:
             await self.disconnect()
             await self.connect()
 
-    async def execute(self, query: TypedReturnsRows[ResultType], connection: DatabaseConnection | None = None) -> Result[ResultType]:
+    @typing.overload
+    async def execute(self, query: TypedReturnsRows[ResultType], connection: DatabaseConnection | None = None) -> Result[ResultType]: ...
+    @typing.overload
+    async def execute(self, query: sqlalchemy.sql.Executable, connection: DatabaseConnection | None = None) -> Result[typing.Any]: ...  # type: ignore[explicit-any]
+    async def execute(self, query: sqlalchemy.sql.Executable, connection: DatabaseConnection | None = None) -> Result[typing.Any]:  # type: ignore[explicit-any]
         if not self._engine:
             raise InternalServerErrorException(message='Connection has not been established. Please called collect() first.')
         if not connection:
             connection = self._get_context_connection()
         if not connection:
             raise InternalServerErrorException(message='No connection found. Please provide a connection or call create_context_connection() for the context.')
-        return typing.cast(Result[ResultType], await connection.execute(statement=query))
+        return typing.cast(Result[typing.Any], await connection.execute(statement=query))  # type: ignore[explicit-any]

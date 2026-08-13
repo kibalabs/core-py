@@ -18,7 +18,7 @@ class AqsMessage(Message):
 
     @classmethod
     def from_aqs_message(cls, aqsMessage: RawAqsMessage) -> AqsMessage:
-        message = Message.parse_raw(aqsMessage.content)
+        message = Message.model_validate_json(aqsMessage.content)
         return cls(
             command=message.command,
             content=message.content,
@@ -54,7 +54,7 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         if not self._aqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to send messages')
         message.prepare_for_send()
-        await self._aqsClient.send_message(visibility_timeout=delaySeconds, content=message.json())
+        await self._aqsClient.send_message(visibility_timeout=delaySeconds, content=message.model_dump_json())
 
     async def send_messages(self, messages: Sequence[Message], delaySeconds: int = 0) -> None:
         if not self._aqsClient:
