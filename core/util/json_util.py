@@ -23,13 +23,13 @@ _HAS_LOGGED_FOR_SERIALIZATION_ERROR = False
 
 
 class DatetimeEncoder(json.JSONEncoder):
-    def default(self, obj: typing.Any) -> str:  # type: ignore[explicit-any]
-        if isinstance(obj, datetime.datetime):
-            return date_util.datetime_to_string(obj)
+    def default(self, o: typing.Any) -> str:  # type: ignore[explicit-any]
+        if isinstance(o, datetime.datetime):
+            return date_util.datetime_to_string(o)
         try:
-            return typing.cast(str, super().default(obj))
+            return typing.cast(str, super().default(o))
         except TypeError:
-            return str(obj)
+            return str(o)
 
 
 def dumpb(obj: Any) -> bytes:  # type: ignore[explicit-any]

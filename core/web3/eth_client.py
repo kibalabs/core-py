@@ -455,16 +455,16 @@ class RestEthClient(EthClientInterface):
         if 'chainId' not in params:
             if chainId is None:
                 chainId = self.chainId
-            params['chainId'] = hex(chainId)  # type: ignore[typeddict-item]
+            params['chainId'] = hex(chainId)  # type: ignore[typeddict-item, ty:invalid-assignment]
         if 'nonce' not in params:
             if nonce is None:
                 nonce = await self.get_transaction_count(address=fromAddress)
-            params['nonce'] = hex(nonce)  # type: ignore[typeddict-item]
+            params['nonce'] = hex(nonce)  # type: ignore[typeddict-item, ty:invalid-assignment]
         if 'gas' not in params:
             if gas is None:
                 response = await self._make_request(method='eth_estimateGas', params=[params])
                 gas = int(response['result'], 16)
-            params['gas'] = hex(gas)  # type: ignore[typeddict-item]
+            params['gas'] = hex(gas)  # type: ignore[typeddict-item, ty:invalid-assignment]
         if 'gasPrice' not in params:
             if 'maxPriorityFeePerGas' not in params:
                 if maxPriorityFeePerGas is None:

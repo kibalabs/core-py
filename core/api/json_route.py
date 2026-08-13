@@ -1,8 +1,6 @@
 import functools
 import typing
-from typing import ParamSpec
 
-from mypy_extensions import Arg
 from pydantic import BaseModel
 from pydantic import ValidationError
 
@@ -13,14 +11,12 @@ from core.exceptions import InternalServerErrorException
 from core.util import json_util
 from core.util.typing_util import JsonObject
 
-_P = ParamSpec('_P')
-
 
 def json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
     requestType: typing.Type[ApiRequest],
     responseType: typing.Type[ApiResponse],
-) -> typing.Callable[[typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[ApiResponse]]], typing.Callable[_P, KibaJSONResponse]]:
-    def decorator(func: typing.Callable[[Arg(KibaApiRequest[ApiRequest], 'request')], typing.Awaitable[ApiResponse]]) -> typing.Callable[_P, KibaJSONResponse]:
+) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], typing.Awaitable[ApiResponse]]], typing.Callable[..., typing.Awaitable[KibaJSONResponse]]]:
+    def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], typing.Awaitable[ApiResponse]]) -> typing.Callable[..., typing.Awaitable[KibaJSONResponse]]:
         @functools.wraps(func)
         async def async_wrapper(*args: typing.Any) -> KibaJSONResponse:  # type: ignore[explicit-any, misc]
             receivedRequest = args[0]
@@ -42,12 +38,11 @@ def json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
                 raise BadRequestException(f'Invalid request: {validationErrorMessage}')
             kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # noqa: SLF001
             kibaRequest.data = requestParams
-            receivedResponse = await func(request=kibaRequest)
+            receivedResponse = await func(kibaRequest)
             if not isinstance(receivedResponse, responseType):
                 raise InternalServerErrorException(f'Expected response to be of type {responseType}, got {type(receivedResponse)}')
             return KibaJSONResponse(content=receivedResponse.model_dump())
 
-        # TODO(krishan711): figure out correct typing here
-        return async_wrapper  # type: ignore[return-value]
+        return async_wrapper
 
     return decorator

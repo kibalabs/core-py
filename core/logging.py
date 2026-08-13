@@ -4,7 +4,6 @@ import logging
 import os
 import re
 import sys
-import typing
 from collections.abc import Callable
 from collections.abc import Collection
 from logging import Formatter
@@ -169,7 +168,7 @@ def stat(name: str, key: str, value: float = 1) -> None:
         nameValue = _serialize_string_value(value=str(name))
         keyValue = _serialize_string_value(value=str(key))
         statValue = _serialize_numeric_value(value=value)
-        STAT_LOGGER.log(level=logging.INFO, msg='', extra=typing.cast(dict[str, str], {'statName': nameValue, 'statKey': keyValue, 'statValue': statValue}))
+        STAT_LOGGER.log(level=logging.INFO, msg='', extra={'statName': nameValue, 'statKey': keyValue, 'statValue': statValue})
 
 
 # TODO(krishan711): make pathPattern mandatory in next major release
@@ -184,7 +183,7 @@ def api(action: str, path: str, query: str, pathPattern: str | None = None, resp
         API_LOGGER.log(
             level=logging.INFO,
             msg='',
-            extra=typing.cast(dict[str, str], {'apiAction': actionString, 'apiPath': pathString, 'apiPathPattern': pathPatternString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''}),
+            extra={'apiAction': actionString, 'apiPath': pathString, 'apiPathPattern': pathPatternString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''},
         )
 
 
@@ -204,11 +203,11 @@ def _log(level: int, msg: str, *args: Any, **kwargs: Any) -> None:  # type: igno
 
 
 def critical(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=CRITICAL, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
+    _log(CRITICAL, msg, *args, **kwargs)
 
 
 def error(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=ERROR, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
+    _log(ERROR, msg, *args, **kwargs)
 
 
 def exception(msg: Union[str, Exception], *args: Any, exc_info: bool = True, **kwargs: Any) -> None:  # type: ignore[explicit-any]
@@ -218,19 +217,19 @@ def exception(msg: Union[str, Exception], *args: Any, exc_info: bool = True, **k
         resolvedMessage = str(msg)
     else:
         resolvedMessage = msg
-    _log(level=ERROR, msg=resolvedMessage, exc_info=exc_info, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
+    _log(ERROR, resolvedMessage, *args, exc_info=exc_info, **kwargs)
 
 
 def warning(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=WARNING, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
+    _log(WARNING, msg, *args, **kwargs)
 
 
 def info(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=INFO, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
+    _log(INFO, msg, *args, **kwargs)
 
 
 def debug(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
-    _log(level=DEBUG, msg=msg, *args, **kwargs)  # type: ignore[misc]  # noqa: B026
+    _log(DEBUG, msg, *args, **kwargs)
 
 
 def basicConfig(**kwargs: Any) -> None:  # type: ignore[explicit-any]  # noqa: N802  # noqa: B026

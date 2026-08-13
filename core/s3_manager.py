@@ -94,7 +94,7 @@ class S3Manager:
             raise InternalServerErrorException('You need to call .connect() before trying to write to s3')
         targetBucket, targetKey = self._split_path_to_bucket_key(path=targetPath)
         extraArgs = self._get_extra_args(accessControl=accessControl, cacheControl=cacheControl, contentType=contentType or self._get_file_mimetype(fileName=targetKey))
-        await self._s3Client.put_object(Body=content, Bucket=targetBucket, Key=targetKey, **extraArgs)  # type: ignore[arg-type]
+        await self._s3Client.put_object(Body=content, Bucket=targetBucket, Key=targetKey, **extraArgs)  # type: ignore[arg-type, ty:invalid-argument-type]
 
     async def upload_file(self, filePath: str, targetPath: str, accessControl: str | None = None, cacheControl: str | None = None, contentType: str | None = None) -> None:
         if not self._s3Client:
@@ -124,7 +124,7 @@ class S3Manager:
         sourceBucket, sourceKey = self._split_path_to_bucket_key(path=source)
         targetBucket, targetKey = self._split_path_to_bucket_key(path=target)
         extraArgs = self._get_extra_args(accessControl=accessControl, cacheControl=cacheControl, contentType=contentType or self._get_file_mimetype(fileName=targetKey))
-        await self._s3Client.copy_object(CopySource={'Bucket': sourceBucket, 'Key': sourceKey}, Bucket=targetBucket, Key=targetKey, MetadataDirective='REPLACE', **extraArgs)  # type: ignore[arg-type]
+        await self._s3Client.copy_object(CopySource={'Bucket': sourceBucket, 'Key': sourceKey}, Bucket=targetBucket, Key=targetKey, MetadataDirective='REPLACE', **extraArgs)  # type: ignore[arg-type, ty:invalid-argument-type]
 
     async def delete_file(self, filePath: str) -> None:
         if not self._s3Client:

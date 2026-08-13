@@ -2,7 +2,6 @@ import functools
 import inspect
 import typing
 from collections.abc import AsyncIterator
-from typing import ParamSpec
 
 from pydantic import BaseModel
 from pydantic import ValidationError
@@ -13,8 +12,6 @@ from core.exceptions import BadRequestException
 from core.exceptions import InternalServerErrorException
 from core.util import json_util
 from core.util.typing_util import JsonObject
-
-_P = ParamSpec('_P')
 
 
 async def _convert_to_json_generator[T: BaseModel](response_iterator: AsyncIterator[T], expectedType: typing.Type[T]) -> AsyncIterator[bytes]:
@@ -27,8 +24,8 @@ async def _convert_to_json_generator[T: BaseModel](response_iterator: AsyncItera
 def streaming_json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
     requestType: typing.Type[ApiRequest],
     responseType: typing.Type[ApiResponse],
-) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]], typing.Callable[_P, StreamingResponse]]:
-    def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]) -> typing.Callable[_P, StreamingResponse]:
+) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]], typing.Callable[..., typing.Awaitable[StreamingResponse]]]:
+    def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], AsyncIterator[ApiResponse]]) -> typing.Callable[..., typing.Awaitable[StreamingResponse]]:
         @functools.wraps(func)
         async def async_wrapper(*args: typing.Any, **kwargs: typing.Any) -> StreamingResponse:  # type: ignore[explicit-any, misc]
             receivedRequest = kwargs.get('request', args[0] if args else None)
@@ -58,7 +55,6 @@ def streaming_json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
             # NOTE(krishan711): we set content-encoding to identity to prevent gzip from trying to process it (cos it buffers all the content)
             return StreamingResponse(content=wrappedGenerator, media_type='application/x-ndjson', headers={'Content-Encoding': 'identity'})
 
-        # TODO(krishan711): figure out correct typing here
-        return async_wrapper  # type: ignore[return-value]
+        return async_wrapper
 
     return decorator
