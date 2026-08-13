@@ -153,7 +153,7 @@ def init_basic_logging(showDebug: bool = False) -> None:
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
 
 
-def _serialize_numeric_value(value: Union[None, float]) -> str:
+def _serialize_numeric_value(value: Union[float, None]) -> str:
     if value is None:
         return ''
     roundedNumber = round(value, 6)
