@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Truncate discord notification messages to fit api
 - [MINOR] Added `blockNumber` to `EthClient.multicall` function
 - [MINOR] Added `SqlMessageQueue` and `CosmosMessageQueue` to support database backed queues
+- [MINOR] Added `shouldAllowFailures` to `EthClient.multicall` to allow individual calls to fail without reverting the whole batch
 
 ### Changed
 

@@ -925,6 +925,81 @@ class TestRestEthClient:
         assert requests_made[0]['params'][1] == hex(55555)
 
     @pytest.mark.asyncio
+    async def test_multicall3_allow_failures(self, client, mock_requester):
+        from core.web3.eth_client import ContractCall
+        from eth_abi import encode, decode
+        requests_made: list[dict[str, Any]] = []
+        # Encode a mixed aggregate3 response: first call succeeds, second call reverted on-chain
+        inner_encoded = encode(['uint256'], [123])
+        aggregate3_result = encode(
+            ['(bool,bytes)[]'],
+            [[(True, inner_encoded), (False, b'')]]
+        )
+        async def mock_post_json(url, dataDict, timeout=None, **kwargs):
+            requests_made.append(dataDict)
+            class MockResp:
+                def json(self):
+                    return {
+                        'jsonrpc': '2.0',
+                        'result': '0x' + aggregate3_result.hex(),
+                        'id': None
+                    }
+            return MockResp()
+        mock_requester.post_json = mock_post_json
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        contract_calls = [
+            ContractCall(toAddress='0x1234567890123456789012345678901234567890', functionName='getValue', contractAbi=contract_abi),
+            ContractCall(toAddress='0x2234567890123456789012345678901234567890', functionName='getValue', contractAbi=contract_abi),
+        ]
+        result = await client.multicall(contractCalls=contract_calls, shouldAllowFailures=True)
+        assert result[0][0] == 123
+        assert result[1] == [None]
+        # The outgoing Call3[] payload must carry allowFailure=True per call - otherwise the chain would
+        # revert the whole batch instead of returning the (False, b'') tuple this test relies on.
+        assert len(requests_made) == 1
+        requestData = requests_made[0]['params'][0]['data']
+        decodedCalls = decode(['(address,bool,bytes)[]'], bytes.fromhex(requestData[10:]))[0]
+        assert [call[1] for call in decodedCalls] == [True, True]
+
+    @pytest.mark.asyncio
+    async def test_multicall3_default_disallows_failures(self, client, mock_requester):
+        from core.web3.eth_client import ContractCall
+        from eth_abi import encode, decode
+        requests_made: list[dict[str, Any]] = []
+        inner_encoded = encode(['uint256'], [123])
+        aggregate3_result = encode(['(bool,bytes)[]'], [[(True, inner_encoded)]])
+        async def mock_post_json(url, dataDict, timeout=None, **kwargs):
+            requests_made.append(dataDict)
+            class MockResp:
+                def json(self):
+                    return {'jsonrpc': '2.0', 'result': '0x' + aggregate3_result.hex(), 'id': None}
+            return MockResp()
+        mock_requester.post_json = mock_post_json
+        contract_abi = [{
+            'inputs': [],
+            'name': 'getValue',
+            'outputs': [{'name': '', 'type': 'uint256'}],
+            'stateMutability': 'view',
+            'type': 'function'
+        }]
+        contract_calls = [
+            ContractCall(toAddress='0x1234567890123456789012345678901234567890', functionName='getValue', contractAbi=contract_abi),
+        ]
+        result = await client.multicall(contractCalls=contract_calls)
+        assert result[0][0] == 123
+        # shouldAllowFailures defaults to False - the outgoing Call3[] payload must still carry allowFailure=False
+        # per call so a real chain reverts the whole batch on any single call failure, same as before this change.
+        requestData = requests_made[0]['params'][0]['data']
+        decodedCalls = decode(['(address,bool,bytes)[]'], bytes.fromhex(requestData[10:]))[0]
+        assert [call[1] for call in decodedCalls] == [False]
+
+    @pytest.mark.asyncio
     async def test_call_function_empty_response_error(self, client, mock_requester):
         # Mock empty response (0x)
         mock_requester.responses['eth_call'] = {
