@@ -20,6 +20,7 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
     @staticmethod
     def _convert_exception(exception: KibaException) -> Response:
         response = JSONResponse(status_code=exception.statusCode, content=exception.to_dict())
+        response.headers.update(exception.outgoing_headers())
         return response
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -27,10 +28,7 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except RedirectException as exception:
             response = Response(status_code=exception.statusCode)
-            response.headers['Location'] = exception.location
-            # TODO(krishan711): clean this up after major version bump (since shouldAddCacheHeader field will always exist)
-            if not hasattr(exception, 'shouldAddCacheHeader') or exception.shouldAddCacheHeader:
-                response.headers['Cache-Control'] = f'max-age={60 * 60 * 24 * 365}'
+            response.headers.update(exception.outgoing_headers())
         except ClientException as exception:
             if self.shouldSquashClientExceptions:
                 logging.error(f'{exception.exceptionType} occurred: {exception.message}')

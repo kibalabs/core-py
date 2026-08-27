@@ -143,7 +143,7 @@ class Requester:
                 message = httpxResponse.headers['www-authenticate']
             if HTTP_EXCEPTIONS_MAP.get(httpxResponse.status_code) is not None:
                 exceptionCls = HTTP_EXCEPTIONS_MAP[httpxResponse.status_code]
-                exception: KibaException = exceptionCls(message=message)
+                exception: KibaException = exceptionCls.from_headers(message=message, statusCode=httpxResponse.status_code, headers=httpxResponse.headers)
             else:
                 exception = ResponseException(message=message, statusCode=httpxResponse.status_code, headers=httpxResponse.headers)
             raise exception
