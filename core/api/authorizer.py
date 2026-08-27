@@ -1,4 +1,5 @@
 import functools
+import hmac
 import typing
 from collections.abc import AsyncIterator
 
@@ -101,7 +102,7 @@ class StaticTokenAuthorizer(TokenAuthorizer):
         self._token = token
 
     async def validate_token(self, token: str) -> None:
-        if token != self._token:
+        if not hmac.compare_digest(token, self._token):
             raise ForbiddenException(message='AUTH_INVALID')
 
 
