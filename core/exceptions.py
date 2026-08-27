@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime
+import email.utils
 from collections.abc import Mapping
 
 from core.util.typing_util import JsonObject
@@ -17,6 +19,15 @@ class KibaException(Exception):  # noqa: N818
         if isinstance(exception, KibaException):
             return exception
         return KibaException(message=str(exception), statusCode=statusCode, exceptionType=exception.__class__.__name__)
+
+    @classmethod
+    def from_headers(cls, message: str | None, statusCode: int, headers: Mapping[str, str]) -> KibaException:  # noqa: ARG003
+        # NOTE(krishan711): default ignores headers; subclasses that need response headers (e.g. Retry-After, Location) should override
+        return cls(message=message)
+
+    def outgoing_headers(self) -> Mapping[str, str]:
+        # NOTE(krishan711): default has no extra headers; subclasses that need to set response headers (e.g. Retry-After, Location) should override
+        return {}
 
     def to_dict(self) -> JsonObject:
         return {
@@ -193,11 +204,35 @@ class PreconditionRequiredException(ClientException):
         super().__init__(message=message, statusCode=428)
 
 
+def _parse_retry_after_header(value: str | None) -> int | None:
+    if not value:
+        return None
+    if value.strip().isdigit():
+        return int(value.strip())
+    try:
+        retryDate = email.utils.parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if retryDate.tzinfo is None:
+        retryDate = retryDate.replace(tzinfo=datetime.UTC)
+    remainingSeconds = int((retryDate - datetime.datetime.now(datetime.UTC)).total_seconds())
+    return max(0, remainingSeconds)
+
+
 class TooManyRequestsException(ClientException):
     def __init__(self, message: str | None = None, retryAfterSeconds: int | None = None) -> None:
         message = message or 'Too Many Requests'
         super().__init__(message=message, statusCode=429)
         self.retryAfterSeconds = retryAfterSeconds
+
+    @classmethod
+    def from_headers(cls, message: str | None, statusCode: int, headers: Mapping[str, str]) -> TooManyRequestsException:  # noqa: ARG003
+        return cls(message=message, retryAfterSeconds=_parse_retry_after_header(headers.get('Retry-After')))
+
+    def outgoing_headers(self) -> Mapping[str, str]:
+        if self.retryAfterSeconds is None:
+            return {}
+        return {'Retry-After': str(self.retryAfterSeconds)}
 
 
 class RequestHeaderFieldsTooLargeException(ClientException):
@@ -394,6 +429,12 @@ class RedirectException(KibaException):
         super().__init__(message=message, statusCode=statusCode)
         self.location = location
         self.shouldAddCacheHeader = shouldAddCacheHeader
+
+    def outgoing_headers(self) -> Mapping[str, str]:
+        headers = {'Location': self.location}
+        if self.shouldAddCacheHeader:
+            headers['Cache-Control'] = f'max-age={60 * 60 * 24 * 365}'
+        return headers
 
 
 class MovedPermanentlyRedirectException(RedirectException):

@@ -34,7 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `blockNumber` to `EthClient.multicall` function
 - [MINOR] Added `SqlMessageQueue` and `CosmosMessageQueue` to support database backed queues
 - [MINOR] Added `shouldAllowFailures` to `EthClient.multicall` to allow individual calls to fail without reverting the whole batch
-- [MINOR] Added `retryAfterSeconds` to `TooManyRequestsException` and `Retry-After` header support in `ExceptionHandlingMiddleware`
+- [MINOR] Added `KibaException.from_headers`/`outgoing_headers` hooks so exceptions can be built from and emit response headers; used by `TooManyRequestsException` (`Retry-After`, now also parsed automatically by `Requester` from 429 responses) and `RedirectException` (`Location`/`Cache-Control`), and applied generically by `ExceptionHandlingMiddleware`
 
 ### Changed
 
