@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `blockNumber` to `EthClient.multicall` function
 - [MINOR] Added `SqlMessageQueue` and `CosmosMessageQueue` to support database backed queues
 - [MINOR] Added `shouldAllowFailures` to `EthClient.multicall` to allow individual calls to fail without reverting the whole batch
+- [MINOR] Added `retryAfterSeconds` to `TooManyRequestsException` and `Retry-After` header support in `ExceptionHandlingMiddleware`
 
 ### Changed
 

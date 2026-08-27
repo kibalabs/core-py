@@ -194,9 +194,10 @@ class PreconditionRequiredException(ClientException):
 
 
 class TooManyRequestsException(ClientException):
-    def __init__(self, message: str | None = None) -> None:
+    def __init__(self, message: str | None = None, retryAfterSeconds: int | None = None) -> None:
         message = message or 'Too Many Requests'
         super().__init__(message=message, statusCode=429)
+        self.retryAfterSeconds = retryAfterSeconds
 
 
 class RequestHeaderFieldsTooLargeException(ClientException):
