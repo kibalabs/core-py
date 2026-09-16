@@ -264,8 +264,7 @@ class Web3EthClient(EthClientInterface):
         return self.w3.eth.get_block(blockNumber, shouldHydrateTransactions)
 
     async def get_block_uncle_count(self, blockNumber: int) -> int:
-        result = typing.cast(Any, self.w3.manager).request_blocking(method='eth_getUncleCountByBlockNumber', params=[hex(blockNumber)])
-        return int(result, 16)
+        return typing.cast(int, self.w3.eth.get_uncle_count(blockNumber))
 
     async def get_transaction_count(self, address: str) -> int:
         return self.w3.eth.get_transaction_count(chain_util.normalize_address_checksum(value=address))
@@ -375,7 +374,7 @@ class RestEthClient(EthClientInterface):
         response = await self._make_request(method='eth_getUncleCountByBlockNumber', params=[hex(blockNumber)])
         if response['result'] is None:
             raise NotFoundException
-        return int(response['result'], 16)
+        return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getUncleCountByBlockNumber](response['result']))
 
     async def get_transaction_count(self, address: str) -> int:
         response = await self._make_request(method='eth_getTransactionCount', params=[address, 'latest'])
