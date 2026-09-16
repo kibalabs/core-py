@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MAJOR] Replace `httpx` with `httpx2` for HTTP requests
 - [MINOR] Use `json_util`/`orjson` for API and database JSON serialization
 - [MINOR] Use Pydantic `JsonValue` for JSON type aliases
 - [MAJOR] Update web3 to 7.8.0

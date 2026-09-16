@@ -9,7 +9,7 @@ from typing import IO
 from typing import Any
 from typing import Union
 
-import httpx
+import httpx2 as httpx
 
 from core import logging
 from core.exceptions import HTTP_EXCEPTIONS_MAP

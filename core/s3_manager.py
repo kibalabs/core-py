@@ -11,7 +11,7 @@ from typing import Any
 
 from aiobotocore.session import get_session as get_botocore_session
 from botocore.exceptions import ClientError
-from httpx import Headers
+from httpx2 import Headers
 
 from core import logging
 from core.exceptions import InternalServerErrorException
