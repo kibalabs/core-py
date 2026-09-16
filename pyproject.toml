@@ -47,7 +47,7 @@ requester = [
     "httpx2>=2.13.0",
 ]
 web3 = [
-    "web3>=8.0.0",
+    "web3>=7.16.0,<8.0.0",
 ]
 types = [
     "types-aiobotocore[essential]>=3.9.1",
