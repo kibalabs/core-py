@@ -1,13 +1,12 @@
-import datetime
-import json
 import typing
 from typing import Any
 
 import orjson
+from pydantic_core import from_json
+from pydantic_core import to_json
 
 from core import logging
 from core.exceptions import KibaException
-from core.util import date_util
 from core.util.typing_util import Json
 
 
@@ -22,16 +21,6 @@ class JsonEncodeException(KibaException):
 _HAS_LOGGED_FOR_SERIALIZATION_ERROR = False
 
 
-class DatetimeEncoder(json.JSONEncoder):
-    def default(self, o: typing.Any) -> str:  # type: ignore[explicit-any]
-        if isinstance(o, datetime.datetime):
-            return date_util.datetime_to_string(o)
-        try:
-            return typing.cast(str, super().default(o))
-        except TypeError:
-            return str(o)
-
-
 def dumpb(obj: Any) -> bytes:  # type: ignore[explicit-any]
     global _HAS_LOGGED_FOR_SERIALIZATION_ERROR  # noqa: PLW0603
     try:
@@ -41,9 +30,9 @@ def dumpb(obj: Any) -> bytes:  # type: ignore[explicit-any]
             if not _HAS_LOGGED_FOR_SERIALIZATION_ERROR:
                 logging.warning(f'There was an error during the serialization an object: `{exception}`, falling back to json.')
                 _HAS_LOGGED_FOR_SERIALIZATION_ERROR = True
-            return json.dumps(obj, cls=DatetimeEncoder).encode('utf-8')
-        raise JsonEncodeException(message=str(exception)) from exception
-    except orjson.JSONEncodeError as exception:
+            # NOTE(krishan711): orjson is faster, but doesnt support ints bigger than 64bit
+            # so we use pydantic instead (still faster than python json)
+            return to_json(obj, fallback=str, inf_nan_mode='null')
         raise JsonEncodeException(message=str(exception)) from exception
 
 
@@ -53,6 +42,8 @@ def dumps(obj: Any) -> str:  # type: ignore[explicit-any]
 
 def loads(json: str | bytes | bytearray) -> Json:
     try:
-        return orjson.loads(json)  # type: ignore[no-any-return]
-    except orjson.JSONDecodeError as exception:
+        # NOTE(krishan711): orjson is faster, but doesnt support ints bigger than 64bit
+        # so we use pydantic instead (still faster than python json)
+        return typing.cast(Json, from_json(json, allow_inf_nan=False))
+    except ValueError as exception:
         raise JsonDecodeException(message=str(exception)) from exception

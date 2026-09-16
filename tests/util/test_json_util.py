@@ -1,3 +1,6 @@
+import datetime
+import math
+
 import pytest
 
 from core.util import json_util
@@ -154,9 +157,45 @@ class TestJsonUtil:
         assert isinstance(result, bytes)
         assert result == b'11111111111111111111111'
 
-    # NOTE(krishan711): not sure why this is failing
-    # def test_dumpb_and_loads_with_very_long_integer(self):
-    #     veryLongInteger = 11111111111111111111111
-    #     result = json_util.dumpb(obj=veryLongInteger)
-    #     assert isinstance(result, bytes)
-    #     assert int(json_util.loads(result)) == veryLongInteger
+    def test_dumpb_and_loads_with_very_long_integer(self):
+        veryLongInteger = 11111111111111111111111
+        result = json_util.dumpb(obj=veryLongInteger)
+        assert isinstance(result, bytes)
+        assert int(json_util.loads(result)) == veryLongInteger
+
+    def test_dumpb_with_very_long_integer_and_datetime(self):
+        veryLongInteger = 25000000000000000001
+        naiveDatetime = datetime.datetime.fromisoformat('2024-01-02T03:04:05.678901')
+        utcDatetime = datetime.datetime(2024, 1, 2, 3, 4, 5, 678901, tzinfo=datetime.UTC)
+        result = json_util.dumpb({
+            'balance': veryLongInteger,
+            'naive': naiveDatetime,
+            'utc': utcDatetime,
+        })
+        assert result == b'{"balance":25000000000000000001,"naive":"2024-01-02T03:04:05.678901","utc":"2024-01-02T03:04:05.678901Z"}'
+
+    def test_dumpb_with_very_long_integer_uses_pydantic_fallbacks(self):
+        veryLongInteger = 25000000000000000001
+
+        class TestObject:
+            def __str__(self):
+                return 'test-object'
+
+        result = json_util.dumpb({
+            'balance': veryLongInteger,
+            'unknown': TestObject(),
+            'not_a_number': math.nan,
+        })
+        assert result == b'{"balance":25000000000000000001,"unknown":"test-object","not_a_number":null}'
+
+    def test_loads_preserves_large_integer_type_and_precision(self):
+        value = 25000000000000000001
+        decoded = json_util.loads(str(value))
+        assert type(decoded) is int
+        assert decoded == value
+
+    def test_loads_preserves_nested_large_integer_type_and_precision(self):
+        value = 25000000000000000001
+        decoded = json_util.loads(f'{{"balance": {value}}}')
+        assert type(decoded['balance']) is int
+        assert decoded['balance'] == value
