@@ -23,7 +23,8 @@ _HAS_LOGGED_FOR_SERIALIZATION_ERROR = False
 def dumpb(obj: Any) -> bytes:  # type: ignore[explicit-any]
     global _HAS_LOGGED_FOR_SERIALIZATION_ERROR  # noqa: PLW0603
     try:
-        return orjson.dumps(obj)
+        # Keep UTC datetime output aligned with pydantic's ISO 8601 format.
+        return orjson.dumps(obj, option=orjson.OPT_UTC_Z)
     except TypeError as exception:
         if str(exception) == 'Integer exceeds 64-bit range':
             if not _HAS_LOGGED_FOR_SERIALIZATION_ERROR:

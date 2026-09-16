@@ -174,6 +174,10 @@ class TestJsonUtil:
         })
         assert result == b'{"balance":25000000000000000001,"naive":"2024-01-02T03:04:05.678901","utc":"2024-01-02T03:04:05.678901Z"}'
 
+    def test_dumpb_with_utc_datetime_matches_pydantic_fallback(self):
+        utcDatetime = datetime.datetime(2024, 1, 2, 3, 4, 5, 678901, tzinfo=datetime.UTC)
+        assert json_util.dumpb(utcDatetime) == b'"2024-01-02T03:04:05.678901Z"'
+
     def test_dumpb_with_very_long_integer_uses_pydantic_fallbacks(self):
         veryLongInteger = 25000000000000000001
 
