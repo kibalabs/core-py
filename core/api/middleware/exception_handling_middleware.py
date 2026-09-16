@@ -1,11 +1,11 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import JSONResponse
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
 from core import logging
+from core.api.api_response import KibaJSONResponse
 from core.exceptions import ClientException
 from core.exceptions import KibaException
 from core.exceptions import RedirectException
@@ -19,7 +19,7 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def _convert_exception(exception: KibaException) -> Response:
-        response = JSONResponse(status_code=exception.statusCode, content=exception.to_dict())
+        response = KibaJSONResponse(status_code=exception.statusCode, content=exception.to_dict())
         response.headers.update(exception.outgoing_headers())
         return response
 
