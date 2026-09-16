@@ -14,6 +14,7 @@ from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from core import logging
 from core.exceptions import InternalServerErrorException
+from core.util import json_util
 
 DatabaseConnection = AsyncConnection
 ResultType = TypeVar('ResultType', bound=tuple)  # type: ignore[type-arg]
@@ -43,6 +44,8 @@ class Database:
                 self.connectionString,
                 # echo_pool=True,
                 # hide_parameters=False,
+                json_serializer=json_util.dumps,
+                json_deserializer=json_util.loads,
                 pool_size=poolSize,
                 pool_recycle=3600,
                 pool_pre_ping=True,
