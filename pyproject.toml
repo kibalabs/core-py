@@ -6,51 +6,51 @@ readme = "README.md"
 requires-python = ">=3.12, <4"
 dependencies = [
     "aiofiles>=25.1.0",
-    "pydantic>=2.13.4",
-    "orjson>=3.11.9",
+    "pydantic>=2.13.5",
+    "orjson>=3.12.0",
 ]
 
 [project.optional-dependencies]
 api = [
     "fastapi>=0.141.1",
-    "uvicorn[standard]>=0.51.0",
+    "uvicorn[standard]>=0.53.0",
 ]
 core-api = [
     "starlette>=1.6.0",
-    "uvicorn[standard]>=0.51.0",
+    "uvicorn[standard]>=0.53.0",
 ]
 storage = [
-    "aiobotocore>=3.9.0",
+    "aiobotocore>=3.9.1",
 ]
 # TODO(krishan711): remove this in next major update
 queues = [
-    "aiobotocore>=3.9.0",
+    "aiobotocore>=3.9.1",
 ]
 queue-sqs = [
-    "aiobotocore>=3.9.0",
+    "aiobotocore>=3.9.1",
 ]
 queue-aqs = [
     "azure-storage-queue[aio]>=12.17.0",
 ]
 queue-cosmos = [
-    "azure-cosmos>=4.16.3",
+    "azure-cosmos>=4.17.0",
 ]
 database-psql = [
-    "sqlalchemy[asyncio]>=2.0.52",
+    "sqlalchemy[asyncio]>=2.0.54",
     "asyncpg>=0.31.0",
 ]
 database-sqlite = [
-    "sqlalchemy[asyncio]>=2.0.52",
+    "sqlalchemy[asyncio]>=2.0.54",
     "aiosqlite>=0.22.1",
 ]
 requester = [
-    "httpx>=0.28.1",
+    "httpx2>=2.13.0",
 ]
 web3 = [
-    "web3>=7.16.0",
+    "web3>=8.0.0",
 ]
 types = [
-    "types-aiobotocore[essential]>=3.9.0",
+    "types-aiobotocore[essential]>=3.9.1",
     "types-aiofiles>=25.1.0.20260518",
 ]
 

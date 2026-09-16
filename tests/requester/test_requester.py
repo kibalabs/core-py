@@ -1,4 +1,4 @@
-import httpx
+import httpx2 as httpx
 import pytest
 
 from core.exceptions import NotFoundException
