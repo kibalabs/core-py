@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Added
 - [MINOR] Added reusable API route metadata, OpenAPI generation, request contexts, `OriginIpMiddleware`, and `KibaApiRequest.originIp`; `rate_limit` now keys on `authBasic`/`authJwt` or `originIp`
+- [MAJOR] `OpenApiSchemaGenerator` derives tag order from `tags` list position (removed `tagOrder` param) and infers "documented" from `operationId` being set (removed `documented` param from `json_route`/`streaming_json_route`)
+- [MINOR] `authorize_bearer_jwt`/`authorize_signature`/`authorize_token` accept `securitySchemeName` and auto-publish route `security` metadata when applying auth
 - [MAJOR] Replace `httpx` with `httpx2` for HTTP requests
 - [MINOR] Use `json_util`/`orjson` for API and database JSON serialization
 - [MINOR] Use Pydantic `JsonValue` for JSON type aliases

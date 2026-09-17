@@ -9,11 +9,11 @@ from typing import cast
 
 from pydantic import BaseModel
 from starlette.requests import Request
-from starlette.responses import JSONResponse
 from starlette.routing import BaseRoute
 from starlette.schemas import EndpointInfo
 from starlette.schemas import SchemaGenerator
 
+from core.api.api_response import KibaJSONResponse
 from core.api.route_metadata import RouteMetadata
 from core.api.route_metadata import get_route_metadata
 
@@ -106,7 +106,6 @@ class OpenApiSchemaGenerator(SchemaGenerator):
         description: str,
         tags: list[dict[str, object]],
         securitySchemes: dict[str, object],
-        tagOrder: dict[str, int],
         extensions: Sequence[OpenApiExtension] = (),
     ) -> None:
         super().__init__({'openapi': '3.0.3', 'info': {'title': title, 'version': version}})
@@ -115,7 +114,7 @@ class OpenApiSchemaGenerator(SchemaGenerator):
         self.description = description
         self.tags = tags
         self.securitySchemes = securitySchemes
-        self.tagOrder = tagOrder
+        self.tagOrder = {cast(str, tag['name']): index for index, tag in enumerate(tags)}
         self.extensions = extensions
 
     def get_schema(self, routes: list[BaseRoute]) -> dict[str, object]:
@@ -139,7 +138,7 @@ class OpenApiSchemaGenerator(SchemaGenerator):
 
         def sort_key(endpoint: object) -> int:
             metadata = get_route_metadata(getattr(endpoint, 'func', None))
-            if metadata.get('documented') is not True:
+            if metadata.get('operationId') is None:
                 return len(self.tagOrder)
             endpointTags = metadata.get('tags', [])
             tag = endpointTags[0] if endpointTags else ''
@@ -147,7 +146,7 @@ class OpenApiSchemaGenerator(SchemaGenerator):
 
         for endpoint in sorted(self.get_endpoints(routes), key=sort_key):
             metadata = get_route_metadata(endpoint.func)
-            if metadata.get('documented') is not True:
+            if metadata.get('operationId') is None:
                 continue
             requestType = metadata['requestType']
             responseType = metadata['responseType']
@@ -203,8 +202,8 @@ class OpenApiSchemaGenerator(SchemaGenerator):
         return document
 
 
-def create_openapi_response(schemaGenerator: OpenApiSchemaGenerator) -> Callable[[Request], JSONResponse]:
-    def get_openapi_response(request: Request) -> JSONResponse:
-        return JSONResponse(content=schemaGenerator.get_schema(routes=request.app.routes))
+def create_openapi_response(schemaGenerator: OpenApiSchemaGenerator) -> Callable[[Request], KibaJSONResponse]:
+    def get_openapi_response(request: Request) -> KibaJSONResponse:
+        return KibaJSONResponse(content=schemaGenerator.get_schema(routes=request.app.routes))
 
     return get_openapi_response

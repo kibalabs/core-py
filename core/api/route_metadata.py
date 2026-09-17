@@ -19,7 +19,6 @@ class RouteMetadata(typing.TypedDict, total=False):
     requestType: type[BaseModel]
     responseType: type[BaseModel]
     streamed: bool
-    documented: bool
     operationId: str | None
     summary: str | None
     description: str | None
