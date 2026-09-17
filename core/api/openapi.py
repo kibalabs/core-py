@@ -15,6 +15,7 @@ from starlette.schemas import SchemaGenerator
 
 from core.api.api_response import KibaJSONResponse
 from core.api.route_metadata import RouteMetadata
+from core.api.route_metadata import SecurityScheme
 from core.api.route_metadata import get_route_metadata
 
 _PATH_PARAMETER_PATTERN = re.compile(r'{([A-Za-z0-9_]+)(?::[^}]+)?}')
@@ -24,6 +25,11 @@ _RATE_LIMIT_WINDOW_LABELS: dict[str, str] = {
     'perHour': 'hour',
     'perDay': 'day',
 }
+
+
+class OpenApiTag(BaseModel):
+    name: str
+    description: str | None = None
 
 
 class OpenApiExtension(Protocol):
@@ -104,8 +110,8 @@ class OpenApiSchemaGenerator(SchemaGenerator):
         title: str,
         version: str,
         description: str,
-        tags: list[dict[str, object]],
-        securitySchemes: dict[str, object],
+        tags: Sequence[OpenApiTag],
+        securitySchemes: Sequence[SecurityScheme],
         extensions: Sequence[OpenApiExtension] = (),
     ) -> None:
         super().__init__({'openapi': '3.0.3', 'info': {'title': title, 'version': version}})
@@ -113,8 +119,8 @@ class OpenApiSchemaGenerator(SchemaGenerator):
         self.version = version
         self.description = description
         self.tags = tags
-        self.securitySchemes = securitySchemes
-        self.tagOrder = {cast(str, tag['name']): index for index, tag in enumerate(tags)}
+        self.securitySchemes = {scheme.name: scheme.definition for scheme in securitySchemes}
+        self.tagOrder = {tag.name: index for index, tag in enumerate(tags)}
         self.extensions = extensions
 
     def get_schema(self, routes: list[BaseRoute]) -> dict[str, object]:
@@ -125,7 +131,7 @@ class OpenApiSchemaGenerator(SchemaGenerator):
                 'version': self.version,
                 'description': self.description,
             },
-            'tags': self.tags,
+            'tags': [tag.model_dump(exclude_none=True) for tag in self.tags],
             'paths': {},
             'components': {
                 'schemas': {},

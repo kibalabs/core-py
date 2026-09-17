@@ -15,6 +15,11 @@ class RateLimitConfig(typing.TypedDict, total=False):
 OpenApiSecurity = list[dict[str, list[str]]]
 
 
+class SecurityScheme(typing.NamedTuple):
+    name: str
+    definition: dict[str, object]
+
+
 class RouteMetadata(typing.TypedDict, total=False):
     requestType: type[BaseModel]
     responseType: type[BaseModel]

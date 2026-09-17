@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from core import logging
 from core.api.api_request import KibaApiRequest
+from core.api.route_metadata import SecurityScheme
 from core.api.route_metadata import update_route_metadata
 from core.exceptions import ForbiddenException
 from core.exceptions import UnauthorizedException
@@ -43,11 +44,11 @@ async def _authorize_bearer_jwt[ApiRequest: BaseModel](request: KibaApiRequest[A
 def authorize_bearer_jwt[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: Authorizer,
     *,
-    securitySchemeName: str | None = None,
+    securityScheme: SecurityScheme | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]:  # type: ignore[explicit-any]
-        if securitySchemeName is not None:
-            update_route_metadata(func, {'security': [{securitySchemeName: []}]})
+        if securityScheme is not None:
+            update_route_metadata(func, {'security': [{securityScheme.name: []}]})
 
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
@@ -83,11 +84,11 @@ async def get_basic_authentication_from_authorization_signature[ApiRequest: Base
 def authorize_signature[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: SignatureAuthorizer,
     *,
-    securitySchemeName: str | None = None,
+    securityScheme: SecurityScheme | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]:  # type: ignore[explicit-any]
-        if securitySchemeName is not None:
-            update_route_metadata(func, {'security': [{securitySchemeName: []}]})
+        if securityScheme is not None:
+            update_route_metadata(func, {'security': [{securityScheme.name: []}]})
 
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
@@ -120,11 +121,11 @@ class StaticTokenAuthorizer(TokenAuthorizer):
 def authorize_token[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: TokenAuthorizer,
     *,
-    securitySchemeName: str | None = None,
+    securityScheme: SecurityScheme | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]:  # type: ignore[explicit-any]
-        if securitySchemeName is not None:
-            update_route_metadata(func, {'security': [{securitySchemeName: []}]})
+        if securityScheme is not None:
+            update_route_metadata(func, {'security': [{securityScheme.name: []}]})
 
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]

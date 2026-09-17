@@ -8,7 +8,9 @@ from core.api.authorizer import authorize_signature
 from core.api.json_route import json_route
 from core.api.openapi import OpenApiExtension
 from core.api.openapi import OpenApiSchemaGenerator
+from core.api.openapi import OpenApiTag
 from core.api.route_metadata import RouteMetadata
+from core.api.route_metadata import SecurityScheme
 from core.api.streaming_json_route import streaming_json_route
 
 
@@ -49,8 +51,8 @@ def test_openapi_generator_builds_routes_and_runs_extensions() -> None:
         title='Example API',
         version='1.0.0',
         description='Example API description.',
-        tags=[{'name': 'Examples'}],
-        securitySchemes={'ExampleApiKey': {'type': 'apiKey', 'in': 'header', 'name': 'X-Example-Key'}},
+        tags=[OpenApiTag(name='Examples', description='Example operations.')],
+        securitySchemes=[SecurityScheme(name='ExampleApiKey', definition={'type': 'apiKey', 'in': 'header', 'name': 'X-Example-Key'})],
         extensions=(ExampleExtension(),),
     )
 
@@ -67,6 +69,20 @@ def test_openapi_generator_builds_routes_and_runs_extensions() -> None:
     assert operation['x-example-metadata'] == {'exampleSetting': 'enabled'}
     assert schema['x-example-document'] is True
     assert schema['components']['securitySchemes']['ExampleApiKey']['name'] == 'X-Example-Key'
+    assert schema['tags'] == [{'name': 'Examples', 'description': 'Example operations.'}]
+
+
+def test_openapi_generator_omits_tag_description_when_unset() -> None:
+    generator = OpenApiSchemaGenerator(
+        title='Example API',
+        version='1.0.0',
+        description='Example API description.',
+        tags=[OpenApiTag(name='Examples')],
+        securitySchemes=[],
+    )
+
+    schema = generator.get_schema(routes=[])
+    assert schema['tags'] == [{'name': 'Examples'}]
 
 
 def test_openapi_generator_uses_stream_content_type() -> None:
@@ -83,8 +99,8 @@ def test_openapi_generator_uses_stream_content_type() -> None:
         title='Example API',
         version='1.0.0',
         description='Example API description.',
-        tags=[{'name': 'Examples'}],
-        securitySchemes={},
+        tags=[OpenApiTag(name='Examples')],
+        securitySchemes=[],
     )
 
     schema = generator.get_schema(routes=[Route('/examples/stream', endpoint, methods=['POST'])])
@@ -103,7 +119,7 @@ def test_openapi_generator_skips_routes_without_operation_id() -> None:
         version='1.0.0',
         description='Example API description.',
         tags=[],
-        securitySchemes={},
+        securitySchemes=[],
     )
 
     schema = generator.get_schema(routes=[Route('/undocumented', undocumented_endpoint, methods=['POST'])])
@@ -123,8 +139,8 @@ def test_openapi_generator_orders_operations_by_declared_tag_position() -> None:
         title='Example API',
         version='1.0.0',
         description='Example API description.',
-        tags=[{'name': 'First'}, {'name': 'Second'}],
-        securitySchemes={},
+        tags=[OpenApiTag(name='First'), OpenApiTag(name='Second')],
+        securitySchemes=[],
     )
 
     schema = generator.get_schema(routes=[Route('/second', second_endpoint, methods=['POST']), Route('/first', first_endpoint, methods=['POST'])])
@@ -138,8 +154,10 @@ class ExampleSignatureAuthorizer(SignatureAuthorizer):
 
 
 def test_authorize_signature_auto_documents_security_scheme() -> None:
+    exampleSignatureScheme = SecurityScheme(name='ExampleSignature', definition={'type': 'apiKey', 'in': 'header', 'name': 'Authorization'})
+
     @json_route(requestType=ExampleRequest, responseType=ExampleResponse, operationId='secureExample', tags=['Examples'])
-    @authorize_signature(authorizer=ExampleSignatureAuthorizer(), securitySchemeName='ExampleSignature')
+    @authorize_signature(authorizer=ExampleSignatureAuthorizer(), securityScheme=exampleSignatureScheme)
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
@@ -147,10 +165,11 @@ def test_authorize_signature_auto_documents_security_scheme() -> None:
         title='Example API',
         version='1.0.0',
         description='Example API description.',
-        tags=[{'name': 'Examples'}],
-        securitySchemes={'ExampleSignature': {'type': 'apiKey', 'in': 'header', 'name': 'Authorization'}},
+        tags=[OpenApiTag(name='Examples')],
+        securitySchemes=[exampleSignatureScheme],
     )
 
     schema = generator.get_schema(routes=[Route('/secure', endpoint, methods=['POST'])])
     operation = schema['paths']['/secure']['post']
     assert operation['security'] == [{'ExampleSignature': []}]
+    assert schema['components']['securitySchemes']['ExampleSignature']['name'] == 'Authorization'
