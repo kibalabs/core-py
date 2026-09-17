@@ -6,12 +6,12 @@ from core.api.api_request import KibaApiRequest
 from core.api.authorizer import SignatureAuthorizer
 from core.api.authorizer import authorize_signature
 from core.api.json_route import json_route
+from core.api.route import route
 from core.api.openapi import OpenApiExtension
 from core.api.openapi import OpenApiSchemaGenerator
 from core.api.openapi import OpenApiTag
 from core.api.route_metadata import RouteMetadata
 from core.api.route_metadata import SecurityScheme
-from core.api.streaming_json_route import streaming_json_route
 
 
 class ExampleRequest(BaseModel):
@@ -33,14 +33,13 @@ class ExampleExtension(OpenApiExtension):
 
 
 def test_openapi_generator_builds_routes_and_runs_extensions() -> None:
-    @json_route(
+    @route(
         requestType=ExampleRequest,
         responseType=ExampleResponse,
         operationId='getExample',
         summary='Get an example',
         description='An example endpoint.',
         tags=['Examples'],
-        security=[{'ExampleApiKey': []}],
         rateLimit={'perMinute': 3, 'perHour': 30},
         extensions={'exampleSetting': 'enabled'},
     )
@@ -61,7 +60,6 @@ def test_openapi_generator_builds_routes_and_runs_extensions() -> None:
 
     assert operation['operationId'] == 'getExample'
     assert operation['summary'] == 'Get an example'
-    assert operation['security'] == [{'ExampleApiKey': []}]
     assert 'An example endpoint.' in operation['description']
     assert '3 requests/minute' in operation['description']
     assert '30 requests/hour' in operation['description']
@@ -85,12 +83,12 @@ def test_openapi_generator_omits_tag_description_when_unset() -> None:
     assert schema['tags'] == [{'name': 'Examples'}]
 
 
-def test_openapi_generator_uses_stream_content_type() -> None:
-    @streaming_json_route(
+    @route(
         requestType=ExampleRequest,
         responseType=ExampleResponse,
         operationId='streamExample',
         tags=['Examples'],
+        isStreaming=True,
     )
     async def endpoint(request: KibaApiRequest[ExampleRequest]):
         yield ExampleResponse(result=request.data.value)
@@ -109,7 +107,7 @@ def test_openapi_generator_uses_stream_content_type() -> None:
     assert 'application/x-ndjson' in operation['responses']['200']['content']
 
 
-def test_openapi_generator_skips_routes_without_operation_id() -> None:
+def test_json_route_is_not_documented() -> None:
     @json_route(requestType=ExampleRequest, responseType=ExampleResponse)
     async def undocumented_endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
@@ -127,11 +125,11 @@ def test_openapi_generator_skips_routes_without_operation_id() -> None:
 
 
 def test_openapi_generator_orders_operations_by_declared_tag_position() -> None:
-    @json_route(requestType=ExampleRequest, responseType=ExampleResponse, operationId='second', tags=['Second'])
+    @route(requestType=ExampleRequest, responseType=ExampleResponse, operationId='second', tags=['Second'])
     async def second_endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
-    @json_route(requestType=ExampleRequest, responseType=ExampleResponse, operationId='first', tags=['First'])
+    @route(requestType=ExampleRequest, responseType=ExampleResponse, operationId='first', tags=['First'])
     async def first_endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
@@ -156,8 +154,13 @@ class ExampleSignatureAuthorizer(SignatureAuthorizer):
 def test_authorize_signature_auto_documents_security_scheme() -> None:
     exampleSignatureScheme = SecurityScheme(name='ExampleSignature', definition={'type': 'apiKey', 'in': 'header', 'name': 'Authorization'})
 
-    @json_route(requestType=ExampleRequest, responseType=ExampleResponse, operationId='secureExample', tags=['Examples'])
-    @authorize_signature(authorizer=ExampleSignatureAuthorizer(), securityScheme=exampleSignatureScheme)
+    @route(
+        requestType=ExampleRequest,
+        responseType=ExampleResponse,
+        operationId='secureExample',
+        tags=['Examples'],
+        auth=(authorize_signature(authorizer=ExampleSignatureAuthorizer(), securityScheme=exampleSignatureScheme),),
+    )
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 

@@ -38,16 +38,24 @@ def _request(*, scope: dict[str, object] | None = None) -> KibaApiRequest[Exampl
 
 
 def test_rate_limit_publishes_metadata_on_the_route() -> None:
-    @rate_limit(perMinute=3, perHour=30)
+    @rate_limit({'perMinute': 3, 'perHour': 30})
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
     assert get_route_metadata(endpoint)['rateLimit'] == {'perMinute': 3, 'perHour': 30}
 
 
+def test_rate_limit_publishes_key_by_as_part_of_metadata() -> None:
+    @rate_limit({'perMinute': 3, 'keyBy': 'ip'})
+    async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
+        return ExampleResponse(result=request.data.value)
+
+    assert get_route_metadata(endpoint)['rateLimit'] == {'perMinute': 3, 'keyBy': 'ip'}
+
+
 @pytest.mark.asyncio
 async def test_rate_limit_user_key_uses_auth_basic_username() -> None:
-    @rate_limit(perMinute=1)
+    @rate_limit({'perMinute': 1})
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
@@ -66,7 +74,7 @@ async def test_rate_limit_user_key_uses_auth_basic_username() -> None:
 
 @pytest.mark.asyncio
 async def test_rate_limit_user_key_falls_back_to_auth_jwt_subject() -> None:
-    @rate_limit(perMinute=1)
+    @rate_limit({'perMinute': 1})
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
@@ -82,7 +90,7 @@ async def test_rate_limit_user_key_falls_back_to_auth_jwt_subject() -> None:
 
 @pytest.mark.asyncio
 async def test_rate_limit_user_key_without_auth_raises_internal_error() -> None:
-    @rate_limit(perMinute=1)
+    @rate_limit({'perMinute': 1})
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
@@ -92,7 +100,7 @@ async def test_rate_limit_user_key_without_auth_raises_internal_error() -> None:
 
 @pytest.mark.asyncio
 async def test_rate_limit_ip_key_uses_origin_ip() -> None:
-    @rate_limit(perMinute=1, keyBy='ip')
+    @rate_limit({'perMinute': 1, 'keyBy': 'ip'})
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
@@ -111,7 +119,7 @@ async def test_rate_limit_ip_key_uses_origin_ip() -> None:
 
 @pytest.mark.asyncio
 async def test_rate_limit_ip_key_without_origin_ip_raises_internal_error() -> None:
-    @rate_limit(perMinute=1, keyBy='ip')
+    @rate_limit({'perMinute': 1, 'keyBy': 'ip'})
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
@@ -121,7 +129,7 @@ async def test_rate_limit_ip_key_without_origin_ip_raises_internal_error() -> No
 
 def test_rate_limit_ip_key_through_origin_ip_middleware_trusts_configured_header() -> None:
     @json_route(requestType=ExampleRequest, responseType=ExampleResponse)
-    @rate_limit(perMinute=1, keyBy='ip')
+    @rate_limit({'perMinute': 1, 'keyBy': 'ip'})
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 
@@ -142,7 +150,7 @@ def test_rate_limit_ip_key_through_origin_ip_middleware_trusts_configured_header
 
 def test_rate_limit_ip_key_without_middleware_returns_500() -> None:
     @json_route(requestType=ExampleRequest, responseType=ExampleResponse)
-    @rate_limit(perMinute=1, keyBy='ip')
+    @rate_limit({'perMinute': 1, 'keyBy': 'ip'})
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
 

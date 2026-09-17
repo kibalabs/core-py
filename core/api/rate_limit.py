@@ -56,63 +56,54 @@ def _sweep_expired_entries(now: float) -> None:
         del _store[storeKey]
 
 
-def rate_limit(  # type: ignore[explicit-any]
-    *,
-    perMinute: int | None = None,
-    perFiveMinutes: int | None = None,
-    perHour: int | None = None,
-    perDay: int | None = None,
-    keyBy: typing.Literal['user', 'ip'] = 'user',
-) -> typing.Callable[[typing.Callable[[KibaApiRequest[typing.Any]], _AnyReturn]], typing.Callable[[KibaApiRequest[typing.Any]], typing.Any]]:
+def check_rate_limit[ApiRequest: BaseModel](*, routeKey: str, request: KibaApiRequest[ApiRequest], rateLimit: RateLimitConfig) -> None:
     windows: list[_WindowConfig] = []
-    rateLimit = RateLimitConfig()
-    if perMinute is not None:
-        windows.append(_WindowConfig(label='perMinute', limit=perMinute, windowSeconds=60))
-        rateLimit['perMinute'] = perMinute
-    if perFiveMinutes is not None:
-        windows.append(_WindowConfig(label='perFiveMinutes', limit=perFiveMinutes, windowSeconds=5 * 60))
-        rateLimit['perFiveMinutes'] = perFiveMinutes
-    if perHour is not None:
-        windows.append(_WindowConfig(label='perHour', limit=perHour, windowSeconds=60 * 60))
-        rateLimit['perHour'] = perHour
-    if perDay is not None:
-        windows.append(_WindowConfig(label='perDay', limit=perDay, windowSeconds=24 * 60 * 60))
-        rateLimit['perDay'] = perDay
+    if 'perMinute' in rateLimit:
+        windows.append(_WindowConfig(label='perMinute', limit=rateLimit['perMinute'], windowSeconds=60))
+    if 'perFiveMinutes' in rateLimit:
+        windows.append(_WindowConfig(label='perFiveMinutes', limit=rateLimit['perFiveMinutes'], windowSeconds=5 * 60))
+    if 'perHour' in rateLimit:
+        windows.append(_WindowConfig(label='perHour', limit=rateLimit['perHour'], windowSeconds=60 * 60))
+    if 'perDay' in rateLimit:
+        windows.append(_WindowConfig(label='perDay', limit=rateLimit['perDay'], windowSeconds=24 * 60 * 60))
     if not windows:
-        raise ValueError('rate_limit requires at least one of perMinute, perFiveMinutes, perHour, perDay')
+        raise ValueError('rate limit requires at least one of perMinute, perFiveMinutes, perHour, perDay')
+    global _checkCount  # noqa: PLW0603
+    keyBy = rateLimit.get('keyBy', 'user')
+    identity = _resolve_user_identity(request=request) if keyBy == 'user' else _resolve_ip_identity(request=request)
+    storeKey = f'{routeKey}:{identity}'
+    now = time.monotonic()
+    _checkCount += 1
+    if _checkCount % _SWEEP_INTERVAL == 0:
+        _sweep_expired_entries(now=now)
+    windowStates = _store.setdefault(storeKey, {})
+    retryAfterSeconds = 0
+    for window in windows:
+        windowState = windowStates.get(window.label)
+        if windowState is None or (now - windowState.windowStart) >= window.windowSeconds:
+            windowState = _WindowState(windowStart=now)
+            windowStates[window.label] = windowState
+        if windowState.count >= window.limit:
+            remainingSeconds = window.windowSeconds - (now - windowState.windowStart)
+            retryAfterSeconds = max(retryAfterSeconds, int(remainingSeconds) + 1)
+    if retryAfterSeconds > 0:
+        raise TooManyRequestsException(message='RATE_LIMITED', retryAfterSeconds=retryAfterSeconds)
+    for window in windows:
+        windowStates[window.label].count += 1
 
+
+def rate_limit(  # type: ignore[explicit-any]
+    rateLimit: RateLimitConfig,
+) -> typing.Callable[[typing.Callable[[KibaApiRequest[typing.Any]], _AnyReturn]], typing.Callable[[KibaApiRequest[typing.Any]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[typing.Any]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[typing.Any]], typing.Any]:  # type: ignore[explicit-any]
         update_route_metadata(func, {'rateLimit': rateLimit})
         routeKey = getattr(func, '__qualname__', type(func).__name__)
-
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[typing.Any]) -> typing.Any:  # type: ignore[explicit-any, misc]
-            global _checkCount  # noqa: PLW0603
-            identity = _resolve_user_identity(request=request) if keyBy == 'user' else _resolve_ip_identity(request=request)
-            storeKey = f'{routeKey}:{identity}'
-            now = time.monotonic()
-            _checkCount += 1
-            if _checkCount % _SWEEP_INTERVAL == 0:
-                _sweep_expired_entries(now=now)
-            windowStates = _store.setdefault(storeKey, {})
-            retryAfterSeconds = 0
-            for window in windows:
-                windowState = windowStates.get(window.label)
-                if windowState is None or (now - windowState.windowStart) >= window.windowSeconds:
-                    windowState = _WindowState(windowStart=now)
-                    windowStates[window.label] = windowState
-                if windowState.count >= window.limit:
-                    remainingSeconds = window.windowSeconds - (now - windowState.windowStart)
-                    retryAfterSeconds = max(retryAfterSeconds, int(remainingSeconds) + 1)
-            if retryAfterSeconds > 0:
-                raise TooManyRequestsException(message='RATE_LIMITED', retryAfterSeconds=retryAfterSeconds)
-            for window in windows:
-                windowStates[window.label].count += 1
+            check_rate_limit(routeKey=routeKey, request=request, rateLimit=rateLimit)
             result = func(request)
             if hasattr(result, '__aiter__'):
                 return result
             return await result
-
         return async_wrapper
-
     return decorator

@@ -10,6 +10,7 @@ class RateLimitConfig(typing.TypedDict, total=False):
     perFiveMinutes: int
     perHour: int
     perDay: int
+    keyBy: typing.Literal['user', 'ip']
 
 
 OpenApiSecurity = list[dict[str, list[str]]]

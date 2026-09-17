@@ -118,6 +118,14 @@ class StaticTokenAuthorizer(TokenAuthorizer):
             raise ForbiddenException(message='AUTH_INVALID')
 
 
+async def authorize_token_request[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest], authorizer: TokenAuthorizer) -> None:
+    authorization = request.headers.get('Authorization')
+    if not authorization:
+        raise ForbiddenException(message='AUTH_NOT_PROVIDED')
+    if not authorization.startswith('Token '):
+        raise ForbiddenException(message='AUTH_INVALID')
+    await authorizer.validate_token(authorization[6:])
+
 def authorize_token[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: TokenAuthorizer,
     *,
@@ -129,12 +137,7 @@ def authorize_token[ApiRequest: BaseModel](  # type: ignore[explicit-any]
 
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
-            authorization = request.headers.get('Authorization')
-            if not authorization:
-                raise ForbiddenException(message='AUTH_NOT_PROVIDED')
-            if not authorization.startswith('Token '):
-                raise ForbiddenException(message='AUTH_INVALID')
-            await authorizer.validate_token(authorization[6:])
+            await authorize_token_request(request=request, authorizer=authorizer)
             result = func(request)
             # NOTE(krishan711): this is here to support streaming responses which return an async generator
             if hasattr(result, '__aiter__'):
