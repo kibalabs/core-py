@@ -10,6 +10,10 @@ from core.exceptions import KibaException
 from core.api.streaming_json_route import streaming_json_route
 from core.api.api_request import KibaApiRequest
 from core.api.middleware.exception_handling_middleware import ExceptionHandlingMiddleware
+from core.api.request_context import RequestContext
+from core.api.request_context import RequestContextHolder
+from core.api.request_context import RequestContextMiddleware
+from core.api.request_context import create_request_context
 
 
 class ExampleRequest(BaseModel):
@@ -17,6 +21,8 @@ class ExampleRequest(BaseModel):
     age: int
     tags: list[str] | None = None
     path_param: str | None = None
+
+requestContextHolder = RequestContextHolder[RequestContext]()
 
 
 class ExampleResponse(BaseModel):
@@ -74,6 +80,7 @@ def client():
         Route("/test-error", test_error_endpoint, methods=["POST"]),
     ])
     app.add_middleware(ExceptionHandlingMiddleware)
+    app.add_middleware(RequestContextMiddleware, requestContextHolder=requestContextHolder, requestContextFactory=create_request_context)
     return TestClient(app, raise_server_exceptions=False)
 
 

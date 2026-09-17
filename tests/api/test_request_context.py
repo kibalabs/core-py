@@ -1,58 +1,61 @@
-from collections.abc import AsyncIterator
-
 import pytest
-from pydantic import BaseModel
+from starlette.responses import StreamingResponse
 
-from core.api.api_request import KibaApiRequest
-from core.api.request_context import with_request_context
-from core.util.value_holder import ContextSettableValueHolder
-
-
-class ExampleRequest(BaseModel):
-    value: str
-
-
-async def _receive() -> dict[str, object]:
-    return {'type': 'http.request'}
-
-
-async def _send(message: dict[str, object]) -> None:
-    del message
-
-
-def _request() -> KibaApiRequest[ExampleRequest]:
-    request = KibaApiRequest(scope={'type': 'http', 'headers': []}, receive=_receive, send=_send)
-    request.data = ExampleRequest(value='value')
-    return request
+from core.api.request_context import RequestContext
+from core.api.request_context import RequestContextHolder
+from core.api.request_context import RequestContextMiddleware
+from core.api.request_context import create_request_context
 
 
 @pytest.mark.asyncio
-async def test_with_request_context_restores_context_after_async_handler() -> None:
-    holder = ContextSettableValueHolder[str | None](defaultValue=None)
+async def test_request_context_middleware_provides_origin_ip() -> None:
+    holder = RequestContextHolder[RequestContext]()
+    observedContext: list[RequestContext] = []
 
-    async def context_factory(request: KibaApiRequest[ExampleRequest]) -> str:
-        return request.data.value
+    async def app(scope: dict[str, object], receive: object, send: object) -> None:
+        del scope, receive, send
+        observedContext.append(holder.get_value())
 
-    @with_request_context(contextHolder=holder, contextFactory=context_factory)
-    async def endpoint(request: KibaApiRequest[ExampleRequest]) -> str:
-        return holder.get_value() or ''
+    middleware = RequestContextMiddleware(app, requestContextHolder=holder, requestContextFactory=create_request_context)
+    await middleware(scope={'type': 'http', 'originIp': '203.0.113.1'}, receive=None, send=None)
 
-    assert await endpoint(_request()) == 'value'
-    assert holder.get_value() is None
+    assert observedContext == [RequestContext(originIp='203.0.113.1')]
+    with pytest.raises(RuntimeError, match='No request context is active'):
+        holder.get_value()
 
 
 @pytest.mark.asyncio
-async def test_with_request_context_restores_context_after_stream_consumption() -> None:
-    holder = ContextSettableValueHolder[str | None](defaultValue=None)
+async def test_request_context_remains_active_until_stream_consumption() -> None:
+    holder = RequestContextHolder[RequestContext]()
+    observedOriginIps: list[str | None] = []
+    messages: list[dict[str, object]] = []
 
-    async def context_factory(request: KibaApiRequest[ExampleRequest]) -> str:
-        return request.data.value
+    async def app(scope: dict[str, object], receive: object, send: object) -> None:
+        async def content() -> object:
+            observedOriginIps.append(holder.get_value().originIp)
+            yield b'body'
 
-    @with_request_context(contextHolder=holder, contextFactory=context_factory)
-    async def endpoint(request: KibaApiRequest[ExampleRequest]) -> AsyncIterator[str]:
-        yield holder.get_value() or ''
+        response = StreamingResponse(content())
+        await response(scope, receive, send)
 
-    result = await endpoint(_request())
-    assert holder.get_value() == 'value'
-    assert [item async for item in result] == ['value']
-    assert holder.get_value() is None
+    async def receive() -> dict[str, object]:
+        return {'type': 'http.disconnect'}
+
+    async def send(message: dict[str, object]) -> None:
+        messages.append(message)
+
+    middleware = RequestContextMiddleware(app, requestContextHolder=holder, requestContextFactory=create_request_context)
+    await middleware(scope={'type': 'http', 'originIp': '203.0.113.1'}, receive=receive, send=send)
+
+    assert observedOriginIps == ['203.0.113.1']
+    assert messages[-2] == {'type': 'http.response.body', 'body': b'body', 'more_body': True}
+    with pytest.raises(RuntimeError, match='No request context is active'):
+        holder.get_value()
+
+
+def test_request_context_holder_restores_previous_context() -> None:
+    holder = RequestContextHolder[RequestContext]()
+    with holder.use_value(RequestContext(originIp='203.0.113.1')):
+        assert holder.get_value().originIp == '203.0.113.1'
+    with pytest.raises(RuntimeError, match='No request context is active'):
+        holder.get_value()

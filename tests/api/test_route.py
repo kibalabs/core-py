@@ -136,7 +136,7 @@ def test_route_without_rate_limit_does_not_enforce_any_limit() -> None:
 
 
 def test_route_composed_auth_runs_before_rate_limit() -> None:
-    # keyBy='user' needs request.authBasic set, which only an auth decorator sets - proves auth
+    # keyBy='user' needs request.authBasic, which only an auth decorator sets - proves auth
     # decorators run before rate_limit, not after, when both are composed onto route().
     client = _build_client(isStreaming=False, auth=(authorize_signature(authorizer=sig_authorizer),), rateLimit={'perMinute': 1})
 

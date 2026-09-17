@@ -7,6 +7,13 @@ from pydantic import BaseModel
 from core.api.json_route import json_route
 from core.api.api_request import KibaApiRequest
 from core.api.middleware.exception_handling_middleware import ExceptionHandlingMiddleware
+from core.api.request_context import RequestContext
+from core.api.request_context import RequestContextHolder
+from core.api.request_context import RequestContextMiddleware
+from core.api.request_context import create_request_context
+
+
+requestContextHolder = RequestContextHolder[RequestContext]()
 
 
 class ExampleRequest(BaseModel):
@@ -50,6 +57,7 @@ def client():
         Route("/test/{path_param}", test_path_endpoint, methods=["POST"]),
     ])
     app.add_middleware(ExceptionHandlingMiddleware)
+    app.add_middleware(RequestContextMiddleware, requestContextHolder=requestContextHolder, requestContextFactory=create_request_context)
     return TestClient(app, raise_server_exceptions=False)
 
 

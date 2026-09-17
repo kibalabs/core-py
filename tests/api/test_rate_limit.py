@@ -31,8 +31,8 @@ async def _send(message: dict[str, object]) -> None:
     del message
 
 
-def _request(*, scope: dict[str, object] | None = None) -> KibaApiRequest[ExampleRequest]:
-    request = KibaApiRequest(scope=scope or {'type': 'http', 'headers': []}, receive=_receive, send=_send)
+def _request() -> KibaApiRequest[ExampleRequest]:
+    request = KibaApiRequest(scope={'type': 'http', 'headers': []}, receive=_receive, send=_send)
     request.data = ExampleRequest(value='value')
     return request
 

@@ -3,8 +3,6 @@ import time
 import typing
 from collections.abc import AsyncIterator
 
-from pydantic import BaseModel
-
 from core.api.api_request import KibaApiRequest
 from core.api.route_metadata import RateLimitConfig
 from core.api.route_metadata import update_route_metadata
@@ -34,7 +32,7 @@ _store: dict[str, dict[str, _WindowState]] = {}
 _checkCount = 0
 
 
-def _resolve_user_identity[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest]) -> str:
+def _resolve_user_identity(request: KibaApiRequest[typing.Any]) -> str:  # type: ignore[explicit-any]
     if request.authBasic is not None:
         return request.authBasic.username
     if request.authJwt is not None:
@@ -44,7 +42,7 @@ def _resolve_user_identity[ApiRequest: BaseModel](request: KibaApiRequest[ApiReq
     raise InternalServerErrorException(message='rate_limit(keyBy="user") requires an auth decorator to run first')
 
 
-def _resolve_ip_identity[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest]) -> str:
+def _resolve_ip_identity(request: KibaApiRequest[typing.Any]) -> str:  # type: ignore[explicit-any]
     if request.originIp is None:
         raise InternalServerErrorException(message='rate_limit(keyBy="ip") requires OriginIpMiddleware to be installed')
     return request.originIp
@@ -56,7 +54,7 @@ def _sweep_expired_entries(now: float) -> None:
         del _store[storeKey]
 
 
-def check_rate_limit[ApiRequest: BaseModel](*, routeKey: str, request: KibaApiRequest[ApiRequest], rateLimit: RateLimitConfig) -> None:
+def check_rate_limit(*, request: KibaApiRequest[typing.Any], routeKey: str, rateLimit: RateLimitConfig) -> None:  # type: ignore[explicit-any]
     windows: list[_WindowConfig] = []
     if 'perMinute' in rateLimit:
         windows.append(_WindowConfig(label='perMinute', limit=rateLimit['perMinute'], windowSeconds=60))
@@ -70,7 +68,7 @@ def check_rate_limit[ApiRequest: BaseModel](*, routeKey: str, request: KibaApiRe
         raise ValueError('rate limit requires at least one of perMinute, perFiveMinutes, perHour, perDay')
     global _checkCount  # noqa: PLW0603
     keyBy = rateLimit.get('keyBy', 'user')
-    identity = _resolve_user_identity(request=request) if keyBy == 'user' else _resolve_ip_identity(request=request)
+    identity = _resolve_user_identity(request) if keyBy == 'user' else _resolve_ip_identity(request)
     storeKey = f'{routeKey}:{identity}'
     now = time.monotonic()
     _checkCount += 1
@@ -100,7 +98,7 @@ def rate_limit(  # type: ignore[explicit-any]
         routeKey = getattr(func, '__qualname__', type(func).__name__)
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[typing.Any]) -> typing.Any:  # type: ignore[explicit-any, misc]
-            check_rate_limit(routeKey=routeKey, request=request, rateLimit=rateLimit)
+            check_rate_limit(request=request, routeKey=routeKey, rateLimit=rateLimit)
             result = func(request)
             if hasattr(result, '__aiter__'):
                 return result

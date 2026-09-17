@@ -1,66 +1,51 @@
-import functools
+import contextvars
 import typing
-from collections.abc import AsyncIterator
-from collections.abc import Awaitable
 from collections.abc import Callable
+from contextlib import contextmanager
+from dataclasses import dataclass
 
-from pydantic import BaseModel
-
-from core.api.api_request import KibaApiRequest
-from core.util.value_holder import ContextSettableValueHolder
-
-_AnyReturn = typing.Awaitable[typing.Any] | AsyncIterator[typing.Any]  # type: ignore[explicit-any]
-
-
-@typing.overload
-def with_request_context[RequestModel: BaseModel, ContextType, ResponseType](
-    contextHolder: ContextSettableValueHolder[ContextType],
-    contextFactory: Callable[[KibaApiRequest[RequestModel]], Awaitable[ContextType]],
-) -> Callable[
-    [Callable[[KibaApiRequest[RequestModel]], Awaitable[ResponseType]]],
-    Callable[[KibaApiRequest[RequestModel]], Awaitable[ResponseType]],
-]: ...
+from starlette.types import ASGIApp
+from starlette.types import Receive
+from starlette.types import Scope
+from starlette.types import Send
 
 
-@typing.overload
-def with_request_context[RequestModel: BaseModel, ContextType, ResponseType](
-    contextHolder: ContextSettableValueHolder[ContextType],
-    contextFactory: Callable[[KibaApiRequest[RequestModel]], Awaitable[ContextType]],
-) -> Callable[
-    [Callable[[KibaApiRequest[RequestModel]], AsyncIterator[ResponseType]]],
-    Callable[[KibaApiRequest[RequestModel]], Awaitable[AsyncIterator[ResponseType]]],
-]: ...
+@dataclass
+class RequestContext:
+    originIp: str | None
 
 
-def with_request_context[RequestModel: BaseModel, ContextType](  # type: ignore[explicit-any]
-    contextHolder: ContextSettableValueHolder[ContextType],
-    contextFactory: Callable[[KibaApiRequest[RequestModel]], Awaitable[ContextType]],
-) -> Callable[
-    [Callable[[KibaApiRequest[RequestModel]], _AnyReturn]],
-    Callable[[KibaApiRequest[RequestModel]], typing.Any],
-]:
-    def decorator(func: Callable[[KibaApiRequest[RequestModel]], _AnyReturn]) -> Callable[[KibaApiRequest[RequestModel]], typing.Any]:  # type: ignore[explicit-any]
-        @functools.wraps(func)
-        async def wrapped(request: KibaApiRequest[RequestModel]) -> typing.Any:  # type: ignore[explicit-any, misc]
-            context = await contextFactory(request)
-            previousContext = contextHolder.get_value()
-            contextHolder.set_value(context)
-            result = func(request)
-            if hasattr(result, '__aiter__'):
+def create_request_context(scope: Scope) -> RequestContext:
+    return RequestContext(originIp=typing.cast('str | None', scope.get('originIp')))
 
-                async def stream() -> typing.AsyncIterator[typing.Any]:  # type: ignore[explicit-any]
-                    try:
-                        async for item in typing.cast(AsyncIterator[typing.Any], result):
-                            yield item
-                    finally:
-                        contextHolder.set_value(previousContext)
 
-                return stream()
-            try:
-                return await result
-            finally:
-                contextHolder.set_value(previousContext)
+class RequestContextHolder[RequestContextType: RequestContext]:
+    def __init__(self) -> None:
+        self._valueContext = contextvars.ContextVar[RequestContextType | None]('_valueContext', default=None)
 
-        return wrapped
+    def get_value(self) -> RequestContextType:
+        value = self._valueContext.get()
+        if value is None:
+            raise RuntimeError('No request context is active')
+        return value
 
-    return decorator
+    @contextmanager
+    def use_value(self, value: RequestContextType) -> typing.Iterator[RequestContextType]:
+        token = self._valueContext.set(value)
+        try:
+            yield value
+        finally:
+            self._valueContext.reset(token)
+
+
+class RequestContextMiddleware:
+    def __init__(self, app: ASGIApp, requestContextHolder: RequestContextHolder[typing.Any], requestContextFactory: Callable[[Scope], RequestContext]) -> None:  # type: ignore[explicit-any]
+        self.app = app
+        self.requestContextHolder = requestContextHolder
+        self.requestContextFactory = requestContextFactory
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope['type'] != 'http':
+            await self.app(scope, receive, send)
+            return
+        with self.requestContextHolder.use_value(self.requestContextFactory(scope)):
+            await self.app(scope, receive, send)
