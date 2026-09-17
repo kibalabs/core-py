@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
-- [MINOR] Added reusable API route metadata, OpenAPI generation, request contexts, and rate limiting.
+- [MINOR] Added reusable API route metadata, OpenAPI generation, request contexts, `OriginIpMiddleware`, and `KibaApiRequest.originIp`; `rate_limit` now keys on `authBasic`/`authJwt` or `originIp`
 - [MAJOR] Replace `httpx` with `httpx2` for HTTP requests
 - [MINOR] Use `json_util`/`orjson` for API and database JSON serialization
 - [MINOR] Use Pydantic `JsonValue` for JSON type aliases

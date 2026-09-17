@@ -2,7 +2,6 @@ import functools
 import time
 import typing
 from collections.abc import AsyncIterator
-from collections.abc import Callable
 
 from pydantic import BaseModel
 
@@ -10,7 +9,6 @@ from core.api.api_request import KibaApiRequest
 from core.api.route_metadata import RateLimitConfig
 from core.api.route_metadata import update_route_metadata
 from core.exceptions import InternalServerErrorException
-from core.exceptions import KibaException
 from core.exceptions import TooManyRequestsException
 
 _AnyReturn = typing.Awaitable[typing.Any] | AsyncIterator[typing.Any]  # type: ignore[explicit-any]
@@ -36,13 +34,20 @@ _store: dict[str, dict[str, _WindowState]] = {}
 _checkCount = 0
 
 
-def _extract_client_ip[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest]) -> str:
-    if request.client is not None:
-        return request.client.host
-    clientInfo = request.scope.get('client')
-    if isinstance(clientInfo, (tuple, list)) and len(clientInfo) > 0:
-        return str(clientInfo[0])
-    raise KibaException('Failed to identify client IP')
+def _resolve_user_identity[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest]) -> str:
+    if request.authBasic is not None:
+        return request.authBasic.username
+    if request.authJwt is not None:
+        subject = request.authJwt.payloadDict.get('sub')
+        if subject:
+            return str(subject)
+    raise InternalServerErrorException(message='rate_limit(keyBy="user") requires an auth decorator to run first')
+
+
+def _resolve_ip_identity[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest]) -> str:
+    if request.originIp is None:
+        raise InternalServerErrorException(message='rate_limit(keyBy="ip") requires OriginIpMiddleware to be installed')
+    return request.originIp
 
 
 def _sweep_expired_entries(now: float) -> None:
@@ -58,7 +63,6 @@ def rate_limit(  # type: ignore[explicit-any]
     perHour: int | None = None,
     perDay: int | None = None,
     keyBy: typing.Literal['user', 'ip'] = 'user',
-    keyFunction: Callable[[KibaApiRequest[typing.Any]], str] | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[typing.Any]], _AnyReturn]], typing.Callable[[KibaApiRequest[typing.Any]], typing.Any]]:
     windows: list[_WindowConfig] = []
     rateLimit = RateLimitConfig()
@@ -84,14 +88,7 @@ def rate_limit(  # type: ignore[explicit-any]
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[typing.Any]) -> typing.Any:  # type: ignore[explicit-any, misc]
             global _checkCount  # noqa: PLW0603
-            if keyFunction is not None:
-                identity = keyFunction(request)
-            elif keyBy == 'user':
-                if request.authBasic is None:
-                    raise InternalServerErrorException(message='rate_limit(keyBy="user") requires an auth decorator to run first')
-                identity = request.authBasic.username
-            else:
-                identity = _extract_client_ip(request=request)
+            identity = _resolve_user_identity(request=request) if keyBy == 'user' else _resolve_ip_identity(request=request)
             storeKey = f'{routeKey}:{identity}'
             now = time.monotonic()
             _checkCount += 1

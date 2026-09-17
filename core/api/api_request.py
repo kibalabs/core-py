@@ -9,3 +9,4 @@ class KibaApiRequest[ApiRequestDataType: BaseModel](Request):
     data: ApiRequestDataType
     authJwt: Jwt | None = None
     authBasic: BasicAuthentication | None = None
+    originIp: str | None = None
