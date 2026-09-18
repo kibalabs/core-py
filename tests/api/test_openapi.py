@@ -3,15 +3,25 @@ from starlette.routing import Route
 from starlette.schemas import EndpointInfo
 
 from core.api.api_request import KibaApiRequest
-from core.api.authorizer import SignatureAuthorizer
-from core.api.authorizer import authorize_signature
 from core.api.json_route import json_route
-from core.api.route import route
+from core.api.route import create_route
+from core.api.route_auth import RouteAuthResolver
 from core.api.openapi import OpenApiExtension
 from core.api.openapi import OpenApiSchemaGenerator
 from core.api.openapi import OpenApiTag
 from core.api.route_metadata import RouteMetadata
 from core.api.route_metadata import SecurityScheme
+
+
+class PublicRouteAuthResolver(RouteAuthResolver):
+    async def authorize_route(self, *, auth: str, request: KibaApiRequest[BaseModel]) -> None:
+        raise ValueError(f'Unknown auth policy: {auth}')
+
+    def get_route_security_schemes(self, *, auth: str) -> list[str]:
+        raise ValueError(f'Unknown auth policy: {auth}')
+
+
+route = create_route(authResolver=PublicRouteAuthResolver())
 
 
 class ExampleRequest(BaseModel):
@@ -146,20 +156,27 @@ def test_openapi_generator_orders_operations_by_declared_tag_position() -> None:
     assert orderedOperationIds == ['first', 'second']
 
 
-class ExampleSignatureAuthorizer(SignatureAuthorizer):
-    async def retrieve_signature_signer(self, signatureString: str) -> str:
-        return 'signer'
-
 
 def test_authorize_signature_auto_documents_security_scheme() -> None:
     exampleSignatureScheme = SecurityScheme(name='ExampleSignature', definition={'type': 'apiKey', 'in': 'header', 'name': 'Authorization'})
+
+    class SignatureRouteAuthResolver(RouteAuthResolver):
+        async def authorize_route(self, *, auth: str, request: KibaApiRequest[BaseModel]) -> None:
+            raise ValueError(f'Unknown auth policy: {auth}')
+
+        def get_route_security_schemes(self, *, auth: str) -> list[str]:
+            if auth == 'signature':
+                return [exampleSignatureScheme.name]
+            raise ValueError(f'Unknown auth policy: {auth}')
+
+    route = create_route(authResolver=SignatureRouteAuthResolver())
 
     @route(
         requestType=ExampleRequest,
         responseType=ExampleResponse,
         operationId='secureExample',
         tags=['Examples'],
-        auth=(authorize_signature(authorizer=ExampleSignatureAuthorizer(), securityScheme=exampleSignatureScheme),),
+        auth='signature',
     )
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
