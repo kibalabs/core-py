@@ -1,4 +1,5 @@
 
+import functools
 import json
 
 from pydantic import BaseModel
@@ -11,7 +12,7 @@ from core.api.authorizer import SignatureAuthorizer
 from core.api.authorizer import get_basic_authentication_from_authorization_signature
 from core.api.middleware.exception_handling_middleware import ExceptionHandlingMiddleware
 from core.api.middleware.origin_ip_middleware import OriginIpMiddleware
-from core.api.route import create_route
+from core.api.route import route as api_route
 from core.api.route_auth import RouteAuthResolver
 from core.api.route_metadata import RateLimitConfig
 from core.api.route_metadata import SecurityScheme
@@ -66,7 +67,7 @@ class ExampleRouteAuthResolver(RouteAuthResolver):
 
 
 def _build_client(*, isStreaming: bool, rateLimit: RateLimitConfig | None = None, auth: str | None = None, authResolver: RouteAuthResolver | None = None) -> TestClient:
-    route = create_route(authResolver=authResolver or ExampleRouteAuthResolver())
+    route = functools.partial(api_route, authResolver=authResolver or ExampleRouteAuthResolver())
     if isStreaming:
 
         @route(requestType=ExampleRequest, responseType=ExampleResponse, isStreaming=True, operationId='streamExample', tags=['Examples'], auth=auth, rateLimit=rateLimit)
@@ -101,7 +102,7 @@ def test_route_handles_streaming_requests() -> None:
 
 
 def test_route_publishes_openapi_metadata() -> None:
-    route = create_route(authResolver=ExampleRouteAuthResolver())
+    route = functools.partial(api_route, authResolver=ExampleRouteAuthResolver())
     @route(
         requestType=ExampleRequest,
         responseType=ExampleResponse,

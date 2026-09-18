@@ -38,51 +38,43 @@ def _authorize_route[ApiRequest: BaseModel](
     return decorator
 
 
-class RouteBuilder:
-    def __init__(self, authResolver: RouteAuthResolver) -> None:
-        self.authResolver = authResolver
+def route[ApiRequest: BaseModel, ApiResponse: BaseModel](  # type: ignore[explicit-any]
+    requestType: typing.Type[ApiRequest],
+    responseType: typing.Type[ApiResponse],
+    *,
+    authResolver: RouteAuthResolver,
+    isStreaming: bool = False,
+    operationId: str | None = None,
+    summary: str | None = None,
+    description: str | None = None,
+    tags: list[str] | None = None,
+    auth: str | None = None,
+    rateLimit: RateLimitConfig | None = None,
+    extensions: Mapping[str, object] | None = None,
+) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[Request], typing.Awaitable[KibaJSONResponse | StreamingResponse]]]:
+    securitySchemeNames = authResolver.get_route_security_schemes(auth=auth) if auth is not None else []
 
-    def __call__[ApiRequest: BaseModel, ApiResponse: BaseModel](  # type: ignore[explicit-any]
-        self,
-        requestType: typing.Type[ApiRequest],
-        responseType: typing.Type[ApiResponse],
-        *,
-        isStreaming: bool = False,
-        operationId: str | None = None,
-        summary: str | None = None,
-        description: str | None = None,
-        tags: list[str] | None = None,
-        auth: str | None = None,
-        rateLimit: RateLimitConfig | None = None,
-        extensions: Mapping[str, object] | None = None,
-    ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[Request], typing.Awaitable[KibaJSONResponse | StreamingResponse]]]:
-        securitySchemeNames = self.authResolver.get_route_security_schemes(auth=auth) if auth is not None else []
+    def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[Request], typing.Awaitable[KibaJSONResponse | StreamingResponse]]:  # type: ignore[explicit-any]
+        handler: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn] = func
+        if rateLimit is not None:
+            handler = rate_limit(rateLimit)(handler)
+        if auth is not None:
+            handler = _authorize_route(authResolver, auth)(handler)
+        endpointDecorator = streaming_json_route if isStreaming else json_route
+        endpoint = endpointDecorator(requestType=requestType, responseType=responseType)(handler)  # type: ignore[arg-type, ty:invalid-argument-type]
+        metadata: RouteMetadata = {
+            'requestType': requestType,
+            'responseType': responseType,
+            'streamed': isStreaming,
+            'operationId': operationId,
+            'summary': summary,
+            'description': description,
+            'tags': tags or [],
+            'extensions': dict(extensions) if extensions else {},
+        }
+        update_route_metadata(endpoint, metadata)
+        if securitySchemeNames:
+            update_route_metadata(endpoint, {'security': [{name: []} for name in securitySchemeNames]})
+        return endpoint
 
-        def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[Request], typing.Awaitable[KibaJSONResponse | StreamingResponse]]:  # type: ignore[explicit-any]
-            handler: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn] = func
-            if rateLimit is not None:
-                handler = rate_limit(rateLimit)(handler)
-            if auth is not None:
-                handler = _authorize_route(self.authResolver, auth)(handler)
-            endpointDecorator = streaming_json_route if isStreaming else json_route
-            endpoint = endpointDecorator(requestType=requestType, responseType=responseType)(handler)  # type: ignore[arg-type, ty:invalid-argument-type]
-            metadata: RouteMetadata = {
-                'requestType': requestType,
-                'responseType': responseType,
-                'streamed': isStreaming,
-                'operationId': operationId,
-                'summary': summary,
-                'description': description,
-                'tags': tags or [],
-                'extensions': dict(extensions) if extensions else {},
-            }
-            update_route_metadata(endpoint, metadata)
-            if securitySchemeNames:
-                update_route_metadata(endpoint, {'security': [{name: []} for name in securitySchemeNames]})
-            return endpoint
-
-        return decorator
-
-
-def create_route(*, authResolver: RouteAuthResolver) -> RouteBuilder:
-    return RouteBuilder(authResolver=authResolver)
+    return decorator

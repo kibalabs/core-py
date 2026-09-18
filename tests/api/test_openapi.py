@@ -1,10 +1,11 @@
+import functools
 from pydantic import BaseModel
 from starlette.routing import Route
 from starlette.schemas import EndpointInfo
 
 from core.api.api_request import KibaApiRequest
 from core.api.json_route import json_route
-from core.api.route import create_route
+from core.api.route import route as api_route
 from core.api.route_auth import RouteAuthResolver
 from core.api.openapi import OpenApiExtension
 from core.api.openapi import OpenApiSchemaGenerator
@@ -21,7 +22,7 @@ class PublicRouteAuthResolver(RouteAuthResolver):
         raise ValueError(f'Unknown auth policy: {auth}')
 
 
-route = create_route(authResolver=PublicRouteAuthResolver())
+route = functools.partial(api_route, authResolver=PublicRouteAuthResolver())
 
 
 class ExampleRequest(BaseModel):
@@ -169,7 +170,7 @@ def test_authorize_signature_auto_documents_security_scheme() -> None:
                 return [exampleSignatureScheme.name]
             raise ValueError(f'Unknown auth policy: {auth}')
 
-    route = create_route(authResolver=SignatureRouteAuthResolver())
+    route = functools.partial(api_route, authResolver=SignatureRouteAuthResolver())
 
     @route(
         requestType=ExampleRequest,
