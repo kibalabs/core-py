@@ -96,6 +96,7 @@ def rate_limit(  # type: ignore[explicit-any]
     def decorator(func: typing.Callable[[KibaApiRequest[typing.Any]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[typing.Any]], typing.Any]:  # type: ignore[explicit-any]
         update_route_metadata(func, {'rateLimit': rateLimit})
         routeKey = getattr(func, '__qualname__', type(func).__name__)
+
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[typing.Any]) -> typing.Any:  # type: ignore[explicit-any, misc]
             check_rate_limit(request=request, routeKey=routeKey, rateLimit=rateLimit)
@@ -103,5 +104,7 @@ def rate_limit(  # type: ignore[explicit-any]
             if hasattr(result, '__aiter__'):
                 return result
             return await result
+
         return async_wrapper
+
     return decorator
