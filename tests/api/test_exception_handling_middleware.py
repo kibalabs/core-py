@@ -7,10 +7,17 @@ from starlette.testclient import TestClient
 from core.api.api_request import KibaApiRequest
 from core.api.json_route import json_route
 from core.api.middleware.exception_handling_middleware import ExceptionHandlingMiddleware
+from core.api.request_context import RequestContext
+from core.api.request_context import RequestContextHolder
+from core.api.request_context import RequestContextMiddleware
+from core.api.request_context import create_request_context
 from core.exceptions import BadRequestException
 from core.exceptions import FoundRedirectException
 from core.exceptions import MovedPermanentlyRedirectException
 from core.exceptions import TooManyRequestsException
+
+
+requestContextHolder = RequestContextHolder[RequestContext]()
 
 
 class SimpleRequest(BaseModel):
@@ -29,6 +36,7 @@ def rate_limited_client():
 
     app = Starlette(routes=[Route('/limited', limited_endpoint, methods=['POST'])])
     app.add_middleware(ExceptionHandlingMiddleware)
+    app.add_middleware(RequestContextMiddleware, requestContextHolder=requestContextHolder, requestContextFactory=create_request_context)
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -40,6 +48,7 @@ def rate_limited_no_retry_client():
 
     app = Starlette(routes=[Route('/limited', limited_endpoint, methods=['POST'])])
     app.add_middleware(ExceptionHandlingMiddleware)
+    app.add_middleware(RequestContextMiddleware, requestContextHolder=requestContextHolder, requestContextFactory=create_request_context)
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -51,6 +60,7 @@ def found_redirect_client():
 
     app = Starlette(routes=[Route('/redirect', redirect_endpoint, methods=['POST'])])
     app.add_middleware(ExceptionHandlingMiddleware)
+    app.add_middleware(RequestContextMiddleware, requestContextHolder=requestContextHolder, requestContextFactory=create_request_context)
     return TestClient(app, raise_server_exceptions=False, follow_redirects=False)
 
 
@@ -62,6 +72,7 @@ def permanent_redirect_client():
 
     app = Starlette(routes=[Route('/redirect', redirect_endpoint, methods=['POST'])])
     app.add_middleware(ExceptionHandlingMiddleware)
+    app.add_middleware(RequestContextMiddleware, requestContextHolder=requestContextHolder, requestContextFactory=create_request_context)
     return TestClient(app, raise_server_exceptions=False, follow_redirects=False)
 
 
@@ -73,6 +84,7 @@ def plain_error_client():
 
     app = Starlette(routes=[Route('/fail', failing_endpoint, methods=['POST'])])
     app.add_middleware(ExceptionHandlingMiddleware)
+    app.add_middleware(RequestContextMiddleware, requestContextHolder=requestContextHolder, requestContextFactory=create_request_context)
     return TestClient(app, raise_server_exceptions=False)
 
 
