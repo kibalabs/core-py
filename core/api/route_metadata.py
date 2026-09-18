@@ -16,7 +16,7 @@ class RateLimitConfig(typing.TypedDict, total=False):
 OpenApiSecurity = list[dict[str, list[str]]]
 
 
-class SecurityScheme(typing.NamedTuple):
+class OpenApiSecurityScheme(typing.NamedTuple):
     name: str
     definition: dict[str, object]
 

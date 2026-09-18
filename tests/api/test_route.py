@@ -1,4 +1,3 @@
-
 import functools
 import json
 
@@ -14,8 +13,8 @@ from core.api.middleware.exception_handling_middleware import ExceptionHandlingM
 from core.api.middleware.origin_ip_middleware import OriginIpMiddleware
 from core.api.route import route as api_route
 from core.api.route_auth import RouteAuthResolver
+from core.api.route_metadata import OpenApiSecurityScheme
 from core.api.route_metadata import RateLimitConfig
-from core.api.route_metadata import SecurityScheme
 from core.api.route_metadata import get_route_metadata
 
 
@@ -29,8 +28,8 @@ class ExampleResponse(BaseModel):
 
 VALID_SIGNATURE = 'valid-sig'
 VALID_SIGNER_ID = 'signer-123'
-EXAMPLE_SECURITY_SCHEME = SecurityScheme(name='ExampleApiKey', definition={'type': 'apiKey', 'in': 'header', 'name': 'Authorization'})
-SECOND_EXAMPLE_SECURITY_SCHEME = SecurityScheme(name='SecondExampleApiKey', definition={'type': 'apiKey', 'in': 'header', 'name': 'X-Example-Key'})
+EXAMPLE_SECURITY_SCHEME = OpenApiSecurityScheme(name='ExampleApiKey', definition={'type': 'apiKey', 'in': 'header', 'name': 'Authorization'})
+SECOND_EXAMPLE_SECURITY_SCHEME = OpenApiSecurityScheme(name='SecondExampleApiKey', definition={'type': 'apiKey', 'in': 'header', 'name': 'X-Example-Key'})
 
 
 class MockSignatureAuthorizer(SignatureAuthorizer):
@@ -38,8 +37,9 @@ class MockSignatureAuthorizer(SignatureAuthorizer):
         if signatureString != VALID_SIGNATURE:
             raise ValueError('invalid signature')
         return VALID_SIGNER_ID
-sig_authorizer = MockSignatureAuthorizer()
 
+
+sig_authorizer = MockSignatureAuthorizer()
 
 
 class ExampleRouteAuthResolver(RouteAuthResolver):
@@ -85,8 +85,6 @@ def _build_client(*, isStreaming: bool, rateLimit: RateLimitConfig | None = None
     return TestClient(app, raise_server_exceptions=False)
 
 
-
-
 def test_route_handles_json_requests() -> None:
     client = _build_client(isStreaming=False)
     response = client.post('/example', json={'value': 'hello'})
@@ -103,6 +101,7 @@ def test_route_handles_streaming_requests() -> None:
 
 def test_route_publishes_openapi_metadata() -> None:
     route = functools.partial(api_route, authResolver=ExampleRouteAuthResolver())
+
     @route(
         requestType=ExampleRequest,
         responseType=ExampleResponse,
@@ -182,6 +181,7 @@ def test_route_composed_auth_accepts_valid_signature() -> None:
     assert response.status_code == 200
     assert response.json() == {'result': 'hello'}
 
+
 def test_route_delegates_auth_policy_to_its_resolver() -> None:
     events: list[str] = []
     client = _build_client(isStreaming=False, auth='record', authResolver=ExampleRouteAuthResolver(events))
@@ -190,4 +190,3 @@ def test_route_delegates_auth_policy_to_its_resolver() -> None:
 
     assert response.status_code == 200
     assert events == ['record']
-

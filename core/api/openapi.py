@@ -14,8 +14,8 @@ from starlette.schemas import EndpointInfo
 from starlette.schemas import SchemaGenerator
 
 from core.api.api_response import KibaJSONResponse
+from core.api.route_metadata import OpenApiSecurityScheme
 from core.api.route_metadata import RouteMetadata
-from core.api.route_metadata import SecurityScheme
 from core.api.route_metadata import get_route_metadata
 
 _PATH_PARAMETER_PATTERN = re.compile(r'{([A-Za-z0-9_]+)(?::[^}]+)?}')
@@ -111,7 +111,7 @@ class OpenApiSchemaGenerator(SchemaGenerator):
         version: str,
         description: str,
         tags: Sequence[OpenApiTag],
-        securitySchemes: Sequence[SecurityScheme],
+        securitySchemes: Sequence[OpenApiSecurityScheme],
         extensions: Sequence[OpenApiExtension] = (),
     ) -> None:
         super().__init__({'openapi': '3.0.3', 'info': {'title': title, 'version': version}})

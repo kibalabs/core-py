@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from core import logging
 from core.api.api_request import KibaApiRequest
-from core.api.route_metadata import SecurityScheme
+from core.api.route_metadata import OpenApiSecurityScheme
 from core.api.route_metadata import update_route_metadata
 from core.exceptions import ForbiddenException
 from core.exceptions import UnauthorizedException
@@ -44,7 +44,7 @@ async def _authorize_bearer_jwt[ApiRequest: BaseModel](request: KibaApiRequest[A
 def authorize_bearer_jwt[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: Authorizer,
     *,
-    securityScheme: SecurityScheme | None = None,
+    securityScheme: OpenApiSecurityScheme | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]:  # type: ignore[explicit-any]
         if securityScheme is not None:
@@ -84,7 +84,7 @@ async def get_basic_authentication_from_authorization_signature[ApiRequest: Base
 def authorize_signature[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: SignatureAuthorizer,
     *,
-    securityScheme: SecurityScheme | None = None,
+    securityScheme: OpenApiSecurityScheme | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]:  # type: ignore[explicit-any]
         if securityScheme is not None:
@@ -138,7 +138,7 @@ async def authorize_static_token_request[ApiRequest: BaseModel](request: KibaApi
 def authorize_token[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: TokenAuthorizer,
     *,
-    securityScheme: SecurityScheme | None = None,
+    securityScheme: OpenApiSecurityScheme | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]:  # type: ignore[explicit-any]
         if securityScheme is not None:

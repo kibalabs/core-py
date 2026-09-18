@@ -1,17 +1,18 @@
 import functools
+
 from pydantic import BaseModel
 from starlette.routing import Route
 from starlette.schemas import EndpointInfo
 
 from core.api.api_request import KibaApiRequest
 from core.api.json_route import json_route
-from core.api.route import route as api_route
-from core.api.route_auth import RouteAuthResolver
 from core.api.openapi import OpenApiExtension
 from core.api.openapi import OpenApiSchemaGenerator
 from core.api.openapi import OpenApiTag
+from core.api.route import route as api_route
+from core.api.route_auth import RouteAuthResolver
+from core.api.route_metadata import OpenApiSecurityScheme
 from core.api.route_metadata import RouteMetadata
-from core.api.route_metadata import SecurityScheme
 
 
 class PublicRouteAuthResolver(RouteAuthResolver):
@@ -62,7 +63,7 @@ def test_openapi_generator_builds_routes_and_runs_extensions() -> None:
         version='1.0.0',
         description='Example API description.',
         tags=[OpenApiTag(name='Examples', description='Example operations.')],
-        securitySchemes=[SecurityScheme(name='ExampleApiKey', definition={'type': 'apiKey', 'in': 'header', 'name': 'X-Example-Key'})],
+        securitySchemes=[OpenApiSecurityScheme(name='ExampleApiKey', definition={'type': 'apiKey', 'in': 'header', 'name': 'X-Example-Key'})],
         extensions=(ExampleExtension(),),
     )
 
@@ -92,7 +93,6 @@ def test_openapi_generator_omits_tag_description_when_unset() -> None:
 
     schema = generator.get_schema(routes=[])
     assert schema['tags'] == [{'name': 'Examples'}]
-
 
     @route(
         requestType=ExampleRequest,
@@ -157,9 +157,8 @@ def test_openapi_generator_orders_operations_by_declared_tag_position() -> None:
     assert orderedOperationIds == ['first', 'second']
 
 
-
 def test_authorize_signature_auto_documents_security_scheme() -> None:
-    exampleSignatureScheme = SecurityScheme(name='ExampleSignature', definition={'type': 'apiKey', 'in': 'header', 'name': 'Authorization'})
+    exampleSignatureScheme = OpenApiSecurityScheme(name='ExampleSignature', definition={'type': 'apiKey', 'in': 'header', 'name': 'Authorization'})
 
     class SignatureRouteAuthResolver(RouteAuthResolver):
         async def authorize_route(self, *, auth: str, request: KibaApiRequest[BaseModel]) -> None:
