@@ -147,15 +147,12 @@ def test_jwt_json_invalid_token_returns_403(jwt_json_client):
     response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Bearer bad-token'})
     assert response.status_code == 403
 
-def test_jwt_json_valid_token_returns_200(jwt_json_client):
-    response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_JWT_TOKEN}'})
-    assert response.status_code == 200
-    assert response.json()['result'] == 'hello'
 
 def test_jwt_json_sets_auth_jwt_on_request(jwt_json_client):
     response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_JWT_TOKEN}'})
     assert response.status_code == 200
     assert response.json()['user_id'] == VALID_USER_ID
+    assert response.json()['result'] == 'hello'
 
 
 # --- authorize_bearer_jwt + streaming_json_route ---
@@ -168,12 +165,10 @@ def test_jwt_streaming_invalid_token_returns_403(jwt_streaming_client):
     response = jwt_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': 'Bearer bad-token'})
     assert response.status_code == 403
 
-def test_jwt_streaming_valid_token_returns_200(jwt_streaming_client):
-    response = jwt_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_JWT_TOKEN}'})
-    assert response.status_code == 200
 
 def test_jwt_streaming_valid_token_streams_data(jwt_streaming_client):
     response = jwt_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_JWT_TOKEN}'})
+    assert response.status_code == 200
     data = json.loads(response.content.decode().strip())
     assert data['result'] == 'hello'
     assert data['user_id'] == VALID_USER_ID
@@ -193,15 +188,12 @@ def test_sig_json_invalid_signature_returns_403(sig_json_client):
     response = sig_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Signature bad-sig'})
     assert response.status_code == 403
 
-def test_sig_json_valid_signature_returns_200(sig_json_client):
-    response = sig_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Signature {VALID_SIGNATURE}'})
-    assert response.status_code == 200
-    assert response.json()['result'] == 'hello'
 
 def test_sig_json_sets_auth_basic_on_request(sig_json_client):
     response = sig_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Signature {VALID_SIGNATURE}'})
     assert response.status_code == 200
     assert response.json()['user_id'] == VALID_USER_ID
+    assert response.json()['result'] == 'hello'
 
 
 # --- authorize_signature + streaming_json_route ---
@@ -214,12 +206,10 @@ def test_sig_streaming_invalid_signature_returns_403(sig_streaming_client):
     response = sig_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': 'Signature bad-sig'})
     assert response.status_code == 403
 
-def test_sig_streaming_valid_signature_returns_200(sig_streaming_client):
-    response = sig_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Signature {VALID_SIGNATURE}'})
-    assert response.status_code == 200
 
 def test_sig_streaming_valid_signature_streams_data(sig_streaming_client):
     response = sig_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Signature {VALID_SIGNATURE}'})
+    assert response.status_code == 200
     data = json.loads(response.content.decode().strip())
     assert data['result'] == 'hello'
     assert data['user_id'] == VALID_USER_ID
@@ -255,11 +245,9 @@ def test_token_streaming_invalid_token_returns_403(token_streaming_client):
     response = token_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': 'Token wrong-token'})
     assert response.status_code == 403
 
-def test_token_streaming_valid_token_returns_200(token_streaming_client):
-    response = token_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Token {VALID_STATIC_TOKEN}'})
-    assert response.status_code == 200
 
 def test_token_streaming_valid_token_streams_data(token_streaming_client):
     response = token_streaming_client.post('/protected-stream', json={'value': 'hello'}, headers={'Authorization': f'Token {VALID_STATIC_TOKEN}'})
+    assert response.status_code == 200
     data = json.loads(response.content.decode().strip())
     assert data['result'] == 'hello'

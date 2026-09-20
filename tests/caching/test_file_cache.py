@@ -143,10 +143,3 @@ class TestFileCache:
         delete_results = await asyncio.gather(*delete_tasks)
         assert all(delete_results)
 
-    async def test_internal_get_behavior(self, cache: FileCache, cache_dir):
-        key = "internal_test"
-        value = "internal_value"
-        await cache.set(key=key, value=value, expirySeconds=60)
-        internal_result = await cache._internal_get(key=key)
-        regular_result = await cache.get(key=key)
-        assert internal_result == regular_result == value

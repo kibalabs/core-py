@@ -92,8 +92,11 @@ def test_openapi_generator_omits_tag_description_when_unset() -> None:
     )
 
     schema = generator.get_schema(routes=[])
+
     assert schema['tags'] == [{'name': 'Examples'}]
 
+
+def test_streaming_route_documents_ndjson_response() -> None:
     @route(
         requestType=ExampleRequest,
         responseType=ExampleResponse,
@@ -116,7 +119,6 @@ def test_openapi_generator_omits_tag_description_when_unset() -> None:
     operation = schema['paths']['/examples/stream']['post']
 
     assert 'application/x-ndjson' in operation['responses']['200']['content']
-
 
 def test_json_route_is_not_documented() -> None:
     @json_route(requestType=ExampleRequest, responseType=ExampleResponse)
@@ -157,26 +159,27 @@ def test_openapi_generator_orders_operations_by_declared_tag_position() -> None:
     assert orderedOperationIds == ['first', 'second']
 
 
-def test_authorize_signature_auto_documents_security_scheme() -> None:
-    exampleSignatureScheme = OpenApiSecurityScheme(name='ExampleSignature', definition={'type': 'apiKey', 'in': 'header', 'name': 'Authorization'})
+def test_route_security_policy_is_published_to_openapi() -> None:
+    signatureScheme = OpenApiSecurityScheme(name='ExampleSignature', definition={'type': 'apiKey', 'in': 'header', 'name': 'Authorization'})
+    apiKeyScheme = OpenApiSecurityScheme(name='ExampleApiKey', definition={'type': 'apiKey', 'in': 'header', 'name': 'X-Example-Key'})
 
-    class SignatureRouteAuthResolver(RouteAuthResolver):
+    class SecurityRouteAuthResolver(RouteAuthResolver):
         async def authorize_route(self, *, auth: str, request: KibaApiRequest[BaseModel]) -> None:
             raise ValueError(f'Unknown auth policy: {auth}')
 
         def get_route_security_schemes(self, *, auth: str) -> list[str]:
-            if auth == 'signature':
-                return [exampleSignatureScheme.name]
+            if auth == 'signed_or_api_key':
+                return [signatureScheme.name, apiKeyScheme.name]
             raise ValueError(f'Unknown auth policy: {auth}')
 
-    route = functools.partial(api_route, authResolver=SignatureRouteAuthResolver())
+    route = functools.partial(api_route, authResolver=SecurityRouteAuthResolver())
 
     @route(
         requestType=ExampleRequest,
         responseType=ExampleResponse,
         operationId='secureExample',
         tags=['Examples'],
-        auth='signature',
+        auth='signed_or_api_key',
     )
     async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
         return ExampleResponse(result=request.data.value)
@@ -186,10 +189,12 @@ def test_authorize_signature_auto_documents_security_scheme() -> None:
         version='1.0.0',
         description='Example API description.',
         tags=[OpenApiTag(name='Examples')],
-        securitySchemes=[exampleSignatureScheme],
+        securitySchemes=[signatureScheme, apiKeyScheme],
     )
 
     schema = generator.get_schema(routes=[Route('/secure', endpoint, methods=['POST'])])
     operation = schema['paths']['/secure']['post']
-    assert operation['security'] == [{'ExampleSignature': []}]
+
+    assert operation['security'] == [{'ExampleSignature': []}, {'ExampleApiKey': []}]
     assert schema['components']['securitySchemes']['ExampleSignature']['name'] == 'Authorization'
+    assert schema['components']['securitySchemes']['ExampleApiKey']['name'] == 'X-Example-Key'
