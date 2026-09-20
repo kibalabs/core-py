@@ -7,7 +7,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from core.api.api_request import KibaApiRequest
-from core.api.authorizer import Authorizer, SignatureAuthorizer, StaticTokenAuthorizer, authorize_bearer_jwt, authorize_signature, authorize_token
+from core.api.authorizer import Authorizer, SignatureAuthorizer, StaticTokenAuthorizer, authorize_bearer_jwt, authorize_signature, authorize_static_header_request, authorize_token
 from core.api.json_route import json_route
 from core.api.middleware.exception_handling_middleware import ExceptionHandlingMiddleware
 from core.api.streaming_json_route import streaming_json_route
@@ -133,6 +133,18 @@ def token_streaming_client():
     return TestClient(app, raise_server_exceptions=False)
 
 
+@pytest.fixture
+def static_header_json_client():
+    @json_route(requestType=SimpleRequest, responseType=SimpleResponse)
+    async def protected_endpoint(request: KibaApiRequest[SimpleRequest]) -> SimpleResponse:
+        await authorize_static_header_request(request=request, headerName='X-Test-Webhook-Secret', token=VALID_STATIC_TOKEN)
+        return SimpleResponse(result=request.data.value)
+
+    app = Starlette(routes=[Route('/protected', protected_endpoint, methods=['POST'])])
+    app.add_middleware(ExceptionHandlingMiddleware)
+    return TestClient(app, raise_server_exceptions=False)
+
+
 # --- authorize_bearer_jwt + json_route ---
 
 def test_jwt_json_no_auth_header_returns_403(jwt_json_client):
@@ -231,6 +243,24 @@ def test_token_json_invalid_token_returns_403(token_json_client):
 
 def test_token_json_valid_token_returns_200(token_json_client):
     response = token_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Token {VALID_STATIC_TOKEN}'})
+    assert response.status_code == 200
+    assert response.json()['result'] == 'hello'
+
+
+# --- authorize_static_header_request + json_route ---
+
+def test_static_header_json_no_secret_returns_403(static_header_json_client):
+    response = static_header_json_client.post('/protected', json={'value': 'hello'})
+    assert response.status_code == 403
+
+
+def test_static_header_json_invalid_secret_returns_403(static_header_json_client):
+    response = static_header_json_client.post('/protected', json={'value': 'hello'}, headers={'X-Test-Webhook-Secret': 'wrong-token'})
+    assert response.status_code == 403
+
+
+def test_static_header_json_valid_secret_returns_200(static_header_json_client):
+    response = static_header_json_client.post('/protected', json={'value': 'hello'}, headers={'X-Test-Webhook-Secret': VALID_STATIC_TOKEN})
     assert response.status_code == 200
     assert response.json()['result'] == 'hello'
 

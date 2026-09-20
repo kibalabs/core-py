@@ -135,6 +135,19 @@ async def authorize_static_token_request[ApiRequest: BaseModel](request: KibaApi
         raise ForbiddenException(message='AUTH_INVALID')
 
 
+async def authorize_static_header_request[ApiRequest: BaseModel](
+    request: KibaApiRequest[ApiRequest],
+    *,
+    headerName: str,
+    token: str,
+) -> None:
+    providedToken = request.headers.get(headerName)
+    if providedToken is None:
+        raise ForbiddenException(message='AUTH_NOT_PROVIDED')
+    if not hmac.compare_digest(providedToken, token):
+        raise ForbiddenException(message='AUTH_INVALID')
+
+
 def authorize_token[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: TokenAuthorizer,
     *,
