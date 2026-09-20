@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MAJOR] Reworked `route` to compose JSON or streaming transport, application-resolved authorization, and rate limiting
+- [MAJOR] Replaced authorization-decorator sequences with named `RouteAuthResolver` policies
+- [MINOR] Added `authJwt`, `authBasic`, and `originIp` to `KibaApiRequest`
+- [MAJOR] Replaced global request-context accessors with injectable `RequestContextHolder` and `RequestContextMiddleware`
+- [MINOR] Added `RateLimitConfig` for rate-limit windows and request keying
+- [MINOR] Updated `json_route` and `streaming_json_route` to only parse and serialize requests and responses
+- [MINOR] Added OpenAPI tag ordering, `OpenApiSecurityScheme` declarations, and route security metadata
+- [MINOR] Added OpenAPI security-scheme publishing to authorization decorators
+- [MINOR] Added `authorize_token_request` and `authorize_static_token_request` for token validation
 - [MAJOR] Replace `httpx` with `httpx2` for HTTP requests
 - [MINOR] Use `json_util`/`orjson` for API and database JSON serialization
 - [MINOR] Use Pydantic `JsonValue` for JSON type aliases

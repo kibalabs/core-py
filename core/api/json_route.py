@@ -37,6 +37,7 @@ def json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
                 validationErrorMessage = ', '.join([f'{".".join([str(value) for value in error["loc"]])}: {error["msg"]}' for error in exception.errors()])
                 raise BadRequestException(f'Invalid request: {validationErrorMessage}')
             kibaRequest: KibaApiRequest[ApiRequest] = KibaApiRequest(scope=receivedRequest.scope, receive=receivedRequest._receive, send=receivedRequest._send)  # noqa: SLF001
+            kibaRequest.originIp = typing.cast('str | None', receivedRequest.scope.get('originIp'))
             kibaRequest.data = requestParams
             receivedResponse = await func(kibaRequest)
             if not isinstance(receivedResponse, responseType):

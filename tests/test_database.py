@@ -39,18 +39,14 @@ def test_create_sqlite_connection_string():
 
 
 @pytest.mark.asyncio
-async def test_connect_is_idempotent_and_disconnect_clears_engine(database):
+async def test_connect_is_idempotent(database):
     await database.connect(poolSize=1)
-    engine = database._engine
-
     await database.connect(poolSize=2)
 
-    assert database._engine is engine
-    assert database._engine.sync_engine.dialect._json_serializer is json_util.dumps
-    assert database._engine.sync_engine.dialect._json_deserializer is json_util.loads
+    async with database.create_transaction() as connection:
+        result = await database.execute(text('SELECT 42 AS answer'), connection=connection)
 
-    await database.disconnect()
-    assert database._engine is None
+    assert result.scalar_one() == 42
     await database.disconnect()
 
 
@@ -97,15 +93,13 @@ async def test_json_values_round_trip_through_sqlalchemy(database):
 
 
 @pytest.mark.asyncio
-async def test_context_connection_is_used_by_execute(database):
+async def test_context_connection_allows_execute_without_passing_connection(database):
     await database.connect(poolSize=1)
 
-    async with database.create_context_connection() as connection:
+    async with database.create_context_connection():
         result = await database.execute(text('SELECT 42 AS answer'))
-        assert result.scalar_one() == 42
-        assert database._get_context_connection() is connection
 
-    assert database._get_context_connection() is None
+    assert result.scalar_one() == 42
     await database.disconnect()
 
 

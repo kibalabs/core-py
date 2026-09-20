@@ -7,6 +7,8 @@ from pydantic import BaseModel
 
 from core import logging
 from core.api.api_request import KibaApiRequest
+from core.api.route_metadata import OpenApiSecurityScheme
+from core.api.route_metadata import update_route_metadata
 from core.exceptions import ForbiddenException
 from core.exceptions import UnauthorizedException
 from core.http.basic_authentication import BasicAuthentication
@@ -41,8 +43,13 @@ async def _authorize_bearer_jwt[ApiRequest: BaseModel](request: KibaApiRequest[A
 
 def authorize_bearer_jwt[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: Authorizer,
+    *,
+    securityScheme: OpenApiSecurityScheme | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]:  # type: ignore[explicit-any]
+        if securityScheme is not None:
+            update_route_metadata(func, {'security': [{securityScheme.name: []}]})
+
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
             request.authJwt = await _authorize_bearer_jwt(request=request, authorizer=authorizer)
@@ -76,8 +83,13 @@ async def get_basic_authentication_from_authorization_signature[ApiRequest: Base
 
 def authorize_signature[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: SignatureAuthorizer,
+    *,
+    securityScheme: OpenApiSecurityScheme | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]:  # type: ignore[explicit-any]
+        if securityScheme is not None:
+            update_route_metadata(func, {'security': [{securityScheme.name: []}]})
+
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
             request.authBasic = await get_basic_authentication_from_authorization_signature(request=request, authorizer=authorizer)
@@ -106,18 +118,35 @@ class StaticTokenAuthorizer(TokenAuthorizer):
             raise ForbiddenException(message='AUTH_INVALID')
 
 
+async def authorize_token_request[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest], authorizer: TokenAuthorizer) -> None:
+    authorization = request.headers.get('Authorization')
+    if not authorization:
+        raise ForbiddenException(message='AUTH_NOT_PROVIDED')
+    if not authorization.startswith('Token '):
+        raise ForbiddenException(message='AUTH_INVALID')
+    await authorizer.validate_token(authorization[6:])
+
+
+async def authorize_static_token_request[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest], token: str) -> None:
+    authorization = request.headers.get('Authorization')
+    if not authorization:
+        raise ForbiddenException(message='AUTH_NOT_PROVIDED')
+    if not authorization.startswith('Token ') or not hmac.compare_digest(authorization[6:], token):
+        raise ForbiddenException(message='AUTH_INVALID')
+
+
 def authorize_token[ApiRequest: BaseModel](  # type: ignore[explicit-any]
     authorizer: TokenAuthorizer,
+    *,
+    securityScheme: OpenApiSecurityScheme | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[ApiRequest]], typing.Any]:  # type: ignore[explicit-any]
+        if securityScheme is not None:
+            update_route_metadata(func, {'security': [{securityScheme.name: []}]})
+
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
-            authorization = request.headers.get('Authorization')
-            if not authorization:
-                raise ForbiddenException(message='AUTH_NOT_PROVIDED')
-            if not authorization.startswith('Token '):
-                raise ForbiddenException(message='AUTH_INVALID')
-            await authorizer.validate_token(authorization[6:])
+            await authorize_token_request(request=request, authorizer=authorizer)
             result = func(request)
             # NOTE(krishan711): this is here to support streaming responses which return an async generator
             if hasattr(result, '__aiter__'):
