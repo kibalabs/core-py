@@ -86,3 +86,6 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
             raise InternalServerErrorException('You need to call .connect() before trying to count messages')
         properties = await self._aqsClient.get_queue_properties()
         return int(properties.approximate_message_count or 0)
+
+    async def get_inflight_message_count(self) -> int:
+        raise NotImplementedError('Azure Storage Queues do not expose an in-flight message count')

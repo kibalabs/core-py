@@ -200,3 +200,15 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
             partition_key=self.queueName,
         )
         return sum([int(item['messageCount']) async for item in counts])
+
+    async def get_inflight_message_count(self) -> int:
+        counts = self.container.query_items(
+            query='SELECT COUNT(1) AS messageCount FROM c WHERE c.itemType = @itemType AND c.queueName = @queueName AND c.leaseId != null AND c.visibleDate > @now',
+            parameters=[
+                {'name': '@itemType', 'value': 'message'},
+                {'name': '@queueName', 'value': self.queueName},
+                {'name': '@now', 'value': time.time()},
+            ],
+            partition_key=self.queueName,
+        )
+        return sum([int(item['messageCount']) async for item in counts])
