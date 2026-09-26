@@ -80,3 +80,12 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         if not self._aqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to delete messages')
         await self._aqsClient.delete_message(message=message.aqsId, pop_receipt=message.popReceipt)
+
+    async def get_message_count(self) -> int:
+        if not self._aqsClient:
+            raise InternalServerErrorException('You need to call .connect() before trying to count messages')
+        properties = await self._aqsClient.get_queue_properties()
+        return int(properties.approximate_message_count or 0)
+
+    async def get_inflight_message_count(self) -> int:
+        raise NotImplementedError('Azure Storage Queues do not expose an in-flight message count')

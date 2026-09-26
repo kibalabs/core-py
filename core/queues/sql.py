@@ -163,3 +163,13 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
         async with self.database.create_transaction() as connection:
             deleteQuery = sqlalchemy.delete(self.table).where(self.table.c.id == message.id).where(self.table.c.lockToken == message.lockToken)
             await self.database.execute(query=deleteQuery, connection=connection)  # type: ignore[arg-type]
+
+    async def get_message_count(self) -> int:
+        countQuery = sqlalchemy.select(sqlalchemy.func.count()).select_from(self.table).where(self.table.c.queueName == self.queueName).where(self.table.c.visibleDate <= date_util.datetime_from_now())
+        result = await self.database.execute(query=countQuery)
+        return int(result.scalar_one())
+
+    async def get_inflight_message_count(self) -> int:
+        countQuery = sqlalchemy.select(sqlalchemy.func.count()).select_from(self.table).where(self.table.c.queueName == self.queueName).where(self.table.c.lockToken.is_not(None)).where(self.table.c.visibleDate > date_util.datetime_from_now())
+        result = await self.database.execute(query=countQuery)
+        return int(result.scalar_one())

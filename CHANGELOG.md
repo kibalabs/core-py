@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MAJOR] Added abstract `MessageQueue.get_message_count` (implemented for SQS, AQS, SQL and Cosmos queues) for the number of messages waiting to be processed
+- [MAJOR] Added abstract `MessageQueue.get_inflight_message_count` (implemented for SQS, SQL and Cosmos queues; AQS raises `NotImplementedError` as Azure does not expose it) for the number of messages currently being processed
 - [MAJOR] Reworked `route` to compose JSON or streaming transport, application-resolved authorization, and rate limiting
 - [MAJOR] Replaced authorization-decorator sequences with named `RouteAuthResolver` policies
 - [MINOR] Added `authJwt`, `authBasic`, and `originIp` to `KibaApiRequest`

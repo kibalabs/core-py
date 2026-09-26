@@ -33,3 +33,11 @@ class MessageQueue[MessageType: Message](ABC):
     @abc.abstractmethod
     async def delete_message(self, message: MessageType) -> None:
         raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_message_count(self) -> int:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_inflight_message_count(self) -> int:
+        raise NotImplementedError
