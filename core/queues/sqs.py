@@ -96,3 +96,9 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
         if not self._sqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to delete messages')
         await self._sqsClient.delete_message(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle)
+
+    async def get_message_count(self) -> int:
+        if not self._sqsClient:
+            raise InternalServerErrorException('You need to call .connect() before trying to count messages')
+        response = await self._sqsClient.get_queue_attributes(QueueUrl=self.queueUrl, AttributeNames=['ApproximateNumberOfMessages'])
+        return int(response['Attributes']['ApproximateNumberOfMessages'])

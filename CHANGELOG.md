@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `MessageQueue.get_message_count` for the number of messages waiting to be processed
 - [MAJOR] Reworked `route` to compose JSON or streaming transport, application-resolved authorization, and rate limiting
 - [MAJOR] Replaced authorization-decorator sequences with named `RouteAuthResolver` policies
 - [MINOR] Added `authJwt`, `authBasic`, and `originIp` to `KibaApiRequest`
