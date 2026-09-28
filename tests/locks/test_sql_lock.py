@@ -155,8 +155,8 @@ async def test_acquire_waits_for_another_worker_to_release(workers: tuple[SqlLoc
 
 async def test_acquire_takes_over_a_lease_that_expires_while_waiting(workers: tuple[SqlLock, SqlLock]):
     workerA, workerB = workers
-    await workerA.acquire(name='job', ttlSeconds=1)
     startTime = time.monotonic()
+    await workerA.acquire(name='job', ttlSeconds=1)
     await workerB.acquire(name='job', maxWaitSeconds=3)
     assert 0.9 <= time.monotonic() - startTime < 3
 
