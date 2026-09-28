@@ -1,9 +1,12 @@
 import contextlib
 import contextvars
 import datetime
+import functools
 import typing
 import weakref
 from collections.abc import AsyncIterator
+from collections.abc import Awaitable
+from collections.abc import Callable
 from typing import TypeVar
 
 import sqlalchemy
@@ -36,8 +39,9 @@ class Database:
     def create_sqlite_connection_string(filename: str) -> str:
         return f'sqlite+aiosqlite:///{filename}'
 
-    def __init__(self, connectionString: str) -> None:
+    def __init__(self, connectionString: str, shouldRaiseOnUncommittedWrites: bool = False) -> None:
         self.connectionString = connectionString
+        self.shouldRaiseOnUncommittedWrites = shouldRaiseOnUncommittedWrites
         self._engine: AsyncEngine | None = None
         self._connectionContext = contextvars.ContextVar[DatabaseConnection | None]('_connectionContext')
         self._connectionsWithWrites = weakref.WeakSet[DatabaseConnection]()
@@ -124,7 +128,10 @@ class Database:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
         outerConnection = self._get_context_connection()
         if outerConnection is not None and outerConnection in self._connectionsWithWrites:
-            logging.error('ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES: an isolated context connection was opened while the outer context connection has uncommitted writes', stack_info=True)
+            errorMessage = 'ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES: an isolated context connection was opened while the outer context connection has uncommitted writes'
+            if self.shouldRaiseOnUncommittedWrites:
+                raise InternalServerErrorException(message=errorMessage)
+            logging.error(errorMessage, stack_info=True)
         async with self._engine.begin() as connection:
             token = self._connectionContext.set(connection)
             try:
@@ -146,3 +153,17 @@ class Database:
         if isinstance(query, UpdateBase):
             self._connectionsWithWrites.add(connection)
         return typing.cast(Result[typing.Any], await connection.execute(statement=query))  # type: ignore[explicit-any]
+
+
+class _HasDatabase(typing.Protocol):
+    database: Database
+
+
+def independent_transaction[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+    @functools.wraps(func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        owner = typing.cast(_HasDatabase, args[0])
+        async with owner.database.create_isolated_context_connection():
+            return await func(*args, **kwargs)
+
+    return wrapper

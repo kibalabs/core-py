@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `Database.now` to build database-clock timestamps; `SqlMessageQueue` and `SqlLock` now use the database clock instead of the host clock
 - [MINOR] Capped `SqsMessageQueue` delays at SQS's 900 second maximum
 - [MINOR] Updated `CosmosMessageQueue.retry_message` to reschedule the message in place and added emulator-backed tests (run when `CORE_TEST_COSMOS_ENDPOINT` is set)
+- [MINOR] Added `independent_transaction` decorator to run a method in its own transaction that commits when it returns, using the owner's `database`
+- [MINOR] Added `shouldRaiseOnUncommittedWrites` to `Database` to raise instead of log when an isolated context connection is opened after uncommitted writes (for tests and development)
 - [MINOR] Added `Lock` with a lease-based `SqlLock` implementation (`tbl_locks`) and a `with_lock` context manager that keeps the lease alive; acquiring raises `LockedException` (naming the current holder) if not acquired within `maxWaitSeconds`, and `get_owner` reports who holds a lock
 - [MINOR] Added `process_util.get_process_name` to identify the current process (`<containerName>:<containerId>` in docker, `<hostname>:<pid>` otherwise)
 - [MINOR] Added `Database.create_isolated_context_connection` to run a block in its own committed transaction inside an existing context connection; logs `ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES` when opened while the outer context connection has uncommitted writes
