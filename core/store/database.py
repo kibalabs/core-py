@@ -1,6 +1,7 @@
 import contextlib
 import contextvars
 import typing
+import weakref
 from collections.abc import AsyncIterator
 from typing import TypeVar
 
@@ -10,6 +11,7 @@ from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.sql.dml import UpdateBase
 from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from core import logging
@@ -37,6 +39,7 @@ class Database:
         self.connectionString = connectionString
         self._engine: AsyncEngine | None = None
         self._connectionContext = contextvars.ContextVar[DatabaseConnection | None]('_connectionContext')
+        self._connectionsWithWrites = weakref.WeakSet[DatabaseConnection]()
 
     async def connect(self, poolSize: int = 100) -> None:
         if not self._engine:
@@ -102,11 +105,15 @@ class Database:
     # NOTE(krishan711): unlike create_context_connection this may be used inside an existing context connection.
     # Everything in the block runs on a new transaction that commits when the block exits, independent of the
     # outer transaction, which becomes the context connection again afterwards. It cannot see the outer
-    # transaction's uncommitted writes and will block forever on rows the outer transaction has written.
+    # transaction's uncommitted writes and will block forever on rows the outer transaction has written, so
+    # callers must commit their writes before entering. Violations are logged (with the caller's stack) for now.
     @contextlib.asynccontextmanager
     async def create_isolated_context_connection(self) -> AsyncIterator[DatabaseConnection]:
         if not self._engine:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
+        outerConnection = self._get_context_connection()
+        if outerConnection is not None and outerConnection in self._connectionsWithWrites:
+            logging.error('ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES: an isolated context connection was opened while the outer context connection has uncommitted writes', stack_info=True)
         async with self._engine.begin() as connection:
             token = self._connectionContext.set(connection)
             try:
@@ -125,4 +132,6 @@ class Database:
             connection = self._get_context_connection()
         if not connection:
             raise InternalServerErrorException(message='No connection found. Please provide a connection or call create_context_connection() for the context.')
+        if isinstance(query, UpdateBase):
+            self._connectionsWithWrites.add(connection)
         return typing.cast(Result[typing.Any], await connection.execute(statement=query))  # type: ignore[explicit-any]
