@@ -5,10 +5,11 @@ from pydantic import BaseModel
 from core.util import date_util
 
 
-class Lease(BaseModel):
+class LockLease(BaseModel):
     name: str
     token: str
     expiryDate: datetime.datetime
+    ttlSeconds: int
     isLost: bool = False
 
     def is_valid(self) -> bool:

@@ -13,6 +13,7 @@ from azure.cosmos.aio import ContainerProxy
 
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
+from core.util import date_util
 from core.util.typing_util import JsonObject
 
 
@@ -169,7 +170,7 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
                 break
         return messages
 
-    async def delete_message(self, message: CosmosMessage) -> None:
+    async def complete_message(self, message: CosmosMessage) -> None:
         if message.deduplicationId is None:
             await self.container.delete_item(
                 item=message.id,
@@ -188,6 +189,46 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
             ],
             partition_key=self.queueName,
         )
+
+    async def retry_message(self, message: CosmosMessage, delaySeconds: int = 0) -> None:
+        try:
+            await self.container.patch_item(
+                item=message.id,
+                partition_key=self.queueName,
+                patch_operations=[
+                    {'op': 'set', 'path': '/leaseId', 'value': None},
+                    {'op': 'set', 'path': '/visibleDate', 'value': time.time() + delaySeconds},
+                    {'op': 'set', 'path': '/postCount', 'value': (message.postCount or 0) + 1},
+                    {'op': 'set', 'path': '/postDate', 'value': date_util.datetime_from_now().isoformat()},
+                ],
+                etag=message.etag,
+                match_condition=MatchConditions.IfNotModified,
+            )
+        except cosmos_exceptions.CosmosHttpResponseError as exception:
+            # NOTE(krishan711): 412 means the lease was lost to another worker, which now owns the message
+            if exception.status_code != 412:  # noqa: PLR2004
+                raise
+
+    async def fail_message(self, message: CosmosMessage, errorMessage: str | None) -> None:
+        # NOTE(krishan711): the message reappears once its lease expires
+        pass
+
+    async def extend_message_lease(self, message: CosmosMessage, expectedProcessingSeconds: int) -> bool:
+        try:
+            updatedItem = await self.container.patch_item(
+                item=message.id,
+                partition_key=self.queueName,
+                patch_operations=[{'op': 'set', 'path': '/visibleDate', 'value': time.time() + expectedProcessingSeconds}],
+                etag=message.etag,
+                match_condition=MatchConditions.IfNotModified,
+            )
+        except cosmos_exceptions.CosmosHttpResponseError as exception:
+            if exception.status_code == 412:  # noqa: PLR2004
+                return False
+            raise
+        # NOTE(krishan711): the patch changes the etag so later calls must use the new one to prove they still hold the lease
+        message.etag = str(updatedItem['_etag'])
+        return True
 
     async def get_message_count(self) -> int:
         counts = self.container.query_items(

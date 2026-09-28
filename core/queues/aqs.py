@@ -3,13 +3,17 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 
+from azure.core.exceptions import HttpResponseError
 from azure.storage.queue import QueueMessage as RawAqsMessage
+from azure.storage.queue import StorageErrorCode
 from azure.storage.queue.aio import QueueClient
 
 from core.exceptions import InternalServerErrorException
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
 from core.util import list_util
+
+AQS_RETRY_HOLD_SECONDS = 60
 
 
 class AqsMessage(Message):
@@ -32,14 +36,18 @@ class AqsMessage(Message):
 
 
 class AqsMessageQueue(MessageQueue[AqsMessage]):
-    def __init__(self, storageAccountName: str, storageAccountKey: str, queueName: str) -> None:
+    def __init__(self, storageAccountName: str, storageAccountKey: str, queueName: str, endpointUrl: str | None = None) -> None:
         self._storageAccountName = storageAccountName
         self._storageAccountKey = storageAccountKey
         self.queueName = queueName
+        self.endpointUrl = endpointUrl
         self._aqsClient: QueueClient | None = None
 
     async def connect(self) -> None:
-        self._aqsClient = QueueClient.from_connection_string(conn_str=f'DefaultEndpointsProtocol=https;AccountName={self._storageAccountName};AccountKey={self._storageAccountKey}', queue_name=self.queueName)
+        connectionString = f'DefaultEndpointsProtocol=https;AccountName={self._storageAccountName};AccountKey={self._storageAccountKey}'
+        if self.endpointUrl:
+            connectionString += f';QueueEndpoint={self.endpointUrl}'
+        self._aqsClient = QueueClient.from_connection_string(conn_str=connectionString, queue_name=self.queueName)
         if not self._aqsClient:
             raise InternalServerErrorException('Failed to connect to queue')
         await self._aqsClient.get_queue_properties()
@@ -76,10 +84,34 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         aqsMessages = [AqsMessage.from_aqs_message(aqsMessage=message) async for message in messagesIterator]
         return aqsMessages
 
-    async def delete_message(self, message: AqsMessage) -> None:
+    async def complete_message(self, message: AqsMessage) -> None:
         if not self._aqsClient:
-            raise InternalServerErrorException('You need to call .connect() before trying to delete messages')
+            raise InternalServerErrorException('You need to call .connect() before trying to complete messages')
         await self._aqsClient.delete_message(message=message.aqsId, pop_receipt=message.popReceipt)
+
+    async def retry_message(self, message: AqsMessage, delaySeconds: int = 0) -> None:
+        # NOTE(krishan711): check the lease is still held before re-sending, otherwise another worker owns the message and re-sending would duplicate it
+        if not await self.extend_message_lease(message=message, expectedProcessingSeconds=AQS_RETRY_HOLD_SECONDS):
+            return
+        await self.send_message(message=message, delaySeconds=delaySeconds)
+        await self.complete_message(message=message)
+
+    async def fail_message(self, message: AqsMessage, errorMessage: str | None) -> None:
+        # NOTE(krishan711): the message reappears after its visibility timeout
+        pass
+
+    async def extend_message_lease(self, message: AqsMessage, expectedProcessingSeconds: int) -> bool:
+        if not self._aqsClient:
+            raise InternalServerErrorException('You need to call .connect() before trying to extend message leases')
+        try:
+            updatedMessage = await self._aqsClient.update_message(message=message.aqsId, pop_receipt=message.popReceipt, visibility_timeout=expectedProcessingSeconds)
+        except HttpResponseError as exception:
+            if getattr(exception, 'error_code', None) in {StorageErrorCode.POP_RECEIPT_MISMATCH, StorageErrorCode.MESSAGE_NOT_FOUND}:
+                return False
+            raise
+        # NOTE(krishan711): azure invalidates the old pop receipt on every update so later calls must use the new one
+        message.popReceipt = updatedMessage.pop_receipt
+        return True
 
     async def get_message_count(self) -> int:
         if not self._aqsClient:

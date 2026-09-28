@@ -212,3 +212,20 @@ async def test_writes_on_an_explicit_transaction_do_not_count_as_outer_context_w
                 pass
     assert 'ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES' not in caplog.text
     await database.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_isolated_context_connection_raises_on_uncommitted_outer_writes_when_strict(tmp_path):
+    database = Database(connectionString=Database.create_sqlite_connection_string(str(tmp_path / 'database.sqlite')), shouldRaiseOnUncommittedWrites=True)
+    metadata = MetaData()
+    records = Table('records', metadata, Column('name', sqlalchemy.Text, primary_key=True))
+    await database.connect(poolSize=2)
+    async with database.create_transaction() as connection:
+        await connection.run_sync(metadata.create_all)
+
+    with pytest.raises(InternalServerErrorException, match='ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES'):
+        async with database.create_context_connection():
+            await database.execute(insert(records).values(name='outer'))
+            async with database.create_isolated_context_connection():
+                pass
+    await database.disconnect()
