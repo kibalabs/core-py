@@ -16,9 +16,9 @@ from core.queues.model import Message
 from core.store.database import Database
 from core.util import date_util
 
-# NOTE: this table is owned here (not in the consuming app's schema.py) so it can ship with
-# core-py. To include it in an app's own alembic-tracked metadata (so autogenerate creates the
-# table), call `QueueMessagesTable.to_metadata(appMetadata)` from the app's schema module.
+# NOTE(krishan711): this table is owned here (not in the consuming app's schema.py) so it can ship with
+# core-py. To include it in an app's own alembic-tracked metadata (so autogenerate creates the table),
+# call `QueueMessagesTable.to_metadata(appMetadata)` from the app's schema module.
 QueueMessagesMetadata = sqlalchemy.MetaData()
 
 QueueMessagesTable = sqlalchemy.Table(
