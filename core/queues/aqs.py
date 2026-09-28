@@ -89,6 +89,14 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         # NOTE(krishan711): the message reappears after its visibility timeout
         pass
 
+    async def extend_message_lease(self, message: AqsMessage, expectedProcessingSeconds: int) -> bool:
+        if not self._aqsClient:
+            raise InternalServerErrorException('You need to call .connect() before trying to extend message leases')
+        updatedMessage = await self._aqsClient.update_message(message=message.aqsId, pop_receipt=message.popReceipt, visibility_timeout=expectedProcessingSeconds)
+        # NOTE(krishan711): azure invalidates the old pop receipt on every update so later calls must use the new one
+        message.popReceipt = updatedMessage.pop_receipt
+        return True
+
     async def get_message_count(self) -> int:
         if not self._aqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to count messages')

@@ -8,7 +8,7 @@ import pytest_asyncio
 import sqlalchemy
 
 from core.exceptions import LockedException
-from core.locks.model import Lease
+from core.locks.model import LockLease
 from core.locks.sql import LocksMetadata
 from core.locks.sql import SqlLock
 from core.store.database import Database
@@ -48,11 +48,11 @@ async def _expire_lock_row(lock: SqlLock, name: str) -> None:
         await lock.database.execute(query=sqlalchemy.update(lock.table).where(lock.table.c.name == name).values(expiryDate=date_util.datetime_from_now(seconds=-1)), connection=connection)
 
 
-async def _count_acquired(results: list[Lease | BaseException]) -> int:
+async def _count_acquired(results: list[LockLease | BaseException]) -> int:
     for result in results:
         if isinstance(result, BaseException) and not isinstance(result, LockedException):
             raise result
-    return sum(1 for result in results if isinstance(result, Lease))
+    return sum(1 for result in results if isinstance(result, LockLease))
 
 
 async def test_owner_tracks_the_current_holder(workers: tuple[SqlLock, SqlLock]):
@@ -123,6 +123,21 @@ async def test_extend_keeps_the_lock_past_its_original_ttl(workers: tuple[SqlLoc
     assert lease.is_valid()
     with pytest.raises(LockedException):
         await workerB.acquire(name='job')
+
+
+async def test_ensure_held_renews_the_lease_and_raises_once_another_worker_took_it_over(workers: tuple[SqlLock, SqlLock]):
+    workerA, workerB = workers
+    lease = await workerA.acquire(name='job', ttlSeconds=1)
+    await asyncio.sleep(0.6)
+    await workerA.ensure_held(lease=lease)
+    await asyncio.sleep(0.6)
+    with pytest.raises(LockedException):
+        await workerB.acquire(name='job')
+    await _expire_lock_row(lock=workerA, name='job')
+    await workerB.acquire(name='job')
+    with pytest.raises(LockedException, match='LOCK_LOST'):
+        await workerA.ensure_held(lease=lease)
+    assert lease.isLost
 
 
 async def test_acquire_waits_for_another_worker_to_release(workers: tuple[SqlLock, SqlLock]):
@@ -229,7 +244,7 @@ async def test_with_lock_keep_alive_survives_a_transient_extend_failure(workers:
     class FlakyLock(SqlLock):
         extendCallCount = 0
 
-        async def extend(self, lease: Lease, ttlSeconds: int = 60) -> bool:
+        async def extend(self, lease: LockLease, ttlSeconds: int = 60) -> bool:
             self.extendCallCount += 1
             if self.extendCallCount == 1:
                 raise ConnectionError('transient')

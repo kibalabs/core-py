@@ -9,7 +9,7 @@ from sqlalchemy.dialects import sqlite as sqlalchemy_sqlite
 from core.exceptions import InternalServerErrorException
 from core.exceptions import LockedException
 from core.locks.lock import Lock
-from core.locks.model import Lease
+from core.locks.model import LockLease
 from core.store.database import Database
 from core.util import date_util
 from core.util import process_util
@@ -43,7 +43,7 @@ class SqlLock(Lock):
     async def disconnect(self) -> None:
         pass
 
-    async def acquire(self, name: str, ttlSeconds: int = 60, maxWaitSeconds: float = 0) -> Lease:
+    async def acquire(self, name: str, ttlSeconds: int = 60, maxWaitSeconds: float = 0) -> LockLease:
         deadline = time.monotonic() + maxWaitSeconds
         while True:
             lease = await self._try_acquire(name=name, ttlSeconds=ttlSeconds)
@@ -67,8 +67,8 @@ class SqlLock(Lock):
             return sqlalchemy_sqlite.insert(self.table)
         raise InternalServerErrorException(message=f'SqlLock does not support dialect: {dialectName}')
 
-    async def _try_acquire(self, name: str, ttlSeconds: int) -> Lease | None:
-        lease = Lease(name=name, token=str(uuid.uuid4()), expiryDate=date_util.datetime_from_now(seconds=ttlSeconds))
+    async def _try_acquire(self, name: str, ttlSeconds: int) -> LockLease | None:
+        lease = LockLease(name=name, token=str(uuid.uuid4()), expiryDate=date_util.datetime_from_now(seconds=ttlSeconds), ttlSeconds=ttlSeconds)
         values = {self.table.c.lockToken: lease.token, self.table.c.acquiredDate: self.database.now(), self.table.c.expiryDate: self.database.now(seconds=ttlSeconds), self.table.c.owner: self.owner}
         async with self.database.create_transaction() as connection:
             upsertQuery = (
@@ -81,7 +81,7 @@ class SqlLock(Lock):
             isAcquired = result.first() is not None
         return lease if isAcquired else None
 
-    async def extend(self, lease: Lease, ttlSeconds: int = 60) -> bool:
+    async def extend(self, lease: LockLease, ttlSeconds: int = 60) -> bool:
         newExpiryDate = date_util.datetime_from_now(seconds=ttlSeconds)
         async with self.database.create_transaction() as connection:
             updateQuery = (
@@ -98,7 +98,7 @@ class SqlLock(Lock):
             lease.expiryDate = newExpiryDate
         return isExtended
 
-    async def release(self, lease: Lease) -> None:
+    async def release(self, lease: LockLease) -> None:
         async with self.database.create_transaction() as connection:
             deleteQuery = sqlalchemy.delete(self.table).where(self.table.c.name == lease.name).where(self.table.c.lockToken == lease.token)
             await self.database.execute(query=deleteQuery, connection=connection)

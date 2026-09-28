@@ -165,6 +165,34 @@ async def test_expired_lease_is_reclaimed_and_old_holder_cannot_complete(workers
     assert (await _row(queue=workerA, messageId=staleMessage.id))['status'] == 'succeeded'
 
 
+async def test_extend_reports_a_lease_that_was_taken_over(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    staleMessage = await _claim(queue=workerA)
+    assert await workerA.extend_message_lease(message=staleMessage, expectedProcessingSeconds=60) is True
+    await _make_visible(queue=workerA, messageId=staleMessage.id)
+    await _claim(queue=workerB)
+    assert await workerA.extend_message_lease(message=staleMessage, expectedProcessingSeconds=60) is False
+
+
+async def test_processor_keeps_a_message_leased_while_it_runs_longer_than_the_lease(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, workerB = workers
+
+    class SlowProcessor(MessageProcessor):
+        async def process_message(self, message: Message) -> None:
+            await asyncio.sleep(1.6)
+
+    async def _claim_while_running() -> SqlMessage | None:
+        await asyncio.sleep(1.3)
+        return await workerB.get_message()
+
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=SlowProcessor(), notificationClients=[])
+    await workerA.send_message(message=_message())
+    _, stolenMessage = await asyncio.gather(processor.execute(expectedProcessingSeconds=1, longPollSeconds=0), _claim_while_running())
+    assert stolenMessage is None
+    assert (await _rows(queue=workerA))[0]['status'] == 'succeeded'
+
+
 async def test_expired_lease_with_no_attempts_left_is_failed(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     workerA, _ = workers
     await workerA.send_message(message=_message())

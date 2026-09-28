@@ -5,7 +5,8 @@ from abc import ABC
 from collections.abc import AsyncIterator
 
 from core import logging
-from core.locks.model import Lease
+from core.exceptions import LockedException
+from core.locks.model import LockLease
 
 
 class Lock(ABC):
@@ -18,22 +19,27 @@ class Lock(ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def acquire(self, name: str, ttlSeconds: int = 60, maxWaitSeconds: float = 0) -> Lease:
+    async def acquire(self, name: str, ttlSeconds: int = 60, maxWaitSeconds: float = 0) -> LockLease:
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def extend(self, lease: Lease, ttlSeconds: int = 60) -> bool:
+    async def extend(self, lease: LockLease, ttlSeconds: int = 60) -> bool:
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def release(self, lease: Lease) -> None:
+    async def release(self, lease: LockLease) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
     async def get_owner(self, name: str) -> str | None:
         raise NotImplementedError
 
-    async def _keep_alive(self, lease: Lease, ttlSeconds: int) -> None:
+    async def ensure_held(self, lease: LockLease) -> None:
+        if lease.isLost or not await self.extend(lease=lease, ttlSeconds=lease.ttlSeconds):
+            lease.isLost = True
+            raise LockedException(message=f'LOCK_LOST: {lease.name}')
+
+    async def _keep_alive(self, lease: LockLease, ttlSeconds: int) -> None:
         while True:
             await asyncio.sleep(ttlSeconds / 3)
             try:
@@ -49,7 +55,7 @@ class Lock(ABC):
                 return
 
     @contextlib.asynccontextmanager
-    async def with_lock(self, name: str, ttlSeconds: int = 60, maxWaitSeconds: float = 0) -> AsyncIterator[Lease]:
+    async def with_lock(self, name: str, ttlSeconds: int = 60, maxWaitSeconds: float = 0) -> AsyncIterator[LockLease]:
         lease = await self.acquire(name=name, ttlSeconds=ttlSeconds, maxWaitSeconds=maxWaitSeconds)
         keepAliveTask = asyncio.create_task(self._keep_alive(lease=lease, ttlSeconds=ttlSeconds))
         try:

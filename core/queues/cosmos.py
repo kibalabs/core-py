@@ -213,6 +213,23 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
         # NOTE(krishan711): the message reappears once its lease expires
         pass
 
+    async def extend_message_lease(self, message: CosmosMessage, expectedProcessingSeconds: int) -> bool:
+        try:
+            updatedItem = await self.container.patch_item(
+                item=message.id,
+                partition_key=self.queueName,
+                patch_operations=[{'op': 'set', 'path': '/visibleDate', 'value': time.time() + expectedProcessingSeconds}],
+                etag=message.etag,
+                match_condition=MatchConditions.IfNotModified,
+            )
+        except cosmos_exceptions.CosmosHttpResponseError as exception:
+            if exception.status_code == 412:  # noqa: PLR2004
+                return False
+            raise
+        # NOTE(krishan711): the patch changes the etag so later calls must use the new one to prove they still hold the lease
+        message.etag = str(updatedItem['_etag'])
+        return True
+
     async def get_message_count(self) -> int:
         counts = self.container.query_items(
             query='SELECT COUNT(1) AS messageCount FROM c WHERE c.itemType = @itemType AND c.queueName = @queueName AND c.visibleDate <= @now',

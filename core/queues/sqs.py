@@ -107,6 +107,12 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
         # NOTE(krishan711): the message reappears after its visibility timeout and the queue's redrive policy decides when to dead-letter it
         pass
 
+    async def extend_message_lease(self, message: SqsMessage, expectedProcessingSeconds: int) -> bool:
+        if not self._sqsClient:
+            raise InternalServerErrorException('You need to call .connect() before trying to extend message leases')
+        await self._sqsClient.change_message_visibility(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle, VisibilityTimeout=expectedProcessingSeconds)
+        return True
+
     async def get_message_count(self) -> int:
         if not self._sqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to count messages')

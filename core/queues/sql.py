@@ -209,6 +209,12 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
             query = self._owned_update(message=message).values(status=MESSAGE_STATUS_SUCCEEDED, lockToken=None, completedDate=self.database.now())
             await self.database.execute(query=query, connection=connection)
 
+    async def extend_message_lease(self, message: SqlMessage, expectedProcessingSeconds: int) -> bool:
+        async with self.database.create_transaction() as connection:
+            query = self._owned_update(message=message).values(visibleDate=self.database.now(seconds=expectedProcessingSeconds)).returning(self.table.c.id)
+            result = await self.database.execute(query=query, connection=connection)
+            return result.first() is not None
+
     async def retry_message(self, message: SqlMessage, delaySeconds: int = 0) -> None:
         await self._reschedule_message(message=message, delaySeconds=delaySeconds, extraValues={})
 

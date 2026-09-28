@@ -109,6 +109,27 @@ async def test_retry_after_losing_the_lease_leaves_the_new_holder_untouched(work
     assert await workerA.get_inflight_message_count() == 0
 
 
+async def test_extended_message_stays_leased_and_can_still_be_completed(workers: tuple[CosmosMessageQueue, CosmosMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    message = await workerA.get_message(expectedProcessingSeconds=1)
+    assert message is not None
+    assert await workerA.extend_message_lease(message=message, expectedProcessingSeconds=60) is True
+    await asyncio.sleep(1.2)
+    assert await workerB.get_message() is None
+    await workerA.complete_message(message=message)
+    assert await workerA.get_inflight_message_count() == 0
+
+
+async def test_extend_after_losing_the_lease_reports_it_lost(workers: tuple[CosmosMessageQueue, CosmosMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    staleMessage = await _claim(queue=workerA)
+    await _make_visible(queue=workerA, messageId=staleMessage.id)
+    await _claim(queue=workerB)
+    assert await workerA.extend_message_lease(message=staleMessage, expectedProcessingSeconds=60) is False
+
+
 async def test_failed_message_reappears_once_its_lease_expires(workers: tuple[CosmosMessageQueue, CosmosMessageQueue]):
     workerA, _ = workers
     await workerA.send_message(message=_message())

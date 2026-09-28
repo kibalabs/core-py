@@ -43,6 +43,10 @@ class MessageQueue[MessageType: Message](ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
+    async def extend_message_lease(self, message: MessageType, expectedProcessingSeconds: int) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     async def get_message_count(self) -> int:
         raise NotImplementedError
 
