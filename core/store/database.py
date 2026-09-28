@@ -99,6 +99,21 @@ class Database:
             await self.disconnect()
             await self.connect()
 
+    # NOTE(krishan711): unlike create_context_connection this may be used inside an existing context connection.
+    # Everything in the block runs on a new transaction that commits when the block exits, independent of the
+    # outer transaction, which becomes the context connection again afterwards. It cannot see the outer
+    # transaction's uncommitted writes and will block forever on rows the outer transaction has written.
+    @contextlib.asynccontextmanager
+    async def create_isolated_context_connection(self) -> AsyncIterator[DatabaseConnection]:
+        if not self._engine:
+            raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
+        async with self._engine.begin() as connection:
+            token = self._connectionContext.set(connection)
+            try:
+                yield connection
+            finally:
+                self._connectionContext.reset(token)
+
     @typing.overload
     async def execute(self, query: TypedReturnsRows[ResultType], connection: DatabaseConnection | None = None) -> Result[ResultType]: ...
     @typing.overload
