@@ -76,10 +76,18 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         aqsMessages = [AqsMessage.from_aqs_message(aqsMessage=message) async for message in messagesIterator]
         return aqsMessages
 
-    async def delete_message(self, message: AqsMessage) -> None:
+    async def complete_message(self, message: AqsMessage) -> None:
         if not self._aqsClient:
-            raise InternalServerErrorException('You need to call .connect() before trying to delete messages')
+            raise InternalServerErrorException('You need to call .connect() before trying to complete messages')
         await self._aqsClient.delete_message(message=message.aqsId, pop_receipt=message.popReceipt)
+
+    async def retry_message(self, message: AqsMessage, delaySeconds: int = 0) -> None:
+        await self.send_message(message=message, delaySeconds=delaySeconds)
+        await self.complete_message(message=message)
+
+    async def fail_message(self, message: AqsMessage, errorMessage: str | None) -> None:
+        # NOTE(krishan711): the message reappears after its visibility timeout
+        pass
 
     async def get_message_count(self) -> int:
         if not self._aqsClient:

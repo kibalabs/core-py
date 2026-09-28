@@ -31,7 +31,15 @@ class MessageQueue[MessageType: Message](ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def delete_message(self, message: MessageType) -> None:
+    async def complete_message(self, message: MessageType) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def retry_message(self, message: MessageType, delaySeconds: int = 0) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def fail_message(self, message: MessageType, errorMessage: str | None) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod

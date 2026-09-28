@@ -35,6 +35,15 @@ class MessageQueueProcessor[MessageType: Message]:
         self.notificationClients = notificationClients
         self.requestIdHolder = requestIdHolder
 
+    async def _handle_failure(self, message: MessageType, exception: Exception, requestId: str) -> int:
+        logging.error('Caught exception whilst processing message:')
+        logging.exception(exception)
+        kibaException = KibaException.from_exception(exception=exception)
+        await self.queue.fail_message(message=message, errorMessage=kibaException.message)
+        for client in self.notificationClients:
+            await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{kibaException.message}```')
+        return exception.statusCode if isinstance(exception, KibaException) else 500
+
     async def _process_message(self, message: MessageType) -> None:
         requestId = message.requestId or str(uuid.uuid4()).replace('-', '')
         if self.requestIdHolder:
@@ -45,18 +54,16 @@ class MessageQueueProcessor[MessageType: Message]:
         statusCode = 200
         try:
             await self.messageProcessor.process_message(message=message)
-            await self.queue.delete_message(message=message)
+            await self.queue.complete_message(message=message)
         except MessageNeedsReprocessingException as exception:
-            logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {exception.originalException!s}')
-            await self.queue.send_message(message=message, delaySeconds=((message.postCount or 0) * exception.delaySeconds))
+            postCount = message.postCount or 0
+            if postCount <= exception.maxRetryCount:
+                logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {exception.originalException!s}')
+                await self.queue.retry_message(message=message, delaySeconds=(postCount * exception.delaySeconds))
+            else:
+                statusCode = await self._handle_failure(message=message, exception=exception.originalException or exception, requestId=requestId)
         except Exception as exception:  # noqa: BLE001
-            statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
-            logging.error('Caught exception whilst processing message:')
-            logging.exception(exception)
-            kibaException = KibaException.from_exception(exception=exception)
-            for client in self.notificationClients:
-                await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{kibaException.message}```')
-            # TODO(krishan711): should possibly reset the visibility timeout
+            statusCode = await self._handle_failure(message=message, exception=exception, requestId=requestId)
         duration = time.time() - startTime
         logging.api(action='MESSAGE', path=message.command, pathPattern=message.command, query=query, response=statusCode, duration=duration)
         if self.requestIdHolder:

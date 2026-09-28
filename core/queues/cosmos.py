@@ -169,7 +169,7 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
                 break
         return messages
 
-    async def delete_message(self, message: CosmosMessage) -> None:
+    async def complete_message(self, message: CosmosMessage) -> None:
         if message.deduplicationId is None:
             await self.container.delete_item(
                 item=message.id,
@@ -188,6 +188,15 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
             ],
             partition_key=self.queueName,
         )
+
+    async def retry_message(self, message: CosmosMessage, delaySeconds: int = 0) -> None:
+        # NOTE(krishan711): complete first so the deduplication item is freed for the resend
+        await self.complete_message(message=message)
+        await self.send_message(message=message, delaySeconds=delaySeconds)
+
+    async def fail_message(self, message: CosmosMessage, errorMessage: str | None) -> None:
+        # NOTE(krishan711): the message reappears once its lease expires
+        pass
 
     async def get_message_count(self) -> int:
         counts = self.container.query_items(

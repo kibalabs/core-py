@@ -92,10 +92,18 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
         sqsMessages = [SqsMessage.from_sqs_message(sqsMessage=sqsMessage) for sqsMessage in sqsResponse.get('Messages', [])]
         return sqsMessages
 
-    async def delete_message(self, message: SqsMessage) -> None:
+    async def complete_message(self, message: SqsMessage) -> None:
         if not self._sqsClient:
-            raise InternalServerErrorException('You need to call .connect() before trying to delete messages')
+            raise InternalServerErrorException('You need to call .connect() before trying to complete messages')
         await self._sqsClient.delete_message(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle)
+
+    async def retry_message(self, message: SqsMessage, delaySeconds: int = 0) -> None:
+        await self.send_message(message=message, delaySeconds=delaySeconds)
+        await self.complete_message(message=message)
+
+    async def fail_message(self, message: SqsMessage, errorMessage: str | None) -> None:
+        # NOTE(krishan711): the message reappears after its visibility timeout and the queue's redrive policy decides when to dead-letter it
+        pass
 
     async def get_message_count(self) -> int:
         if not self._sqsClient:
