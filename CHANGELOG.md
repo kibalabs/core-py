@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Added
 - [MAJOR] Replaced `MessageQueue.delete_message` with `complete_message`, and added abstract `retry_message` (reschedule with a delay) and `fail_message` (apply the queue's failure policy); `MessageQueueProcessor` now uses these and enforces `MessageNeedsReprocessingException.maxRetryCount`
+- [MINOR] Updated `MessageQueueProcessor` to retry messages that raise `LockedException` with the default `MessageNeedsReprocessingException` policy (3 retries, 60s linear backoff) before failing them
 - [MAJOR] Reworked `SqlMessageQueue` to keep message history in `tbl_queue_messages` with a `status` lifecycle (`pending`, `running`, `succeeded`, `failed`, `deduplicated`), `attemptCount`, `owner`, `lastError`, `startedDate` and `completedDate`; deduplication now only applies against pending messages, failures back off and move to `failed` after `maxAttempts`, and `delete_completed_messages` prunes old finished messages
 - [MINOR] Added `Lock` with a lease-based `SqlLock` implementation (`tbl_locks`) and a `with_lock` context manager that keeps the lease alive; acquiring raises `LockedException` (naming the current holder) if not acquired within `maxWaitSeconds`, and `get_owner` reports who holds a lock
 - [MINOR] Added `process_util.get_process_name` to identify the current process (`<containerName>:<containerId>` in docker, `<hostname>:<pid>` otherwise)

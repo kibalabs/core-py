@@ -7,6 +7,7 @@ import pytest
 import pytest_asyncio
 import sqlalchemy
 
+from core.exceptions import LockedException
 from core.queues.message_queue_processor import MessageNeedsReprocessingException
 from core.queues.message_queue_processor import MessageProcessor
 from core.queues.message_queue_processor import MessageQueueProcessor
@@ -227,3 +228,24 @@ async def test_processor_retries_reprocessing_messages_then_fails_them(workers: 
         await _make_visible(queue=workerA, messageId=row['id'])
     assert await processor.execute(longPollSeconds=0)
     assert (await _rows(queue=workerA))[0]['status'] == 'failed'
+
+
+async def test_processor_retries_locked_messages_three_times_then_fails_them(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+
+    class LockHeldProcessor(MessageProcessor):
+        async def process_message(self, message: Message) -> None:
+            raise LockedException(message='LOCK_HELD: job by worker-b')
+
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=LockHeldProcessor(), notificationClients=[])
+    await workerA.send_message(message=_message())
+    for _ in range(3):
+        assert await processor.execute(longPollSeconds=0)
+        row = (await _rows(queue=workerA))[0]
+        assert row['status'] == 'pending'
+        assert await workerA.get_message() is None
+        await _make_visible(queue=workerA, messageId=row['id'])
+    assert await processor.execute(longPollSeconds=0)
+    row = (await _rows(queue=workerA))[0]
+    assert row['status'] == 'failed'
+    assert row['last_error'] == 'LOCK_HELD: job by worker-b'
