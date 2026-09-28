@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `Lock` with a lease-based `SqlLock` implementation (`tbl_locks`) and a `with_lock` context manager that keeps the lease alive; acquiring raises `LockedException` (naming the current holder) if not acquired within `maxWaitSeconds`, and `get_owner` reports who holds a lock
+- [MINOR] Added `process_util.get_process_name` to identify the current process (`<containerName>:<containerId>` in docker, `<hostname>:<pid>` otherwise)
+- [MINOR] Added `Database.create_isolated_context_connection` to run a block in its own committed transaction inside an existing context connection; logs `ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES` when opened while the outer context connection has uncommitted writes
 - [MAJOR] Added abstract `MessageQueue.get_message_count` (implemented for SQS, AQS, SQL and Cosmos queues) for the number of messages waiting to be processed
 - [MAJOR] Added abstract `MessageQueue.get_inflight_message_count` (implemented for SQS, SQL and Cosmos queues; AQS raises `NotImplementedError` as Azure does not expose it) for the number of messages currently being processed
 - [MAJOR] Reworked `route` to compose JSON or streaming transport, application-resolved authorization, and rate limiting

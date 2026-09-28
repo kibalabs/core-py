@@ -45,9 +45,16 @@ jobs:
           json-file-path: ./type-check-results.json
           check-name: core-type-check
           fail-on-error: false
+      - name: Start postgres
+        run: |
+          docker network create tests
+          docker run --detach --name postgres --network tests --env POSTGRES_PASSWORD=test --env POSTGRES_DB=core postgres:16-alpine
+          # NOTE(krishan711): check over TCP: during initdb the image runs a temporary server on the unix socket only, which reports ready and then shuts down
+          for i in $(seq 1 60); do docker exec postgres pg_isready --host 127.0.0.1 --username postgres --quiet && break; sleep 1; done
+          docker exec postgres pg_isready --host 127.0.0.1 --username postgres
       - name: Run tests
         run: |
-          docker run --name tests $DOCKER_IMAGE make test-ci
+          docker run --name tests --network tests --env CORE_TEST_PSQL_CONNECTION_STRING=postgresql+asyncpg://postgres:test@postgres:5432/core $DOCKER_IMAGE make test-ci
           docker cp tests:/app/test-check-results.json ./test-check-results.json
       - name: Upload test results
         uses: kibalabs/github-action-create-annotations@main
