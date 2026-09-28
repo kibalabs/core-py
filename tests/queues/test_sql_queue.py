@@ -211,23 +211,21 @@ async def test_counts_split_waiting_and_inflight(workers: tuple[SqlMessageQueue,
     assert await workerA.get_inflight_message_count() == 1
 
 
-async def test_processor_retries_reprocessing_messages_then_fails_them(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+async def test_processor_always_retries_reprocessing_messages(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     workerA, _ = workers
 
-    class LockedProcessor(MessageProcessor):
+    class ReprocessingProcessor(MessageProcessor):
         async def process_message(self, message: Message) -> None:
-            raise MessageNeedsReprocessingException(maxRetryCount=2, delaySeconds=30)
+            raise MessageNeedsReprocessingException(delaySeconds=30)
 
-    processor = MessageQueueProcessor(queue=workerA, messageProcessor=LockedProcessor(), notificationClients=[])
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=ReprocessingProcessor(), notificationClients=[])
     await workerA.send_message(message=_message())
-    for _ in range(2):
+    for _ in range(6):
         assert await processor.execute(longPollSeconds=0)
         row = (await _rows(queue=workerA))[0]
         assert row['status'] == 'pending'
         assert await workerA.get_message() is None
         await _make_visible(queue=workerA, messageId=row['id'])
-    assert await processor.execute(longPollSeconds=0)
-    assert (await _rows(queue=workerA))[0]['status'] == 'failed'
 
 
 async def test_processor_retries_locked_messages_three_times_then_fails_them(workers: tuple[SqlMessageQueue, SqlMessageQueue]):

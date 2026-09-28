@@ -14,6 +14,9 @@ from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
 from core.util.value_holder import RequestIdHolder
 
+LOCKED_MAX_RETRY_COUNT = 3
+LOCKED_RETRY_DELAY_SECONDS = 30
+
 
 class MessageProcessor(ABC):
     @abc.abstractmethod
@@ -56,14 +59,16 @@ class MessageQueueProcessor[MessageType: Message]:
         try:
             await self.messageProcessor.process_message(message=message)
             await self.queue.complete_message(message=message)
-        except (MessageNeedsReprocessingException, LockedException) as exception:
-            reprocessingException = exception if isinstance(exception, MessageNeedsReprocessingException) else MessageNeedsReprocessingException(originalException=exception)
+        except MessageNeedsReprocessingException as exception:
+            logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {exception.originalException!s}')
+            await self.queue.retry_message(message=message, delaySeconds=((message.postCount or 0) * exception.delaySeconds))
+        except LockedException as exception:
             postCount = message.postCount or 0
-            if postCount <= reprocessingException.maxRetryCount:
-                logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {reprocessingException.originalException!s}')
-                await self.queue.retry_message(message=message, delaySeconds=(postCount * reprocessingException.delaySeconds))
+            if postCount <= LOCKED_MAX_RETRY_COUNT:
+                logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {exception!s}')
+                await self.queue.retry_message(message=message, delaySeconds=(postCount * LOCKED_RETRY_DELAY_SECONDS))
             else:
-                statusCode = await self._handle_failure(message=message, exception=reprocessingException.originalException or reprocessingException, requestId=requestId)
+                statusCode = await self._handle_failure(message=message, exception=exception, requestId=requestId)
         except Exception as exception:  # noqa: BLE001
             statusCode = await self._handle_failure(message=message, exception=exception, requestId=requestId)
         duration = time.time() - startTime
