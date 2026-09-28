@@ -56,7 +56,7 @@ class SqlLock(Lock):
 
     async def get_owner(self, name: str) -> str | None:
         async with self.database.create_transaction() as connection:
-            query = sqlalchemy.select(self.table.c.owner).where(self.table.c.name == name).where(self.table.c.expiryDate > date_util.datetime_from_now())
+            query = sqlalchemy.select(self.table.c.owner).where(self.table.c.name == name).where(self.table.c.expiryDate > self.database.now())
             result = await self.database.execute(query=query, connection=connection)
             return result.scalar_one_or_none()
 
@@ -68,22 +68,20 @@ class SqlLock(Lock):
         raise InternalServerErrorException(message=f'SqlLock does not support dialect: {dialectName}')
 
     async def _try_acquire(self, name: str, ttlSeconds: int) -> Lease | None:
-        now = date_util.datetime_from_now()
         lease = Lease(name=name, token=str(uuid.uuid4()), expiryDate=date_util.datetime_from_now(seconds=ttlSeconds))
-        values = {self.table.c.lockToken: lease.token, self.table.c.acquiredDate: now, self.table.c.expiryDate: lease.expiryDate, self.table.c.owner: self.owner}
+        values = {self.table.c.lockToken: lease.token, self.table.c.acquiredDate: self.database.now(), self.table.c.expiryDate: self.database.now(seconds=ttlSeconds), self.table.c.owner: self.owner}
         async with self.database.create_transaction() as connection:
             upsertQuery = (
-                self._create_insert(dialectName=connection.dialect.name).values({self.table.c.name: name, **values}).on_conflict_do_update(index_elements=[self.table.c.name], set_=values, where=self.table.c.expiryDate <= now).returning(self.table.c.name)
+                self._create_insert(dialectName=connection.dialect.name).values({self.table.c.name: name, **values}).on_conflict_do_update(index_elements=[self.table.c.name], set_=values, where=self.table.c.expiryDate <= self.database.now()).returning(self.table.c.name)
             )
             result = await self.database.execute(query=upsertQuery, connection=connection)
             isAcquired = result.first() is not None
         return lease if isAcquired else None
 
     async def extend(self, lease: Lease, ttlSeconds: int = 60) -> bool:
-        now = date_util.datetime_from_now()
         newExpiryDate = date_util.datetime_from_now(seconds=ttlSeconds)
         async with self.database.create_transaction() as connection:
-            updateQuery = sqlalchemy.update(self.table).where(self.table.c.name == lease.name).where(self.table.c.lockToken == lease.token).where(self.table.c.expiryDate > now).values(expiryDate=newExpiryDate).returning(self.table.c.name)
+            updateQuery = sqlalchemy.update(self.table).where(self.table.c.name == lease.name).where(self.table.c.lockToken == lease.token).where(self.table.c.expiryDate > self.database.now()).values(expiryDate=self.database.now(seconds=ttlSeconds)).returning(self.table.c.name)
             result = await self.database.execute(query=updateQuery, connection=connection)
             isExtended = result.first() is not None
         if isExtended:

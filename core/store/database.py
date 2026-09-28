@@ -1,5 +1,6 @@
 import contextlib
 import contextvars
+import datetime
 import typing
 import weakref
 from collections.abc import AsyncIterator
@@ -58,6 +59,16 @@ class Database:
         if self._engine:
             await self._engine.dispose()
             self._engine = None
+
+    def now(self, seconds: float = 0) -> sqlalchemy.ColumnElement[datetime.datetime]:
+        if not self._engine:
+            raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
+        dialectName = self._engine.dialect.name
+        if dialectName == 'postgresql':
+            return sqlalchemy.func.now() + datetime.timedelta(seconds=seconds)
+        if dialectName == 'sqlite':
+            return sqlalchemy.func.strftime('%Y-%m-%d %H:%M:%f', 'now', f'{seconds:+} seconds', type_=sqlalchemy.DateTime(timezone=True))
+        raise InternalServerErrorException(message=f'Database.now does not support dialect: {dialectName}')
 
     @contextlib.asynccontextmanager
     async def create_transaction(self) -> AsyncIterator[DatabaseConnection]:

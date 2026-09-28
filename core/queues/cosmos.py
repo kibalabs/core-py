@@ -13,6 +13,7 @@ from azure.cosmos.aio import ContainerProxy
 
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
+from core.util import date_util
 from core.util.typing_util import JsonObject
 
 
@@ -190,9 +191,23 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
         )
 
     async def retry_message(self, message: CosmosMessage, delaySeconds: int = 0) -> None:
-        # NOTE(krishan711): complete first so the deduplication item is freed for the resend
-        await self.complete_message(message=message)
-        await self.send_message(message=message, delaySeconds=delaySeconds)
+        try:
+            await self.container.patch_item(
+                item=message.id,
+                partition_key=self.queueName,
+                patch_operations=[
+                    {'op': 'set', 'path': '/leaseId', 'value': None},
+                    {'op': 'set', 'path': '/visibleDate', 'value': time.time() + delaySeconds},
+                    {'op': 'set', 'path': '/postCount', 'value': (message.postCount or 0) + 1},
+                    {'op': 'set', 'path': '/postDate', 'value': date_util.datetime_from_now().isoformat()},
+                ],
+                etag=message.etag,
+                match_condition=MatchConditions.IfNotModified,
+            )
+        except cosmos_exceptions.CosmosHttpResponseError as exception:
+            # NOTE(krishan711): 412 means the lease was lost to another worker, which now owns the message
+            if exception.status_code != 412:  # noqa: PLR2004
+                raise
 
     async def fail_message(self, message: CosmosMessage, errorMessage: str | None) -> None:
         # NOTE(krishan711): the message reappears once its lease expires

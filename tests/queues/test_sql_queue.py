@@ -130,7 +130,7 @@ async def test_expired_lease_is_reclaimed_and_old_holder_cannot_complete(workers
     await _make_visible(queue=workerA, messageId=staleMessage.id)
     newMessage = await _claim(queue=workerB)
     assert newMessage.id == staleMessage.id
-    assert newMessage.attemptCount == 2  # noqa: PLR2004
+    assert newMessage.postCount == 2  # noqa: PLR2004
     await workerA.complete_message(message=staleMessage)
     assert (await _row(queue=workerA, messageId=staleMessage.id))['status'] == 'running'
     await workerB.complete_message(message=newMessage)
@@ -154,7 +154,7 @@ async def test_failed_message_backs_off_then_fails_after_max_attempts(workers: t
     await workerA.send_message(message=_message())
     for attempt in range(1, 4):
         message = await _claim(queue=workerA)
-        assert message.attemptCount == attempt
+        assert message.postCount == attempt
         await workerA.fail_message(message=message, errorMessage=f'boom {attempt}')
         row = await _row(queue=workerA, messageId=message.id)
         if attempt < 3:  # noqa: PLR2004
@@ -189,7 +189,7 @@ async def test_retry_is_folded_into_an_identical_pending_message(workers: tuple[
     assert [row['status'] for row in await _rows(queue=workerA)] == ['deduplicated', 'pending']
 
 
-async def test_delete_completed_messages_only_removes_old_finished_messages(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+async def test_message_count_removes_only_old_finished_messages_unless_skipped(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     workerA, _ = workers
     await workerA.send_messages(messages=[_message(deduplicationId=None, userId=str(index)) for index in range(4)])
     succeededMessage, failedMessage, recentMessage = await workerA.get_messages(limit=3)
@@ -198,7 +198,9 @@ async def test_delete_completed_messages_only_removes_old_finished_messages(work
     await workerA.complete_message(message=recentMessage)
     async with workerA.database.create_transaction() as connection:
         await workerA.database.execute(query=sqlalchemy.update(workerA.table).where(workerA.table.c.id.in_([succeededMessage.id, failedMessage.id])).values(completedDate=date_util.datetime_from_now(days=-8)), connection=connection)
-    assert await workerA.delete_completed_messages(retentionSeconds=7 * 24 * 60 * 60) == 1
+    assert await workerA.get_message_count(shouldSkipRemovingNonRetained=True) == 1
+    assert len(await _rows(queue=workerA)) == 4  # noqa: PLR2004
+    assert await workerA.get_message_count() == 1
     assert [row['status'] for row in await _rows(queue=workerA)] == ['failed', 'succeeded', 'pending']
 
 

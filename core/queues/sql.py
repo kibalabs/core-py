@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
 import time
 import uuid
 from collections.abc import Sequence
@@ -17,7 +16,6 @@ from core.exceptions import InternalServerErrorException
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
 from core.store.database import Database
-from core.util import date_util
 from core.util import process_util
 
 MESSAGE_STATUS_PENDING = 'pending'
@@ -48,7 +46,6 @@ QueueMessagesTable = sqlalchemy.Table(
     sqlalchemy.Column(key='deduplicationId', name='deduplication_id', type_=sqlalchemy.Text, nullable=True),
     sqlalchemy.Column(key='status', name='status', type_=sqlalchemy.Text, nullable=False),
     sqlalchemy.Column(key='visibleDate', name='visible_date', type_=sqlalchemy.DateTime(timezone=True), nullable=False),
-    sqlalchemy.Column(key='attemptCount', name='attempt_count', type_=sqlalchemy.Integer, nullable=False),
     sqlalchemy.Column(key='lockToken', name='lock_token', type_=sqlalchemy.Text, nullable=True),
     sqlalchemy.Column(key='owner', name='owner', type_=sqlalchemy.Text, nullable=True),
     sqlalchemy.Column(key='startedDate', name='started_date', type_=sqlalchemy.DateTime(timezone=True), nullable=True),
@@ -62,7 +59,6 @@ QueueMessagesTable = sqlalchemy.Table(
 class SqlMessage(Message):
     id: int
     lockToken: str
-    attemptCount: int
 
     @staticmethod
     def _get_row_value(row: RowMapping, key: str, databaseKey: str) -> Any:  # type: ignore[explicit-any]
@@ -81,7 +77,6 @@ class SqlMessage(Message):
             postDate=cls._get_row_value(row, 'postDate', 'post_date'),
             deduplicationId=cls._get_row_value(row, 'deduplicationId', 'deduplication_id'),
             lockToken=cls._get_row_value(row, 'lockToken', 'lock_token'),
-            attemptCount=cls._get_row_value(row, 'attemptCount', 'attempt_count'),
         )
 
 
@@ -94,6 +89,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
         pollIntervalSeconds: float = 1.0,
         maxAttempts: int = 3,
         failureRetryDelaySeconds: int = 60,
+        retentionSeconds: int = 7 * 24 * 60 * 60,
         owner: str | None = None,
     ) -> None:
         self.database = database
@@ -102,6 +98,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
         self.pollIntervalSeconds = pollIntervalSeconds
         self.maxAttempts = maxAttempts
         self.failureRetryDelaySeconds = failureRetryDelaySeconds
+        self.retentionSeconds = retentionSeconds
         self.owner = owner or process_util.get_process_name()
 
     async def connect(self) -> None:
@@ -123,8 +120,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
     async def send_messages(self, messages: Sequence[Message], delaySeconds: int = 0) -> None:
         if not messages:
             return
-        now = date_util.datetime_from_now()
-        visibleDate = date_util.datetime_from_now(seconds=delaySeconds)
+        now = self.database.now()
         rows = []
         for message in messages:
             message.prepare_for_send()
@@ -135,11 +131,10 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                     'content': message.content,
                     'requestId': message.requestId,
                     'postCount': message.postCount,
-                    'postDate': message.postDate,
+                    'postDate': now,
                     'deduplicationId': message.deduplicationId,
                     'status': MESSAGE_STATUS_PENDING,
-                    'visibleDate': visibleDate,
-                    'attemptCount': 0,
+                    'visibleDate': self.database.now(seconds=delaySeconds),
                     'createdDate': now,
                 }
             )
@@ -160,14 +155,14 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
             await asyncio.sleep(min(self.pollIntervalSeconds, max(deadline - time.monotonic(), 0)))
 
     async def _claim_messages(self, limit: int, expectedProcessingSeconds: int) -> list[SqlMessage]:
-        now = date_util.datetime_from_now()
+        now = self.database.now()
         async with self.database.create_transaction() as connection:
             exhaustedQuery = (
                 sqlalchemy.update(self.table)
                 .where(self.table.c.queueName == self.queueName)
                 .where(self.table.c.status == MESSAGE_STATUS_RUNNING)
                 .where(self.table.c.visibleDate <= now)
-                .where(self.table.c.attemptCount >= self.maxAttempts)
+                .where(self.table.c.postCount >= self.maxAttempts)
                 .values(status=MESSAGE_STATUS_FAILED, lockToken=None, completedDate=now, lastError='LEASE_EXPIRED')
             )
             await self.database.execute(query=exhaustedQuery, connection=connection)
@@ -185,11 +180,11 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                 .where(self.table.c.id.in_(claimableIdsQuery))
                 .values(
                     status=MESSAGE_STATUS_RUNNING,
-                    attemptCount=self.table.c.attemptCount + 1,
+                    postCount=sqlalchemy.case((self.table.c.status == MESSAGE_STATUS_RUNNING, self.table.c.postCount + 1), else_=self.table.c.postCount),
                     lockToken=str(uuid.uuid4()),
                     owner=self.owner,
                     startedDate=now,
-                    visibleDate=date_util.datetime_from_now(seconds=expectedProcessingSeconds),
+                    visibleDate=self.database.now(seconds=expectedProcessingSeconds),
                 )
                 .returning(*self.table.c)
             )
@@ -202,65 +197,43 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
 
     async def complete_message(self, message: SqlMessage) -> None:
         async with self.database.create_transaction() as connection:
-            query = self._owned_update(message=message).values(status=MESSAGE_STATUS_SUCCEEDED, lockToken=None, completedDate=date_util.datetime_from_now())
+            query = self._owned_update(message=message).values(status=MESSAGE_STATUS_SUCCEEDED, lockToken=None, completedDate=self.database.now())
             await self.database.execute(query=query, connection=connection)
 
     async def retry_message(self, message: SqlMessage, delaySeconds: int = 0) -> None:
-        now = date_util.datetime_from_now()
-        await self._reschedule_message(message=message, visibleDate=date_util.datetime_from_now(seconds=delaySeconds), extraValues={'postCount': self.table.c.postCount + 1, 'postDate': now})
+        await self._reschedule_message(message=message, delaySeconds=delaySeconds, extraValues={})
 
     async def fail_message(self, message: SqlMessage, errorMessage: str | None) -> None:
-        if message.attemptCount >= self.maxAttempts:
+        postCount = message.postCount or 0
+        if postCount >= self.maxAttempts:
             async with self.database.create_transaction() as connection:
-                query = self._owned_update(message=message).values(status=MESSAGE_STATUS_FAILED, lockToken=None, completedDate=date_util.datetime_from_now(), lastError=errorMessage)
+                query = self._owned_update(message=message).values(status=MESSAGE_STATUS_FAILED, lockToken=None, completedDate=self.database.now(), lastError=errorMessage)
                 await self.database.execute(query=query, connection=connection)
             return
-        visibleDate = date_util.datetime_from_now(seconds=self.failureRetryDelaySeconds * message.attemptCount)
-        await self._reschedule_message(message=message, visibleDate=visibleDate, extraValues={'lastError': errorMessage})
+        await self._reschedule_message(message=message, delaySeconds=self.failureRetryDelaySeconds * postCount, extraValues={'lastError': errorMessage})
 
-    async def _reschedule_message(self, message: SqlMessage, visibleDate: datetime.datetime, extraValues: dict[str, Any]) -> None:  # type: ignore[explicit-any]
+    async def _reschedule_message(self, message: SqlMessage, delaySeconds: float, extraValues: dict[str, Any]) -> None:  # type: ignore[explicit-any]
         async with self.database.create_transaction() as connection:
             try:
                 async with connection.begin_nested():
-                    query = self._owned_update(message=message).values(status=MESSAGE_STATUS_PENDING, lockToken=None, visibleDate=visibleDate, **extraValues)
+                    query = self._owned_update(message=message).values(status=MESSAGE_STATUS_PENDING, lockToken=None, visibleDate=self.database.now(seconds=delaySeconds), postCount=self.table.c.postCount + 1, postDate=self.database.now(), **extraValues)
                     await self.database.execute(query=query, connection=connection)
             except sqlalchemy.exc.IntegrityError:
                 # NOTE(krishan711): an identical message was enqueued while this one ran, so it will do the work instead
-                query = self._owned_update(message=message).values(status=MESSAGE_STATUS_DEDUPLICATED, lockToken=None, completedDate=date_util.datetime_from_now())
+                query = self._owned_update(message=message).values(status=MESSAGE_STATUS_DEDUPLICATED, lockToken=None, completedDate=self.database.now())
                 await self.database.execute(query=query, connection=connection)
 
-    async def delete_completed_messages(self, retentionSeconds: int) -> int:
+    async def get_message_count(self, shouldSkipRemovingNonRetained: bool = False) -> int:
+        countQuery = sqlalchemy.select(sqlalchemy.func.count()).select_from(self.table).where(self.table.c.queueName == self.queueName).where(self.table.c.status.in_([MESSAGE_STATUS_PENDING, MESSAGE_STATUS_RUNNING])).where(self.table.c.visibleDate <= self.database.now())
         async with self.database.create_transaction() as connection:
-            query = (
-                sqlalchemy.delete(self.table)
-                .where(self.table.c.queueName == self.queueName)
-                .where(self.table.c.status.in_([MESSAGE_STATUS_SUCCEEDED, MESSAGE_STATUS_DEDUPLICATED]))
-                .where(self.table.c.completedDate < date_util.datetime_from_now(seconds=-retentionSeconds))
-                .returning(self.table.c.id)
-            )
-            result = await self.database.execute(query=query, connection=connection)
-            return len(result.all())
-
-    async def get_message_count(self) -> int:
-        countQuery = (
-            sqlalchemy.select(sqlalchemy.func.count())
-            .select_from(self.table)
-            .where(self.table.c.queueName == self.queueName)
-            .where(self.table.c.status.in_([MESSAGE_STATUS_PENDING, MESSAGE_STATUS_RUNNING]))
-            .where(self.table.c.visibleDate <= date_util.datetime_from_now())
-        )
-        async with self.database.create_transaction() as connection:
+            if not shouldSkipRemovingNonRetained:
+                deleteQuery = sqlalchemy.delete(self.table).where(self.table.c.queueName == self.queueName).where(self.table.c.status.in_([MESSAGE_STATUS_SUCCEEDED, MESSAGE_STATUS_DEDUPLICATED])).where(self.table.c.completedDate < self.database.now(seconds=-self.retentionSeconds))
+                await self.database.execute(query=deleteQuery, connection=connection)
             result = await self.database.execute(query=countQuery, connection=connection)
         return int(result.scalar_one())
 
     async def get_inflight_message_count(self) -> int:
-        countQuery = (
-            sqlalchemy.select(sqlalchemy.func.count())
-            .select_from(self.table)
-            .where(self.table.c.queueName == self.queueName)
-            .where(self.table.c.status == MESSAGE_STATUS_RUNNING)
-            .where(self.table.c.visibleDate > date_util.datetime_from_now())
-        )
+        countQuery = sqlalchemy.select(sqlalchemy.func.count()).select_from(self.table).where(self.table.c.queueName == self.queueName).where(self.table.c.status == MESSAGE_STATUS_RUNNING).where(self.table.c.visibleDate > self.database.now())
         async with self.database.create_transaction() as connection:
             result = await self.database.execute(query=countQuery, connection=connection)
         return int(result.scalar_one())

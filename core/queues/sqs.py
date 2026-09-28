@@ -21,6 +21,8 @@ else:
     SendMessageBatchRequestEntryTypeDef = Any
     RawSqsMessageTypeDef = Any
 
+SQS_MAX_DELAY_SECONDS = 900
+
 
 class SqsMessage(Message):
     receiptHandle: str
@@ -61,7 +63,7 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
         if not self._sqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to send messages')
         message.prepare_for_send()
-        await self._sqsClient.send_message(QueueUrl=self.queueUrl, DelaySeconds=delaySeconds, MessageAttributes={}, MessageBody=message.model_dump_json())
+        await self._sqsClient.send_message(QueueUrl=self.queueUrl, DelaySeconds=min(delaySeconds, SQS_MAX_DELAY_SECONDS), MessageAttributes={}, MessageBody=message.model_dump_json())
 
     async def send_messages(self, messages: Sequence[Message], delaySeconds: int = 0) -> None:
         if not self._sqsClient:
@@ -71,7 +73,7 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
             requests: list[SendMessageBatchRequestEntryTypeDef] = []
             for index, message in enumerate(messageChunk):
                 message.prepare_for_send()
-                requests.append({'Id': str(index), 'DelaySeconds': int(delaySeconds), 'MessageAttributes': {}, 'MessageBody': message.model_dump_json()})
+                requests.append({'Id': str(index), 'DelaySeconds': min(int(delaySeconds), SQS_MAX_DELAY_SECONDS), 'MessageAttributes': {}, 'MessageBody': message.model_dump_json()})
             response = await self._sqsClient.send_message_batch(QueueUrl=self.queueUrl, Entries=requests)
             failures += response.get('Failed', [])
         if len(failures) > 0:
