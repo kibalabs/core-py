@@ -12,6 +12,7 @@ from core.locks.lock import Lock
 from core.locks.model import Lease
 from core.store.database import Database
 from core.util import date_util
+from core.util import process_util
 
 # NOTE(krishan711): this table is owned here (not in the consuming app's schema.py) so it can ship with
 # core-py. To include it in an app's own alembic-tracked metadata (so autogenerate creates the table),
@@ -25,14 +26,16 @@ LocksTable = sqlalchemy.Table(
     sqlalchemy.Column(key='lockToken', name='lock_token', type_=sqlalchemy.Text, nullable=False),
     sqlalchemy.Column(key='acquiredDate', name='acquired_date', type_=sqlalchemy.DateTime(timezone=True), nullable=False),
     sqlalchemy.Column(key='expiryDate', name='expiry_date', type_=sqlalchemy.DateTime(timezone=True), nullable=False),
+    sqlalchemy.Column(key='owner', name='owner', type_=sqlalchemy.Text, nullable=False),
 )
 
 
 class SqlLock(Lock):
-    def __init__(self, database: Database, table: sqlalchemy.Table = LocksTable, pollIntervalSeconds: float = 1.0) -> None:
+    def __init__(self, database: Database, table: sqlalchemy.Table = LocksTable, pollIntervalSeconds: float = 1.0, owner: str | None = None) -> None:
         self.database = database
         self.table = table
         self.pollIntervalSeconds = pollIntervalSeconds
+        self.owner = owner or process_util.get_process_name()
 
     async def connect(self) -> None:
         pass
@@ -47,8 +50,15 @@ class SqlLock(Lock):
             if lease is not None:
                 return lease
             if time.monotonic() >= deadline:
-                raise LockedException(message=f'LOCK_HELD: {name}')
+                owner = await self.get_owner(name=name)
+                raise LockedException(message=f'LOCK_HELD: {name} by {owner}')
             await asyncio.sleep(min(self.pollIntervalSeconds, max(deadline - time.monotonic(), 0)))
+
+    async def get_owner(self, name: str) -> str | None:
+        async with self.database.create_transaction() as connection:
+            query = sqlalchemy.select(self.table.c.owner).where(self.table.c.name == name).where(self.table.c.expiryDate > date_util.datetime_from_now())
+            result = await self.database.execute(query=query, connection=connection)
+            return result.scalar_one_or_none()
 
     def _create_insert(self, dialectName: str) -> sqlalchemy_psql.Insert | sqlalchemy_sqlite.Insert:
         if dialectName == 'postgresql':
@@ -60,7 +70,7 @@ class SqlLock(Lock):
     async def _try_acquire(self, name: str, ttlSeconds: int) -> Lease | None:
         now = date_util.datetime_from_now()
         lease = Lease(name=name, token=str(uuid.uuid4()), expiryDate=date_util.datetime_from_now(seconds=ttlSeconds))
-        values = {self.table.c.lockToken: lease.token, self.table.c.acquiredDate: now, self.table.c.expiryDate: lease.expiryDate}
+        values = {self.table.c.lockToken: lease.token, self.table.c.acquiredDate: now, self.table.c.expiryDate: lease.expiryDate, self.table.c.owner: self.owner}
         async with self.database.create_transaction() as connection:
             upsertQuery = (
                 self._create_insert(dialectName=connection.dialect.name).values({self.table.c.name: name, **values}).on_conflict_do_update(index_elements=[self.table.c.name], set_=values, where=self.table.c.expiryDate <= now).returning(self.table.c.name)

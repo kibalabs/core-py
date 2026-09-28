@@ -29,6 +29,10 @@ class Lock(ABC):
     async def release(self, lease: Lease) -> None:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    async def get_owner(self, name: str) -> str | None:
+        raise NotImplementedError
+
     async def _keep_alive(self, lease: Lease, ttlSeconds: int) -> None:
         while True:
             await asyncio.sleep(ttlSeconds / 3)
