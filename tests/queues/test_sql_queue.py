@@ -194,7 +194,8 @@ async def test_processor_keeps_a_message_leased_while_it_runs_longer_than_the_le
     assert (await _rows(queue=workerA))[0]['status'] == 'succeeded'
 
 
-async def test_processor_reports_a_lease_lost_while_running_and_leaves_the_new_holder_alone(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+@pytest.mark.parametrize('shouldJobRaise', [False, True])
+async def test_processor_reports_a_lease_lost_while_running_and_leaves_the_new_holder_alone(workers: tuple[SqlMessageQueue, SqlMessageQueue], shouldJobRaise: bool):
     workerA, workerB = workers
     notifications: list[str] = []
 
@@ -208,6 +209,8 @@ async def test_processor_reports_a_lease_lost_while_running_and_leaves_the_new_h
             await _make_visible(queue=workerA, messageId=typing.cast(SqlMessage, message).id)
             await _claim(queue=workerB)
             await asyncio.sleep(0.6)
+            if shouldJobRaise:
+                raise LockedException(message='LOCK_HELD: job by worker-b')
 
     processor = MessageQueueProcessor(queue=workerA, messageProcessor=LeaseStealingProcessor(), notificationClients=[RecordingNotificationClient()])
     await workerA.send_message(message=_message())

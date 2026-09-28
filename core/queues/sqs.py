@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from aiobotocore.session import get_session as get_botocore_session
+from botocore.exceptions import ClientError
 
 from core.exceptions import InternalServerErrorException
 from core.queues.message_queue import MessageQueue
@@ -22,6 +23,8 @@ else:
     RawSqsMessageTypeDef = Any
 
 SQS_MAX_DELAY_SECONDS = 900
+SQS_LOST_LEASE_ERROR_CODES = {'ReceiptHandleIsInvalid', 'MessageNotInflight'}
+SQS_RETRY_HOLD_SECONDS = 60
 
 
 class SqsMessage(Message):
@@ -103,6 +106,9 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
         await self._sqsClient.delete_message(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle)
 
     async def retry_message(self, message: SqsMessage, delaySeconds: int = 0) -> None:
+        # NOTE(krishan711): check the lease is still held before re-sending, otherwise another worker owns the message and re-sending would duplicate it
+        if not await self.extend_message_lease(message=message, expectedProcessingSeconds=SQS_RETRY_HOLD_SECONDS):
+            return
         await self.send_message(message=message, delaySeconds=delaySeconds)
         await self.complete_message(message=message)
 
@@ -113,7 +119,12 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
     async def extend_message_lease(self, message: SqsMessage, expectedProcessingSeconds: int) -> bool:
         if not self._sqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to extend message leases')
-        await self._sqsClient.change_message_visibility(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle, VisibilityTimeout=expectedProcessingSeconds)
+        try:
+            await self._sqsClient.change_message_visibility(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle, VisibilityTimeout=expectedProcessingSeconds)
+        except ClientError as exception:
+            if exception.response.get('Error', {}).get('Code') in SQS_LOST_LEASE_ERROR_CODES:
+                return False
+            raise
         return True
 
     async def get_message_count(self) -> int:

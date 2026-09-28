@@ -3,13 +3,17 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 
+from azure.core.exceptions import HttpResponseError
 from azure.storage.queue import QueueMessage as RawAqsMessage
+from azure.storage.queue import StorageErrorCode
 from azure.storage.queue.aio import QueueClient
 
 from core.exceptions import InternalServerErrorException
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
 from core.util import list_util
+
+AQS_RETRY_HOLD_SECONDS = 60
 
 
 class AqsMessage(Message):
@@ -86,6 +90,9 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         await self._aqsClient.delete_message(message=message.aqsId, pop_receipt=message.popReceipt)
 
     async def retry_message(self, message: AqsMessage, delaySeconds: int = 0) -> None:
+        # NOTE(krishan711): check the lease is still held before re-sending, otherwise another worker owns the message and re-sending would duplicate it
+        if not await self.extend_message_lease(message=message, expectedProcessingSeconds=AQS_RETRY_HOLD_SECONDS):
+            return
         await self.send_message(message=message, delaySeconds=delaySeconds)
         await self.complete_message(message=message)
 
@@ -96,7 +103,12 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
     async def extend_message_lease(self, message: AqsMessage, expectedProcessingSeconds: int) -> bool:
         if not self._aqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to extend message leases')
-        updatedMessage = await self._aqsClient.update_message(message=message.aqsId, pop_receipt=message.popReceipt, visibility_timeout=expectedProcessingSeconds)
+        try:
+            updatedMessage = await self._aqsClient.update_message(message=message.aqsId, pop_receipt=message.popReceipt, visibility_timeout=expectedProcessingSeconds)
+        except HttpResponseError as exception:
+            if getattr(exception, 'error_code', None) in {StorageErrorCode.POP_RECEIPT_MISMATCH, StorageErrorCode.MESSAGE_NOT_FOUND}:
+                return False
+            raise
         # NOTE(krishan711): azure invalidates the old pop receipt on every update so later calls must use the new one
         message.popReceipt = updatedMessage.pop_receipt
         return True

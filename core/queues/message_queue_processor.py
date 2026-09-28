@@ -84,6 +84,7 @@ class MessageQueueProcessor[MessageType: Message]:
         statusCode = 200
         # NOTE(krishan711): the keep-alive is stopped and awaited (not cancelled) so an in-flight extend finishes before the message is completed, retried or failed.
         # A lost lease is raised once the job returns rather than interrupting it, as cancelling mid-job could abandon work that was already sent.
+        # It is raised from the finally so it replaces any exception from the job: the message belongs to another worker, so it must not be retried or completed here.
         stopKeepAliveEvent = asyncio.Event()
         keepAliveTask = asyncio.create_task(self._keep_message_alive(message=message, expectedProcessingSeconds=expectedProcessingSeconds, stopEvent=stopKeepAliveEvent))
         try:
@@ -91,9 +92,8 @@ class MessageQueueProcessor[MessageType: Message]:
                 await self.messageProcessor.process_message(message=message)
             finally:
                 stopKeepAliveEvent.set()
-                isLeaseLost = await keepAliveTask
-            if isLeaseLost:
-                raise MessageLeaseLostException  # noqa: TRY301
+                if await keepAliveTask:
+                    raise MessageLeaseLostException
             await self.queue.complete_message(message=message)
         except MessageNeedsReprocessingException as exception:
             logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {exception.originalException!s}')

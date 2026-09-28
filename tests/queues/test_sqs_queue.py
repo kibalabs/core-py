@@ -49,6 +49,26 @@ async def test_extended_message_stays_invisible_and_can_still_be_completed(worke
     assert await workerA.get_inflight_message_count() == 0
 
 
+async def test_extend_after_another_worker_received_the_message_reports_the_lease_lost(workers: tuple[SqsMessageQueue, SqsMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    staleMessage = await _claim(queue=workerA, expectedProcessingSeconds=1)
+    await asyncio.sleep(1.5)
+    await _claim(queue=workerB)
+    assert await workerA.extend_message_lease(message=staleMessage, expectedProcessingSeconds=60) is False
+
+
+async def test_retry_after_losing_the_lease_does_not_duplicate_the_message(workers: tuple[SqsMessageQueue, SqsMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    staleMessage = await _claim(queue=workerA, expectedProcessingSeconds=1)
+    await asyncio.sleep(1.5)
+    newMessage = await _claim(queue=workerB)
+    await workerA.retry_message(message=staleMessage)
+    await workerB.complete_message(message=newMessage)
+    assert await workerA.get_message() is None
+
+
 async def test_retry_reschedules_without_leaving_the_original_behind(workers: tuple[SqsMessageQueue, SqsMessageQueue]):
     workerA, _ = workers
     await workerA.send_message(message=_message())
