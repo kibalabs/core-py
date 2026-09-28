@@ -45,14 +45,6 @@ class MessageQueueProcessor[MessageType: Message]:
             await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{kibaException.message}```')
         return exception.statusCode if isinstance(exception, KibaException) else 500
 
-    async def _handle_reprocessing(self, message: MessageType, exception: MessageNeedsReprocessingException, requestId: str) -> int:
-        postCount = message.postCount or 0
-        if postCount > exception.maxRetryCount:
-            return await self._handle_failure(message=message, exception=exception.originalException or exception, requestId=requestId)
-        logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {exception.originalException!s}')
-        await self.queue.retry_message(message=message, delaySeconds=(postCount * exception.delaySeconds))
-        return 200
-
     async def _process_message(self, message: MessageType) -> None:
         requestId = message.requestId or str(uuid.uuid4()).replace('-', '')
         if self.requestIdHolder:
@@ -64,10 +56,14 @@ class MessageQueueProcessor[MessageType: Message]:
         try:
             await self.messageProcessor.process_message(message=message)
             await self.queue.complete_message(message=message)
-        except MessageNeedsReprocessingException as exception:
-            statusCode = await self._handle_reprocessing(message=message, exception=exception, requestId=requestId)
-        except LockedException as exception:
-            statusCode = await self._handle_reprocessing(message=message, exception=MessageNeedsReprocessingException(originalException=exception), requestId=requestId)
+        except (MessageNeedsReprocessingException, LockedException) as exception:
+            reprocessingException = exception if isinstance(exception, MessageNeedsReprocessingException) else MessageNeedsReprocessingException(originalException=exception)
+            postCount = message.postCount or 0
+            if postCount <= reprocessingException.maxRetryCount:
+                logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {reprocessingException.originalException!s}')
+                await self.queue.retry_message(message=message, delaySeconds=(postCount * reprocessingException.delaySeconds))
+            else:
+                statusCode = await self._handle_failure(message=message, exception=reprocessingException.originalException or reprocessingException, requestId=requestId)
         except Exception as exception:  # noqa: BLE001
             statusCode = await self._handle_failure(message=message, exception=exception, requestId=requestId)
         duration = time.time() - startTime
