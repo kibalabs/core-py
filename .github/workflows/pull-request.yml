@@ -49,9 +49,9 @@ jobs:
         run: |
           docker network create tests
           docker run --detach --name postgres --network tests --env POSTGRES_PASSWORD=test --env POSTGRES_DB=core postgres:16-alpine
-          docker run --detach --name cosmos --network tests mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview --protocol http
-          docker run --detach --name elasticmq --network tests --publish 9324:9324 softwaremill/elasticmq-native
-          docker run --detach --name azurite --network tests --publish 10001:10001 mcr.microsoft.com/azure-storage/azurite azurite-queue --queueHost 0.0.0.0 --skipApiVersionCheck
+          docker run --detach --name cosmos --network tests mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator@sha256:2db1f9e74c506bcf6fc347aa937aea1c00fa756061296a5a9efba530ce86ec02 --protocol http
+          docker run --detach --name elasticmq --network tests --publish 9324:9324 softwaremill/elasticmq-native@sha256:e4580ab9ad1bd5cd37b4ba04911bc5ccc8cd2d9ab4de56ece65acee71c24e05c
+          docker run --detach --name azurite --network tests --publish 10001:10001 mcr.microsoft.com/azure-storage/azurite@sha256:830430c1da1a2d537e08f3e6764dd1f5ae00cf0346bcaf625b968ec3f0971fd5 azurite-queue --queueHost 0.0.0.0 --skipApiVersionCheck
           echo "Waiting for postgres..."
           # NOTE(krishan711): check over TCP: during initdb the image runs a temporary server on the unix socket only, which reports ready and then shuts down
           for i in $(seq 1 60); do docker exec postgres pg_isready --host 127.0.0.1 --username postgres --quiet && break; sleep 1; done

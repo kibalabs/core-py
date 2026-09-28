@@ -41,7 +41,7 @@ QueueMessagesTable = sqlalchemy.Table(
     sqlalchemy.Column(key='command', name='command', type_=sqlalchemy.Text, nullable=False),
     sqlalchemy.Column(key='content', name='content', type_=sqlalchemy.JSON().with_variant(sqlalchemy_psql.JSONB(), 'postgresql'), nullable=False),
     sqlalchemy.Column(key='requestId', name='request_id', type_=sqlalchemy.Text, nullable=True),
-    sqlalchemy.Column(key='postCount', name='post_count', type_=sqlalchemy.Integer, nullable=True),
+    sqlalchemy.Column(key='postCount', name='post_count', type_=sqlalchemy.Integer, nullable=False),
     sqlalchemy.Column(key='postDate', name='post_date', type_=sqlalchemy.DateTime(timezone=True), nullable=True),
     sqlalchemy.Column(key='deduplicationId', name='deduplication_id', type_=sqlalchemy.Text, nullable=True),
     sqlalchemy.Column(key='status', name='status', type_=sqlalchemy.Text, nullable=False),
@@ -60,23 +60,17 @@ class SqlMessage(Message):
     id: int
     lockToken: str
 
-    @staticmethod
-    def _get_row_value(row: RowMapping, key: str, databaseKey: str) -> Any:  # type: ignore[explicit-any]
-        if key in row:
-            return row[key]
-        return row[databaseKey]
-
     @classmethod
-    def from_row(cls, row: RowMapping) -> SqlMessage:
+    def from_row(cls, row: RowMapping, table: sqlalchemy.Table) -> SqlMessage:
         return cls(
-            id=cls._get_row_value(row, 'id', 'id'),
-            command=cls._get_row_value(row, 'command', 'command'),
-            content=cls._get_row_value(row, 'content', 'content'),
-            requestId=cls._get_row_value(row, 'requestId', 'request_id'),
-            postCount=cls._get_row_value(row, 'postCount', 'post_count'),
-            postDate=cls._get_row_value(row, 'postDate', 'post_date'),
-            deduplicationId=cls._get_row_value(row, 'deduplicationId', 'deduplication_id'),
-            lockToken=cls._get_row_value(row, 'lockToken', 'lock_token'),
+            id=row[table.c.id],
+            command=row[table.c.command],
+            content=row[table.c.content],
+            requestId=row[table.c.requestId],
+            postCount=row[table.c.postCount],
+            postDate=row[table.c.postDate],
+            deduplicationId=row[table.c.deduplicationId],
+            lockToken=row[table.c.lockToken],
         )
 
 
@@ -199,7 +193,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
             )
             result = await self.database.execute(query=claimQuery, connection=connection)
             rows = result.mappings().all()
-        return sorted((SqlMessage.from_row(row=row) for row in rows), key=lambda message: message.id)
+        return sorted((SqlMessage.from_row(row=row, table=self.table) for row in rows), key=lambda message: message.id)
 
     def _owned_update(self, message: SqlMessage) -> sqlalchemy.Update:
         return sqlalchemy.update(self.table).where(self.table.c.id == message.id).where(self.table.c.lockToken == message.lockToken).where(self.table.c.status == MESSAGE_STATUS_RUNNING)
