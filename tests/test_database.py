@@ -151,6 +151,27 @@ async def test_isolated_context_connection_restores_no_context_connection(databa
 
 
 @pytest.mark.asyncio
+async def test_nested_isolated_context_connection_commits_alone_and_restores_the_enclosing_one(database):
+    metadata = MetaData()
+    records = Table('records', metadata, Column('name', sqlalchemy.Text, primary_key=True))
+    await database.connect(poolSize=3)
+    async with database.create_transaction() as connection:
+        await connection.run_sync(metadata.create_all)
+
+    with pytest.raises(ValueError, match='rollback'):
+        async with database.create_context_connection(), database.create_isolated_context_connection():
+            async with database.create_isolated_context_connection():
+                await database.execute(insert(records).values(name='inner'))
+            await database.execute(insert(records).values(name='enclosing'))
+            raise ValueError('rollback')
+
+    async with database.create_transaction() as connection:
+        result = await database.execute(select(records.c.name), connection=connection)
+    assert result.scalars().all() == ['inner']
+    await database.disconnect()
+
+
+@pytest.mark.asyncio
 async def test_isolated_context_connection_reports_uncommitted_writes_in_the_outer_context_connection(database, caplog):
     metadata = MetaData()
     records = Table('records', metadata, Column('name', sqlalchemy.Text, primary_key=True))

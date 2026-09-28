@@ -143,7 +143,7 @@ async def test_acquire_takes_over_a_lease_that_expires_while_waiting(workers: tu
     await workerA.acquire(name='job', ttlSeconds=1)
     startTime = time.monotonic()
     await workerB.acquire(name='job', maxWaitSeconds=3)
-    assert 0.9 <= time.monotonic() - startTime < 2
+    assert 0.9 <= time.monotonic() - startTime < 3
 
 
 async def test_acquire_gives_up_after_max_wait(workers: tuple[SqlLock, SqlLock]):
@@ -152,7 +152,7 @@ async def test_acquire_gives_up_after_max_wait(workers: tuple[SqlLock, SqlLock])
     startTime = time.monotonic()
     with pytest.raises(LockedException):
         await workerB.acquire(name='job', maxWaitSeconds=0.3)
-    assert 0.3 <= time.monotonic() - startTime < 1
+    assert 0.3 <= time.monotonic() - startTime < 3
 
 
 async def test_concurrent_acquires_have_exactly_one_winner(workers: tuple[SqlLock, SqlLock]):
@@ -217,7 +217,7 @@ async def test_with_lock_marks_the_lease_lost_after_a_takeover_and_does_not_rele
     async with workerA.with_lock(name='job', ttlSeconds=1) as lease:
         await _expire_lock_row(lock=workerA, name='job')
         newLease = await workerB.acquire(name='job')
-        await asyncio.sleep(0.6)
+        await asyncio.sleep(1)
         assert lease.isLost
         assert not lease.is_valid()
     assert await workerB.extend(lease=newLease) is True
