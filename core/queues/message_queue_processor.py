@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import contextlib
+import sys
 import time
 import urllib.parse as urlparse
 import uuid
@@ -85,6 +86,7 @@ class MessageQueueProcessor[MessageType: Message]:
         # NOTE(krishan711): the keep-alive is stopped and awaited (not cancelled) so an in-flight extend finishes before the message is completed, retried or failed.
         # A lost lease is raised once the job returns rather than interrupting it, as cancelling mid-job could abandon work that was already sent.
         # It is raised from the finally so it replaces any exception from the job: the message belongs to another worker, so it must not be retried or completed here.
+        # Cancellation (and other non-Exception errors) must still propagate, so those are never replaced.
         stopKeepAliveEvent = asyncio.Event()
         keepAliveTask = asyncio.create_task(self._keep_message_alive(message=message, expectedProcessingSeconds=expectedProcessingSeconds, stopEvent=stopKeepAliveEvent))
         try:
@@ -92,7 +94,9 @@ class MessageQueueProcessor[MessageType: Message]:
                 await self.messageProcessor.process_message(message=message)
             finally:
                 stopKeepAliveEvent.set()
-                if await keepAliveTask:
+                isLeaseLost = await keepAliveTask
+                inFlightException = sys.exception()
+                if isLeaseLost and (inFlightException is None or isinstance(inFlightException, Exception)):
                     raise MessageLeaseLostException
             await self.queue.complete_message(message=message)
         except MessageNeedsReprocessingException as exception:

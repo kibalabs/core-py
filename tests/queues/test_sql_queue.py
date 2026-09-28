@@ -221,6 +221,24 @@ async def test_processor_reports_a_lease_lost_while_running_and_leaves_the_new_h
     assert 'MESSAGE_LEASE_LOST' in notifications[0]
 
 
+async def test_processor_cancellation_propagates_even_when_the_lease_was_lost(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, workerB = workers
+
+    class LeaseStealingProcessor(MessageProcessor):
+        async def process_message(self, message: Message) -> None:
+            await _make_visible(queue=workerA, messageId=typing.cast(SqlMessage, message).id)
+            await _claim(queue=workerB)
+            await asyncio.sleep(10)
+
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=LeaseStealingProcessor(), notificationClients=[])
+    await workerA.send_message(message=_message())
+    executeTask = asyncio.create_task(processor.execute(expectedProcessingSeconds=1, longPollSeconds=0))
+    await asyncio.sleep(0.8)
+    executeTask.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await executeTask
+
+
 async def test_expired_lease_with_no_attempts_left_is_failed(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     workerA, _ = workers
     await workerA.send_message(message=_message())
