@@ -24,6 +24,7 @@ else:
 
 SQS_MAX_DELAY_SECONDS = 900
 SQS_LOST_LEASE_ERROR_CODES = {'ReceiptHandleIsInvalid', 'MessageNotInflight'}
+SQS_MESSAGE_UNAVAILABLE_REASON = 'Message does not exist or is not available'
 SQS_RETRY_HOLD_SECONDS = 60
 
 
@@ -106,7 +107,7 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
         await self._sqsClient.delete_message(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle)
 
     async def retry_message(self, message: SqsMessage, delaySeconds: int = 0) -> None:
-        # NOTE(krishan711): check the lease is still held before re-sending, otherwise another worker owns the message and re-sending would duplicate it
+        # NOTE(krishan711): check the message is still in flight before re-sending so a message another worker already completed is not sent again
         if not await self.extend_message_lease(message=message, expectedProcessingSeconds=SQS_RETRY_HOLD_SECONDS):
             return
         await self.send_message(message=message, delaySeconds=delaySeconds)
@@ -122,7 +123,10 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
         try:
             await self._sqsClient.change_message_visibility(QueueUrl=self.queueUrl, ReceiptHandle=message.receiptHandle, VisibilityTimeout=expectedProcessingSeconds)
         except ClientError as exception:
-            if exception.response.get('Error', {}).get('Code') in SQS_LOST_LEASE_ERROR_CODES:
+            error = exception.response.get('Error', {})
+            # NOTE(krishan711): real SQS accepts any receipt handle for a message (even one from an earlier receive), so a takeover by another worker cannot be
+            # detected; only that the message has been deleted or is no longer in flight, which it reports as InvalidParameterValue with this reason
+            if error.get('Code') in SQS_LOST_LEASE_ERROR_CODES or (error.get('Code') == 'InvalidParameterValue' and SQS_MESSAGE_UNAVAILABLE_REASON in error.get('Message', '')):
                 return False
             raise
         return True
