@@ -122,8 +122,13 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
             return
         now = self.database.now()
         rows = []
+        batchDeduplicationIds: set[str] = set()
         for message in messages:
             message.prepare_for_send()
+            if message.deduplicationId is not None:
+                if message.deduplicationId in batchDeduplicationIds:
+                    continue
+                batchDeduplicationIds.add(message.deduplicationId)
             rows.append(
                 {
                     'queueName': self.queueName,
@@ -139,8 +144,10 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                 }
             )
         async with self.database.create_transaction() as connection:
-            insertQuery = self._create_insert(dialectName=connection.dialect.name).values(rows).on_conflict_do_nothing(index_elements=[self.table.c.queueName, self.table.c.deduplicationId], index_where=_PENDING_PREDICATE)
-            await self.database.execute(query=insertQuery, connection=connection)
+            insertQuery = self._create_insert(dialectName=connection.dialect.name).values(rows)
+            earliest = sqlalchemy.func.least if connection.dialect.name == 'postgresql' else sqlalchemy.func.min
+            upsertQuery = insertQuery.on_conflict_do_update(index_elements=[self.table.c.queueName, self.table.c.deduplicationId], index_where=_PENDING_PREDICATE, set_={self.table.c.visibleDate: earliest(self.table.c.visibleDate, insertQuery.excluded.visibleDate)})
+            await self.database.execute(query=upsertQuery, connection=connection)
 
     async def get_message(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> SqlMessage | None:
         messages = await self.get_messages(limit=1, expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds)

@@ -8,6 +8,7 @@ import pytest_asyncio
 import sqlalchemy
 
 from core.exceptions import LockedException
+from core.notifications.notification_client import NotificationClient
 from core.queues.message_queue_processor import MessageNeedsReprocessingException
 from core.queues.message_queue_processor import MessageProcessor
 from core.queues.message_queue_processor import MessageQueueProcessor
@@ -15,6 +16,7 @@ from core.queues.model import Message
 from core.queues.sql import QueueMessagesMetadata
 from core.queues.sql import SqlMessage
 from core.queues.sql import SqlMessageQueue
+from core.requester import KibaResponse
 from core.store.database import Database
 from core.util import date_util
 
@@ -101,6 +103,32 @@ async def test_delayed_message_is_not_claimed_until_visible(workers: tuple[SqlMe
     await workerA.send_message(message=_message(), delaySeconds=60)
     assert await workerA.get_message() is None
     assert await workerA.get_message_count() == 0
+
+
+async def test_duplicate_send_keeps_the_earliest_visibility(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    await workerA.send_message(message=_message(), delaySeconds=60)
+    await workerA.send_message(message=_message())
+    await workerA.send_message(message=_message(), delaySeconds=60)
+    assert len(await _rows(queue=workerA)) == 1
+    assert await workerA.get_message() is not None
+
+
+async def test_processor_fails_message_even_when_notifications_fail(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+
+    class BrokenProcessor(MessageProcessor):
+        async def process_message(self, message: Message) -> None:
+            raise ValueError('boom')
+
+    class BrokenNotificationClient(NotificationClient):
+        async def post(self, messageText: str) -> KibaResponse:
+            raise ConnectionError('discord is down')
+
+    processor = MessageQueueProcessor(queue=SqlMessageQueue(database=workerA.database, queueName='work', maxAttempts=1), messageProcessor=BrokenProcessor(), notificationClients=[BrokenNotificationClient()])
+    await workerA.send_message(message=_message())
+    assert await processor.execute(longPollSeconds=0)
+    assert (await _rows(queue=workerA))[0]['status'] == 'failed'
 
 
 async def test_concurrent_claims_never_hand_out_the_same_message(workers: tuple[SqlMessageQueue, SqlMessageQueue]):

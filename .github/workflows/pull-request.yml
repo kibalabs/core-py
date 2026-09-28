@@ -52,9 +52,14 @@ jobs:
           # NOTE(krishan711): check over TCP: during initdb the image runs a temporary server on the unix socket only, which reports ready and then shuts down
           for i in $(seq 1 60); do docker exec postgres pg_isready --host 127.0.0.1 --username postgres --quiet && break; sleep 1; done
           docker exec postgres pg_isready --host 127.0.0.1 --username postgres
+      - name: Start cosmos emulator
+        run: |
+          docker run --detach --name cosmos --network tests mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview --protocol http
+          for i in $(seq 1 120); do docker exec cosmos curl --silent --fail --output /dev/null http://localhost:8080/ready && break; sleep 1; done
+          docker exec cosmos curl --silent --fail --output /dev/null http://localhost:8080/ready
       - name: Run tests
         run: |
-          docker run --name tests --network tests --env CORE_TEST_PSQL_CONNECTION_STRING=postgresql+asyncpg://postgres:test@postgres:5432/core $DOCKER_IMAGE make test-ci
+          docker run --name tests --network tests --env CORE_TEST_PSQL_CONNECTION_STRING=postgresql+asyncpg://postgres:test@postgres:5432/core --env CORE_TEST_COSMOS_ENDPOINT=http://cosmos:8081 $DOCKER_IMAGE make test-ci
           docker cp tests:/app/test-check-results.json ./test-check-results.json
       - name: Upload test results
         uses: kibalabs/github-action-create-annotations@main
