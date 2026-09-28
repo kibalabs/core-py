@@ -72,7 +72,10 @@ class SqlLock(Lock):
         values = {self.table.c.lockToken: lease.token, self.table.c.acquiredDate: self.database.now(), self.table.c.expiryDate: self.database.now(seconds=ttlSeconds), self.table.c.owner: self.owner}
         async with self.database.create_transaction() as connection:
             upsertQuery = (
-                self._create_insert(dialectName=connection.dialect.name).values({self.table.c.name: name, **values}).on_conflict_do_update(index_elements=[self.table.c.name], set_=values, where=self.table.c.expiryDate <= self.database.now()).returning(self.table.c.name)
+                self._create_insert(dialectName=connection.dialect.name)
+                .values({self.table.c.name: name, **values})
+                .on_conflict_do_update(index_elements=[self.table.c.name], set_=values, where=self.table.c.expiryDate <= self.database.now())
+                .returning(self.table.c.name)
             )
             result = await self.database.execute(query=upsertQuery, connection=connection)
             isAcquired = result.first() is not None
@@ -81,7 +84,14 @@ class SqlLock(Lock):
     async def extend(self, lease: Lease, ttlSeconds: int = 60) -> bool:
         newExpiryDate = date_util.datetime_from_now(seconds=ttlSeconds)
         async with self.database.create_transaction() as connection:
-            updateQuery = sqlalchemy.update(self.table).where(self.table.c.name == lease.name).where(self.table.c.lockToken == lease.token).where(self.table.c.expiryDate > self.database.now()).values(expiryDate=self.database.now(seconds=ttlSeconds)).returning(self.table.c.name)
+            updateQuery = (
+                sqlalchemy.update(self.table)
+                .where(self.table.c.name == lease.name)
+                .where(self.table.c.lockToken == lease.token)
+                .where(self.table.c.expiryDate > self.database.now())
+                .values(expiryDate=self.database.now(seconds=ttlSeconds))
+                .returning(self.table.c.name)
+            )
             result = await self.database.execute(query=updateQuery, connection=connection)
             isExtended = result.first() is not None
         if isExtended:

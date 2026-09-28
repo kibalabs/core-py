@@ -146,7 +146,9 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
         async with self.database.create_transaction() as connection:
             insertQuery = self._create_insert(dialectName=connection.dialect.name).values(rows)
             earliest = sqlalchemy.func.least if connection.dialect.name == 'postgresql' else sqlalchemy.func.min
-            upsertQuery = insertQuery.on_conflict_do_update(index_elements=[self.table.c.queueName, self.table.c.deduplicationId], index_where=_PENDING_PREDICATE, set_={self.table.c.visibleDate: earliest(self.table.c.visibleDate, insertQuery.excluded.visibleDate)})
+            upsertQuery = insertQuery.on_conflict_do_update(
+                index_elements=[self.table.c.queueName, self.table.c.deduplicationId], index_where=_PENDING_PREDICATE, set_={self.table.c.visibleDate: earliest(self.table.c.visibleDate, insertQuery.excluded.visibleDate)}
+            )
             await self.database.execute(query=upsertQuery, connection=connection)
 
     async def get_message(self, expectedProcessingSeconds: int = 300, longPollSeconds: int = 0) -> SqlMessage | None:
@@ -231,10 +233,21 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                 await self.database.execute(query=query, connection=connection)
 
     async def get_message_count(self, shouldSkipRemovingNonRetained: bool = False) -> int:
-        countQuery = sqlalchemy.select(sqlalchemy.func.count()).select_from(self.table).where(self.table.c.queueName == self.queueName).where(self.table.c.status.in_([MESSAGE_STATUS_PENDING, MESSAGE_STATUS_RUNNING])).where(self.table.c.visibleDate <= self.database.now())
+        countQuery = (
+            sqlalchemy.select(sqlalchemy.func.count())
+            .select_from(self.table)
+            .where(self.table.c.queueName == self.queueName)
+            .where(self.table.c.status.in_([MESSAGE_STATUS_PENDING, MESSAGE_STATUS_RUNNING]))
+            .where(self.table.c.visibleDate <= self.database.now())
+        )
         async with self.database.create_transaction() as connection:
             if not shouldSkipRemovingNonRetained:
-                deleteQuery = sqlalchemy.delete(self.table).where(self.table.c.queueName == self.queueName).where(self.table.c.status.in_([MESSAGE_STATUS_SUCCEEDED, MESSAGE_STATUS_DEDUPLICATED])).where(self.table.c.completedDate < self.database.now(seconds=-self.retentionSeconds))
+                deleteQuery = (
+                    sqlalchemy.delete(self.table)
+                    .where(self.table.c.queueName == self.queueName)
+                    .where(self.table.c.status.in_([MESSAGE_STATUS_SUCCEEDED, MESSAGE_STATUS_DEDUPLICATED]))
+                    .where(self.table.c.completedDate < self.database.now(seconds=-self.retentionSeconds))
+                )
                 await self.database.execute(query=deleteQuery, connection=connection)
             result = await self.database.execute(query=countQuery, connection=connection)
         return int(result.scalar_one())

@@ -159,6 +159,8 @@ class _HasDatabase(typing.Protocol):
     database: Database
 
 
+# NOTE(krishan711): the commit happens when the decorated method returns, so any lock guarding the same data must be
+# held by the caller around the call (not taken inside the method), otherwise the lock is released before the commit.
 def independent_transaction[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
     @functools.wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
