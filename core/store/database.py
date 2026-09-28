@@ -1,12 +1,9 @@
 import contextlib
 import contextvars
 import datetime
-import functools
 import typing
 import weakref
 from collections.abc import AsyncIterator
-from collections.abc import Awaitable
-from collections.abc import Callable
 from typing import TypeVar
 
 import sqlalchemy
@@ -153,19 +150,3 @@ class Database:
         if isinstance(query, UpdateBase):
             self._connectionsWithWrites.add(connection)
         return typing.cast(Result[typing.Any], await connection.execute(statement=query))  # type: ignore[explicit-any]
-
-
-class _HasDatabase(typing.Protocol):
-    database: Database
-
-
-# NOTE(krishan711): the commit happens when the decorated method returns, so any lock guarding the same data must be
-# held by the caller around the call (not taken inside the method), otherwise the lock is released before the commit.
-def independent_transaction[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-    @functools.wraps(func)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        owner = typing.cast(_HasDatabase, args[0])
-        async with owner.database.create_isolated_context_connection():
-            return await func(*args, **kwargs)
-
-    return wrapper

@@ -13,7 +13,6 @@ from sqlalchemy import text
 
 from core.exceptions import InternalServerErrorException
 from core.store.database import Database
-from core.store.database import independent_transaction
 from core.util import json_util
 
 
@@ -229,34 +228,4 @@ async def test_isolated_context_connection_raises_on_uncommitted_outer_writes_wh
             await database.execute(insert(records).values(name='outer'))
             async with database.create_isolated_context_connection():
                 pass
-    await database.disconnect()
-
-
-@pytest.mark.asyncio
-async def test_independent_transaction_commits_when_the_function_returns_even_if_the_caller_rolls_back(database):
-    metadata = MetaData()
-    records = Table('records', metadata, Column('name', sqlalchemy.Text, primary_key=True))
-
-    class Recorder:
-        def __init__(self, database: Database) -> None:
-            self.database = database
-
-        @independent_transaction
-        async def record(self, name: str) -> str:
-            await self.database.execute(insert(records).values(name=name))
-            return name
-
-    await database.connect(poolSize=2)
-    async with database.create_transaction() as connection:
-        await connection.run_sync(metadata.create_all)
-
-    with pytest.raises(ValueError, match='rollback'):
-        async with database.create_context_connection():
-            assert await Recorder(database=database).record(name='independent') == 'independent'
-            await database.execute(insert(records).values(name='outer'))
-            raise ValueError('rollback')
-
-    async with database.create_transaction() as connection:
-        result = await database.execute(select(records.c.name), connection=connection)
-    assert result.scalars().all() == ['independent']
     await database.disconnect()
