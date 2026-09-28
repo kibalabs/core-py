@@ -32,14 +32,18 @@ class AqsMessage(Message):
 
 
 class AqsMessageQueue(MessageQueue[AqsMessage]):
-    def __init__(self, storageAccountName: str, storageAccountKey: str, queueName: str) -> None:
+    def __init__(self, storageAccountName: str, storageAccountKey: str, queueName: str, endpointUrl: str | None = None) -> None:
         self._storageAccountName = storageAccountName
         self._storageAccountKey = storageAccountKey
         self.queueName = queueName
+        self.endpointUrl = endpointUrl
         self._aqsClient: QueueClient | None = None
 
     async def connect(self) -> None:
-        self._aqsClient = QueueClient.from_connection_string(conn_str=f'DefaultEndpointsProtocol=https;AccountName={self._storageAccountName};AccountKey={self._storageAccountKey}', queue_name=self.queueName)
+        connectionString = f'DefaultEndpointsProtocol=https;AccountName={self._storageAccountName};AccountKey={self._storageAccountKey}'
+        if self.endpointUrl:
+            connectionString += f';QueueEndpoint={self.endpointUrl}'
+        self._aqsClient = QueueClient.from_connection_string(conn_str=connectionString, queue_name=self.queueName)
         if not self._aqsClient:
             raise InternalServerErrorException('Failed to connect to queue')
         await self._aqsClient.get_queue_properties()

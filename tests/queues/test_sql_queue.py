@@ -1,5 +1,6 @@
 import asyncio
 import os
+import typing
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -191,6 +192,30 @@ async def test_processor_keeps_a_message_leased_while_it_runs_longer_than_the_le
     _, stolenMessage = await asyncio.gather(processor.execute(expectedProcessingSeconds=1, longPollSeconds=0), _claim_while_running())
     assert stolenMessage is None
     assert (await _rows(queue=workerA))[0]['status'] == 'succeeded'
+
+
+async def test_processor_reports_a_lease_lost_while_running_and_leaves_the_new_holder_alone(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, workerB = workers
+    notifications: list[str] = []
+
+    class RecordingNotificationClient(NotificationClient):
+        async def post(self, messageText: str) -> KibaResponse:
+            notifications.append(messageText)
+            return typing.cast(KibaResponse, None)
+
+    class LeaseStealingProcessor(MessageProcessor):
+        async def process_message(self, message: Message) -> None:
+            await _make_visible(queue=workerA, messageId=typing.cast(SqlMessage, message).id)
+            await _claim(queue=workerB)
+            await asyncio.sleep(0.6)
+
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=LeaseStealingProcessor(), notificationClients=[RecordingNotificationClient()])
+    await workerA.send_message(message=_message())
+    assert await processor.execute(expectedProcessingSeconds=1, longPollSeconds=0)
+    row = (await _rows(queue=workerA))[0]
+    assert (row['status'], row['owner']) == ('running', 'worker-b')
+    assert len(notifications) == 1
+    assert 'MESSAGE_LEASE_LOST' in notifications[0]
 
 
 async def test_expired_lease_with_no_attempts_left_is_failed(workers: tuple[SqlMessageQueue, SqlMessageQueue]):

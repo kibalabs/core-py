@@ -33,6 +33,11 @@ class MessageNeedsReprocessingException(InternalServerErrorException):
         self.originalException = originalException
 
 
+class MessageLeaseLostException(InternalServerErrorException):
+    def __init__(self) -> None:
+        super().__init__(message='MESSAGE_LEASE_LOST')
+
+
 class MessageQueueProcessor[MessageType: Message]:
     def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, notificationClients: list[NotificationClient], requestIdHolder: RequestIdHolder | None = None) -> None:
         self.queue = queue
@@ -53,12 +58,12 @@ class MessageQueueProcessor[MessageType: Message]:
                 logging.exception(notificationException)
         return exception.statusCode if isinstance(exception, KibaException) else 500
 
-    async def _keep_message_alive(self, message: MessageType, expectedProcessingSeconds: int, stopEvent: asyncio.Event) -> None:
+    async def _keep_message_alive(self, message: MessageType, expectedProcessingSeconds: int, stopEvent: asyncio.Event) -> bool:
         while True:
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(stopEvent.wait(), timeout=expectedProcessingSeconds / 3)
             if stopEvent.is_set():
-                return
+                return False
             try:
                 isExtended = await self.queue.extend_message_lease(message=message, expectedProcessingSeconds=expectedProcessingSeconds)
             except Exception as exception:  # noqa: BLE001
@@ -67,7 +72,7 @@ class MessageQueueProcessor[MessageType: Message]:
                 continue
             if not isExtended:
                 logging.error(f'Lost message lease for {message.command}')
-                return
+                return True
 
     async def _process_message(self, message: MessageType, expectedProcessingSeconds: int) -> None:
         requestId = message.requestId or str(uuid.uuid4()).replace('-', '')
@@ -77,7 +82,8 @@ class MessageQueueProcessor[MessageType: Message]:
         logging.api(action='MESSAGE', path=message.command, pathPattern=message.command, query=query)
         startTime = time.time()
         statusCode = 200
-        # NOTE(krishan711): the keep-alive is stopped and awaited (not cancelled) so an in-flight extend finishes before the message is completed, retried or failed
+        # NOTE(krishan711): the keep-alive is stopped and awaited (not cancelled) so an in-flight extend finishes before the message is completed, retried or failed.
+        # A lost lease is raised once the job returns rather than interrupting it, as cancelling mid-job could abandon work that was already sent.
         stopKeepAliveEvent = asyncio.Event()
         keepAliveTask = asyncio.create_task(self._keep_message_alive(message=message, expectedProcessingSeconds=expectedProcessingSeconds, stopEvent=stopKeepAliveEvent))
         try:
@@ -85,7 +91,9 @@ class MessageQueueProcessor[MessageType: Message]:
                 await self.messageProcessor.process_message(message=message)
             finally:
                 stopKeepAliveEvent.set()
-                await keepAliveTask
+                isLeaseLost = await keepAliveTask
+            if isLeaseLost:
+                raise MessageLeaseLostException  # noqa: TRY301
             await self.queue.complete_message(message=message)
         except MessageNeedsReprocessingException as exception:
             logging.info(msg=f'Scheduling reprocessing for message:{message.command} due to: {exception.originalException!s}')

@@ -45,21 +45,27 @@ jobs:
           json-file-path: ./type-check-results.json
           check-name: core-type-check
           fail-on-error: false
-      - name: Start postgres
+      - name: Start test services
         run: |
           docker network create tests
           docker run --detach --name postgres --network tests --env POSTGRES_PASSWORD=test --env POSTGRES_DB=core postgres:16-alpine
+          docker run --detach --name cosmos --network tests mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview --protocol http
+          docker run --detach --name elasticmq --network tests --publish 9324:9324 softwaremill/elasticmq-native
+          docker run --detach --name azurite --network tests --publish 10001:10001 mcr.microsoft.com/azure-storage/azurite azurite-queue --queueHost 0.0.0.0 --skipApiVersionCheck
+          echo "Waiting for postgres..."
           # NOTE(krishan711): check over TCP: during initdb the image runs a temporary server on the unix socket only, which reports ready and then shuts down
           for i in $(seq 1 60); do docker exec postgres pg_isready --host 127.0.0.1 --username postgres --quiet && break; sleep 1; done
           docker exec postgres pg_isready --host 127.0.0.1 --username postgres
-      - name: Start cosmos emulator
-        run: |
-          docker run --detach --name cosmos --network tests mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview --protocol http
+          echo "Waiting for sqs and aqs emulators..."
+          # NOTE(krishan711): any http response (even an error) means the emulator is accepting requests
+          for i in $(seq 1 60); do curl --silent --output /dev/null http://localhost:9324/ && curl --silent --output /dev/null http://localhost:10001/ && break; sleep 1; done
+          curl --silent --output /dev/null http://localhost:9324/ && curl --silent --output /dev/null http://localhost:10001/
+          echo "Waiting for cosmos emulator..."
           for i in $(seq 1 120); do docker exec cosmos curl --silent --fail --output /dev/null http://localhost:8080/ready && break; sleep 1; done
           docker exec cosmos curl --silent --fail --output /dev/null http://localhost:8080/ready
       - name: Run tests
         run: |
-          docker run --name tests --network tests --env CORE_TEST_PSQL_CONNECTION_STRING=postgresql+asyncpg://postgres:test@postgres:5432/core --env CORE_TEST_COSMOS_ENDPOINT=http://cosmos:8081 $DOCKER_IMAGE make test-ci
+          docker run --name tests --network tests --env CORE_TEST_PSQL_CONNECTION_STRING=postgresql+asyncpg://postgres:test@postgres:5432/core --env CORE_TEST_COSMOS_ENDPOINT=http://cosmos:8081 --env CORE_TEST_SQS_ENDPOINT=http://elasticmq:9324 --env CORE_TEST_AQS_ENDPOINT=http://azurite:10001/devstoreaccount1 $DOCKER_IMAGE make test-ci
           docker cp tests:/app/test-check-results.json ./test-check-results.json
       - name: Upload test results
         uses: kibalabs/github-action-create-annotations@main

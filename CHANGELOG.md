@@ -16,7 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Capped `SqsMessageQueue` delays at SQS's 900 second maximum
 - [MINOR] Updated `CosmosMessageQueue.retry_message` to reschedule the message in place and added emulator-backed tests (run when `CORE_TEST_COSMOS_ENDPOINT` is set)
 - [MINOR] Added `shouldRaiseOnUncommittedWrites` to `Database` to raise instead of log when an isolated context connection is opened after uncommitted writes (for tests and development)
-- [MAJOR] Added abstract `MessageQueue.extend_message_lease` (implemented for SQL, SQS, AQS and Cosmos queues); `MessageQueueProcessor` now keeps a message's lease alive while it is being processed
+- [MAJOR] Added abstract `MessageQueue.extend_message_lease` (implemented for SQL, SQS, AQS and Cosmos queues); `MessageQueueProcessor` now keeps a message's lease alive while it is being processed and raises `MessageLeaseLostException` (handled as a failure, without completing the message) if the lease was lost by the time the job returns
+- [MINOR] Added optional `endpointUrl` to `SqsMessageQueue` and `AqsMessageQueue` to target local emulators, and added emulator-backed tests (run when `CORE_TEST_SQS_ENDPOINT` / `CORE_TEST_AQS_ENDPOINT` are set)
 - [MINOR] Added `Lock.ensure_held` to renew a lease and raise `LockedException` if it has been lost, for use before irreversible work; `LockLease` now records its `ttlSeconds`
 - [MINOR] Added `Lock` with a lease-based `SqlLock` implementation (`tbl_locks`) and a `with_lock` context manager that keeps the lease alive; acquiring raises `LockedException` (naming the current holder) if not acquired within `maxWaitSeconds`, and `get_owner` reports who holds a lock
 - [MINOR] Added `process_util.get_process_name` to identify the current process (`<containerName>:<containerId>` in docker, `<hostname>:<pid>` otherwise)
