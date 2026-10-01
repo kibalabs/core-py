@@ -42,7 +42,7 @@ def route[ApiRequest: BaseModel, ApiResponse: BaseModel](  # type: ignore[explic
     requestType: typing.Type[ApiRequest],
     responseType: typing.Type[ApiResponse],
     *,
-    authResolver: RouteAuthResolver,
+    authResolver: RouteAuthResolver | None = None,
     isStreaming: bool = False,
     operationId: str | None = None,
     summary: str | None = None,
@@ -52,13 +52,15 @@ def route[ApiRequest: BaseModel, ApiResponse: BaseModel](  # type: ignore[explic
     rateLimit: RateLimitConfig | None = None,
     extensions: Mapping[str, object] | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[Request], typing.Awaitable[KibaJSONResponse | StreamingResponse]]]:
-    securitySchemeNames = authResolver.get_route_security_schemes(auth=auth) if auth is not None else []
-
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[Request], typing.Awaitable[KibaJSONResponse | StreamingResponse]]:  # type: ignore[explicit-any]
         handler: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn] = func
         if rateLimit is not None:
             handler = rate_limit(rateLimit)(handler)
+        securitySchemeNames: list[str] = []
         if auth is not None:
+            if authResolver is None:
+                raise ValueError(f'Auth policy {auth} requires an authResolver')
+            securitySchemeNames = authResolver.get_route_security_schemes(auth=auth)
             handler = _authorize_route(authResolver, auth)(handler)
         endpointDecorator = streaming_json_route if isStreaming else json_route
         endpoint = endpointDecorator(requestType=requestType, responseType=responseType)(handler)  # type: ignore[arg-type, ty:invalid-argument-type]

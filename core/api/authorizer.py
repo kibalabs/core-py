@@ -10,6 +10,7 @@ from core.api.api_request import KibaApiRequest
 from core.api.route_metadata import OpenApiSecurityScheme
 from core.api.route_metadata import update_route_metadata
 from core.exceptions import ForbiddenException
+from core.exceptions import KibaException
 from core.exceptions import UnauthorizedException
 from core.http.basic_authentication import BasicAuthentication
 from core.http.jwt import Jwt
@@ -27,18 +28,19 @@ class SignatureAuthorizer:
         raise NotImplementedError
 
 
-async def _authorize_bearer_jwt[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest], authorizer: Authorizer) -> Jwt:
+async def authorize_bearer_jwt_request[ApiRequest: BaseModel](request: KibaApiRequest[ApiRequest], authorizer: Authorizer) -> Jwt:
     authorization = request.headers.get('Authorization')
     if not authorization:
         raise ForbiddenException(message='AUTH_NOT_PROVIDED')
     if not authorization.startswith('Bearer '):
         raise ForbiddenException(message='AUTH_INVALID')
-    jwtString = authorization.replace('Bearer ', '')
     try:
-        jwt = await authorizer.validate_jwt(jwtString=jwtString)
-    except BaseException:  # noqa: BLE001
-        raise ForbiddenException(message='AUTH_INVALID')
-    return jwt
+        return await authorizer.validate_jwt(jwtString=authorization.removeprefix('Bearer '))
+    except Exception as exception:
+        # NOTE(krishan711): only log kiba messages as other exception messages (e.g. json decode errors) can contain parts of the token
+        reason = exception.message if isinstance(exception, KibaException) else type(exception).__name__
+        logging.info(f'Bearer JWT rejected: {reason}')
+        raise ForbiddenException(message='AUTH_INVALID') from exception
 
 
 def authorize_bearer_jwt[ApiRequest: BaseModel](  # type: ignore[explicit-any]
@@ -52,7 +54,7 @@ def authorize_bearer_jwt[ApiRequest: BaseModel](  # type: ignore[explicit-any]
 
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[ApiRequest]) -> typing.Any:  # type: ignore[explicit-any, misc]
-            request.authJwt = await _authorize_bearer_jwt(request=request, authorizer=authorizer)
+            request.authJwt = await authorize_bearer_jwt_request(request=request, authorizer=authorizer)
             result = func(request)
             # NOTE(krishan711): this is here to support streaming responses which return an async generator
             if hasattr(result, '__aiter__'):
