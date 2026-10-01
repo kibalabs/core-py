@@ -176,9 +176,27 @@ def test_route_static_token_policy_accepts_valid_credentials() -> None:
 
 def test_route_rejects_unknown_auth_policy_during_registration() -> None:
     with pytest.raises(ValueError, match='Unknown auth policy: unknown'):
-        api_route(
-            requestType=ExampleRequest,
-            responseType=ExampleResponse,
-            authResolver=ExampleRouteAuthResolver(),
-            auth='unknown',
-        )
+
+        @api_route(requestType=ExampleRequest, responseType=ExampleResponse, authResolver=ExampleRouteAuthResolver(), auth='unknown')
+        async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
+            return ExampleResponse(result=request.data.value)
+
+
+def test_route_without_auth_does_not_require_an_auth_resolver() -> None:
+    @api_route(requestType=ExampleRequest, responseType=ExampleResponse)
+    async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
+        return ExampleResponse(result=request.data.value)
+
+    client = TestClient(Starlette(routes=[Route('/example', endpoint, methods=['POST'])]), raise_server_exceptions=False)
+    response = client.post('/example', json={'value': 'hello'})
+
+    assert response.status_code == 200
+    assert response.json() == {'result': 'hello'}
+
+
+def test_route_rejects_auth_policy_without_auth_resolver_during_registration() -> None:
+    with pytest.raises(ValueError, match='Auth policy signature requires an authResolver'):
+
+        @api_route(requestType=ExampleRequest, responseType=ExampleResponse, auth='signature')
+        async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
+            return ExampleResponse(result=request.data.value)

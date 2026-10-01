@@ -1,13 +1,15 @@
+import asyncio
 import json
 import pytest
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
 from pydantic import BaseModel
 from starlette.applications import Starlette
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from core.api.api_request import KibaApiRequest
-from core.api.authorizer import Authorizer, SignatureAuthorizer, StaticTokenAuthorizer, authorize_bearer_jwt, authorize_signature, authorize_static_header_request, authorize_token
+from core.api.authorizer import Authorizer, SignatureAuthorizer, StaticTokenAuthorizer, authorize_bearer_jwt, authorize_bearer_jwt_request, authorize_signature, authorize_static_header_request, authorize_token
 from core.api.json_route import json_route
 from core.api.middleware.exception_handling_middleware import ExceptionHandlingMiddleware
 from core.api.streaming_json_route import streaming_json_route
@@ -159,6 +161,10 @@ def test_jwt_json_invalid_token_returns_403(jwt_json_client):
     response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': 'Bearer bad-token'})
     assert response.status_code == 403
 
+def test_jwt_json_repeated_bearer_prefix_returns_403(jwt_json_client):
+    response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Bearer Bearer {VALID_JWT_TOKEN}'})
+    assert response.status_code == 403
+
 
 def test_jwt_json_sets_auth_jwt_on_request(jwt_json_client):
     response = jwt_json_client.post('/protected', json={'value': 'hello'}, headers={'Authorization': f'Bearer {VALID_JWT_TOKEN}'})
@@ -184,6 +190,31 @@ def test_jwt_streaming_valid_token_streams_data(jwt_streaming_client):
     data = json.loads(response.content.decode().strip())
     assert data['result'] == 'hello'
     assert data['user_id'] == VALID_USER_ID
+
+
+# --- authorize_bearer_jwt_request ---
+
+class RaisingJwtAuthorizer(Authorizer):
+    def __init__(self, exception: BaseException) -> None:
+        self.exception = exception
+
+    async def validate_jwt(self, jwtString: str) -> Jwt:
+        raise self.exception
+
+
+@pytest.mark.asyncio
+async def test_bearer_jwt_request_maps_unexpected_validation_errors_to_auth_invalid():
+    request = SimpleNamespace(headers={'Authorization': 'Bearer token'})
+    with pytest.raises(ForbiddenException) as exceptionInfo:
+        await authorize_bearer_jwt_request(request=request, authorizer=RaisingJwtAuthorizer(exception=ValueError('bad token')))
+    assert exceptionInfo.value.message == 'AUTH_INVALID'
+
+
+@pytest.mark.asyncio
+async def test_bearer_jwt_request_propagates_cancellation():
+    request = SimpleNamespace(headers={'Authorization': 'Bearer token'})
+    with pytest.raises(asyncio.CancelledError):
+        await authorize_bearer_jwt_request(request=request, authorizer=RaisingJwtAuthorizer(exception=asyncio.CancelledError()))
 
 
 # --- authorize_signature + json_route ---

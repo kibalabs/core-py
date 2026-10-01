@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `authorize_bearer_jwt_request` for validating bearer JWTs in `RouteAuthResolver` implementations; it and `authorize_bearer_jwt` now only strip the leading `Bearer ` prefix, let cancellation propagate, and log why a JWT was rejected
+- [MINOR] Made the `route` `authResolver` optional for routes without `auth`; setting `auth` without an `authResolver` raises `ValueError` at registration
 - [MAJOR] Replaced `MessageQueue.delete_message` with `complete_message`, and added abstract `retry_message` (reschedule with a delay) and `fail_message` (apply the queue's failure policy); `MessageQueueProcessor` now reschedules `MessageNeedsReprocessingException` messages with `retry_message`
 - [MINOR] Updated `MessageQueueProcessor` to retry messages that raise `LockedException` up to 3 times (30s linear backoff) before failing them
 - [MINOR] Updated `MessageQueueProcessor` to log instead of raise when a failure notification cannot be sent
