@@ -18,9 +18,18 @@ INTERVAL_START_DATE = datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC)
 
 
 class CronExecutor:
-    def __init__(self, jobs: Sequence[CronJob], jobProcessor: CronJobProcessor) -> None:
+    def __init__(self, jobs: Sequence[CronJob], jobProcessors: Sequence[CronJobProcessor]) -> None:
         self.jobs = jobs
-        self.jobProcessor = jobProcessor
+        self.processorByJobType: dict[str, CronJobProcessor] = {}
+        for jobProcessor in jobProcessors:
+            for jobType in jobProcessor.jobTypes:
+                existingProcessor = self.processorByJobType.get(jobType)
+                if existingProcessor is not None:
+                    raise KibaException(message=f'Cron job type {jobType} is handled by both {type(existingProcessor).__name__} and {type(jobProcessor).__name__}')
+                self.processorByJobType[jobType] = jobProcessor
+        unprocessableJobNames = [job.name for job in jobs if job.jobType not in self.processorByJobType]
+        if unprocessableJobNames:
+            raise KibaException(message=f'No cron job processor for jobs: {", ".join(unprocessableJobNames)}')
         self.scheduler = AsyncIOScheduler()
 
     async def execute_job(self, job: CronJob) -> None:
@@ -30,7 +39,7 @@ class CronExecutor:
         startTime = time.time()
         statusCode = 200
         try:
-            await self.jobProcessor.process_job(job=job)
+            await self.processorByJobType[job.jobType].process_job(job=job)
         except Exception as exception:  # noqa: BLE001
             statusCode = exception.statusCode if isinstance(exception, KibaException) else 500
             logging.error('Caught exception whilst processing cron job:')

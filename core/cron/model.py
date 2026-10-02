@@ -1,9 +1,10 @@
-from pydantic import BaseModel
+from typing import ClassVar
 
-from core.util.typing_util import Json
+from pydantic import BaseModel
 
 
 class CronJob(BaseModel):
+    jobType: ClassVar[str]
     name: str
     weeks: int = 0
     days: int = 0
@@ -16,17 +17,3 @@ class CronJob(BaseModel):
     @property
     def query(self) -> dict[str, str]:
         return {}
-
-
-class ApiRequestCronJob(CronJob):
-    method: str
-    url: str
-    dataDict: Json | None = None
-    headers: dict[str, str] | None = None
-    timeout: int | None = None
-
-    @property
-    def query(self) -> dict[str, str]:
-        if not isinstance(self.dataDict, dict):
-            return {}
-        return {key: str(value) for key, value in self.dataDict.items() if isinstance(value, str | int | float | bool)}
