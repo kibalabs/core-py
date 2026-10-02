@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Updated `init_logging`, `init_json_logging` and `init_basic_logging` to set the loggers of the third-party libraries core uses (`DEFAULT_EXTERNAL_LOGGER_NAMES`: httpx2, httpcore2, sqlalchemy, aiosqlite, asyncpg, botocore, aiobotocore, azure, apscheduler, web3) to `WARNING`; pass `extraLoggerNames` to quieten more loggers on top of these, or `loggerNames` to replace them (`loggerNames=[]` keeps the previous behaviour). `init_external_loggers` takes the same arguments and now defaults to the same list
 - [MAJOR] Updated `Requester` to raise `RequesterTimeoutException` (a `GatewayTimeoutException`, 504) instead of `httpx` timeout exceptions; it carries the method, the URL without credentials or query string, the timeout, how long the request ran and the `httpx` timeout type, and keeps the original exception as its cause. Code catching `httpx.TimeoutException` (or `ReadTimeout`, `ConnectTimeout`, …) around `Requester` calls must catch `RequesterTimeoutException` instead
 - [PATCH] Updated `MessageQueueProcessor` failure notifications to show the exception type before its message, so failures from exceptions without text (e.g. `httpx` timeouts) are still identifiable
 - [MINOR] Added `authorize_bearer_jwt_request` for validating bearer JWTs in `RouteAuthResolver` implementations; it and `authorize_bearer_jwt` now only strip the leading `Bearer ` prefix, let cancellation propagate, and log why a JWT was rejected
