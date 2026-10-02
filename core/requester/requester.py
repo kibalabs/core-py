@@ -1,4 +1,5 @@
 import os
+import time
 import typing
 import urllib.parse as urlparse
 from collections.abc import Mapping
@@ -13,6 +14,7 @@ import httpx2 as httpx
 
 from core import logging
 from core.exceptions import HTTP_EXCEPTIONS_MAP
+from core.exceptions import GatewayTimeoutException
 from core.exceptions import KibaException
 from core.util import dict_util
 from core.util import file_util
@@ -40,6 +42,18 @@ class ResponseException(KibaException):
     def __init__(self, message: str | None = None, statusCode: int | None = None, headers: MutableMapping[str, str] | None = None) -> None:
         super().__init__(message=message, statusCode=statusCode, exceptionType=None)
         self.headers = headers
+
+
+class RequesterTimeoutException(GatewayTimeoutException):
+    def __init__(self, method: str, url: str, timeoutSeconds: float | None, durationSeconds: float, timeoutType: str) -> None:
+        urlParts = urlparse.urlsplit(url)
+        # NOTE(krishan711): drop credentials and the query string (where api keys usually live) since this message ends up in logs and notifications
+        self.url = urlparse.urlunsplit((urlParts.scheme, urlParts.netloc.rpartition('@')[2], urlParts.path, '', ''))
+        self.method = method
+        self.timeoutSeconds = timeoutSeconds
+        self.durationSeconds = durationSeconds
+        self.timeoutType = timeoutType
+        super().__init__(message=f'{method} {self.url} timed out after {durationSeconds:.1f}s ({timeoutType}, timeout {timeoutSeconds}s)')
 
 
 class Requester:
@@ -136,7 +150,11 @@ class Requester:
             else:
                 logging.error('Error: formFiles should only be passed into POST requests.')
         request = self.client.build_request(method=method, url=url, content=content, data=innerData, files=files, timeout=timeout, headers=requestHeaders)
-        httpxResponse = await self.client.send(request=request)
+        startTime = time.monotonic()
+        try:
+            httpxResponse = await self.client.send(request=request)
+        except httpx.TimeoutException as exception:
+            raise RequesterTimeoutException(method=method, url=str(request.url), timeoutSeconds=timeout, durationSeconds=time.monotonic() - startTime, timeoutType=exception.__class__.__name__) from exception
         if 400 <= httpxResponse.status_code < 600:  # noqa: PLR2004
             message = httpxResponse.text
             if not message and httpxResponse.status_code == 401 and httpxResponse.headers.get('www-authenticate'):  # noqa: PLR2004
