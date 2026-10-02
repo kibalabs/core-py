@@ -120,36 +120,43 @@ def init_logger(logger: Logger, loggingLevel: int, handler: StreamHandler) -> No
     logger.setLevel(level=loggingLevel)
 
 
-def init_external_loggers(loggerNames: Collection[str], loggingLevel: int = logging.WARNING) -> None:
-    for loggerName in loggerNames:
+# NOTE(krishan711): third-party libraries pulled in by core's extras; their info-level logs drown out the app's own
+DEFAULT_EXTERNAL_LOGGER_NAMES = ('httpx2', 'httpcore2', 'sqlalchemy', 'aiosqlite', 'asyncpg', 'botocore', 'aiobotocore', 'azure', 'apscheduler', 'web3')
+
+
+def init_external_loggers(loggerNames: Collection[str] | None = None, extraLoggerNames: Collection[str] | None = None, loggingLevel: int = logging.WARNING) -> None:
+    for loggerName in {*(loggerNames if loggerNames is not None else DEFAULT_EXTERNAL_LOGGER_NAMES), *(extraLoggerNames or [])}:
         logging.getLogger(loggerName).setLevel(loggingLevel)
 
 
-def init_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: RequestIdHolder | None = None) -> None:
+def init_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: RequestIdHolder | None = None, loggerNames: Collection[str] | None = None, extraLoggerNames: Collection[str] | None = None) -> None:
     loggingLevel = logging.DEBUG if showDebug else logging.INFO
     for logFormat in ALL_LOGGER_FORMATS:
         logger = logging.getLogger(name=logFormat.loggerType)
         handler = StreamHandler(stream=sys.stdout)
         handler.setFormatter(fmt=KibaLoggingFormatter(logFormat=logFormat, name=name, version=version, environment=environment, requestIdHolder=requestIdHolder))
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
+    init_external_loggers(loggerNames=loggerNames, extraLoggerNames=extraLoggerNames)
 
 
-def init_json_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: RequestIdHolder | None = None) -> None:
+def init_json_logging(name: str, version: str, environment: str, showDebug: bool = False, requestIdHolder: RequestIdHolder | None = None, loggerNames: Collection[str] | None = None, extraLoggerNames: Collection[str] | None = None) -> None:
     loggingLevel = logging.DEBUG if showDebug else logging.INFO
     for logFormat in ALL_LOGGER_FORMATS:
         logger = logging.getLogger(name=logFormat.loggerType)
         handler = StreamHandler(stream=sys.stdout)
         handler.setFormatter(fmt=KibaJsonLoggingFormatter(logFormat=logFormat, name=name, version=version, environment=environment, requestIdHolder=requestIdHolder))
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
+    init_external_loggers(loggerNames=loggerNames, extraLoggerNames=extraLoggerNames)
 
 
-def init_basic_logging(showDebug: bool = False) -> None:
+def init_basic_logging(showDebug: bool = False, loggerNames: Collection[str] | None = None, extraLoggerNames: Collection[str] | None = None) -> None:
     loggingLevel = logging.DEBUG if showDebug else logging.INFO
     for logFormat in ALL_LOGGER_FORMATS:
         logger = logging.getLogger(name=logFormat.loggerType)
         handler = StreamHandler(stream=sys.stdout)
         handler.setFormatter(fmt=Formatter(fmt=logFormat.loggerFormat))
         init_logger(logger=logger, loggingLevel=loggingLevel, handler=handler)
+    init_external_loggers(loggerNames=loggerNames, extraLoggerNames=extraLoggerNames)
 
 
 def _serialize_numeric_value(value: Union[float, None]) -> str:
@@ -168,7 +175,8 @@ def stat(name: str, key: str, value: float = 1) -> None:
         nameValue = _serialize_string_value(value=str(name))
         keyValue = _serialize_string_value(value=str(key))
         statValue = _serialize_numeric_value(value=value)
-        STAT_LOGGER.log(level=logging.INFO, msg='', extra={'statName': nameValue, 'statKey': keyValue, 'statValue': statValue})
+        # NOTE(krishan711): stacklevel=2 skips this function so records point at the caller
+        STAT_LOGGER.log(level=logging.INFO, msg='', extra={'statName': nameValue, 'statKey': keyValue, 'statValue': statValue}, stacklevel=2)
 
 
 # TODO(krishan711): make pathPattern mandatory in next major release
@@ -184,6 +192,7 @@ def api(action: str, path: str, query: str, pathPattern: str | None = None, resp
             level=logging.INFO,
             msg='',
             extra={'apiAction': actionString, 'apiPath': pathString, 'apiPathPattern': pathPatternString, 'apiQuery': queryString, 'apiResponse': responseString or '', 'apiDuration': durationString or ''},
+            stacklevel=2,
         )
 
 
@@ -197,9 +206,10 @@ INFO = logging.INFO
 DEBUG = logging.DEBUG
 
 
-def _log(level: int, msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
+def _log(level: int, msg: str, *args: Any, stacklevel: int = 1, **kwargs: Any) -> None:  # type: ignore[explicit-any]
     if ROOT_LOGGER.isEnabledFor(level=level):
-        ROOT_LOGGER._log(level=level, msg=msg, args=args, **kwargs)  # noqa: SLF001
+        # NOTE(krishan711): +2 skips this function and the public wrapper (info, error, ...) so records point at the caller
+        ROOT_LOGGER._log(level=level, msg=msg, args=args, stacklevel=stacklevel + 2, **kwargs)  # noqa: SLF001
 
 
 def critical(msg: str, *args: Any, **kwargs: Any) -> None:  # type: ignore[explicit-any]
