@@ -130,11 +130,46 @@ async def test_extend_after_losing_the_lease_reports_it_lost(workers: tuple[Cosm
     assert await workerA.extend_message_lease(message=staleMessage, expectedProcessingSeconds=60) is False
 
 
-async def test_failed_message_reappears_once_its_lease_expires(workers: tuple[CosmosMessageQueue, CosmosMessageQueue]):
+async def test_failed_message_backs_off_then_is_removed_after_max_attempts(workers: tuple[CosmosMessageQueue, CosmosMessageQueue]):
     workerA, _ = workers
     await workerA.send_message(message=_message())
-    message = await _claim(queue=workerA)
-    await workerA.fail_message(message=message, errorMessage='boom')
+    for attempt in range(1, 4):
+        message = await _claim(queue=workerA)
+        assert message.postCount == attempt
+        isRetryScheduled = await workerA.fail_message(message=message, errorMessage=f'boom {attempt}')
+        assert isRetryScheduled == (attempt < 3)  # noqa: PLR2004
+        if attempt < 3:  # noqa: PLR2004
+            item = await workerA.container.read_item(item=message.id, partition_key=workerA.queueName)
+            assert item['lastError'] == f'boom {attempt}'
+            assert await workerA.get_message() is None
+            await _make_visible(queue=workerA, messageId=message.id)
+    assert await workerA.get_message_count() == 0
+    assert await workerA.get_inflight_message_count() == 0
+    await workerA.send_message(message=_message())
+    assert await workerA.get_message_count() == 1
+
+
+async def test_abandoned_message_counts_as_an_attempt_and_is_removed_after_max_attempts(workers: tuple[CosmosMessageQueue, CosmosMessageQueue]):
+    workerA, _ = workers
+    await workerA.send_message(message=_message())
+    for attempt in range(1, 4):
+        message = await _claim(queue=workerA)
+        assert message.postCount == attempt
+        await _make_visible(queue=workerA, messageId=message.id)
     assert await workerA.get_message() is None
-    await _make_visible(queue=workerA, messageId=message.id)
-    assert (await _claim(queue=workerA)).id == message.id
+    assert await workerA.get_message_count() == 0
+    await workerA.send_message(message=_message())
+    assert await workerA.get_message_count() == 1
+
+
+async def test_fail_after_losing_the_lease_leaves_the_new_holder_untouched(workers: tuple[CosmosMessageQueue, CosmosMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    staleMessage = await _claim(queue=workerA)
+    await _make_visible(queue=workerA, messageId=staleMessage.id)
+    newMessage = await _claim(queue=workerB)
+    staleMessage.postCount = 3
+    assert await workerA.fail_message(message=staleMessage, errorMessage='boom') is False
+    assert await workerA.get_inflight_message_count() == 1
+    await workerB.complete_message(message=newMessage)
+    assert await workerA.get_inflight_message_count() == 0

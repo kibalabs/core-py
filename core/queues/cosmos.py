@@ -48,10 +48,12 @@ class CosmosMessage(Message):
 
 
 class CosmosMessageQueue(MessageQueue[CosmosMessage]):
-    def __init__(self, container: ContainerProxy, queueName: str, pollIntervalSeconds: float = 1.0) -> None:
+    def __init__(self, container: ContainerProxy, queueName: str, pollIntervalSeconds: float = 1.0, maxAttempts: int = 3, failureRetryDelaySeconds: int = 60) -> None:
         self.container = container
         self.queueName = queueName
         self.pollIntervalSeconds = pollIntervalSeconds
+        self.maxAttempts = maxAttempts
+        self.failureRetryDelaySeconds = failureRetryDelaySeconds
 
     async def connect(self) -> None:
         # The caller supplies a shared ContainerProxy and owns CosmosClient lifecycle.
@@ -148,6 +150,12 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
         messages: list[CosmosMessage] = []
         async for candidate in candidates:
             item = {key: value for key, value in candidate.items() if not key.startswith('_')}
+            # NOTE(krishan711): a visible message that still has a lease was abandoned by its worker, which counts as an attempt
+            if candidate.get('leaseId') is not None:
+                if (candidate.get('postCount') or 0) >= self.maxAttempts:
+                    await self._remove_message_if_unchanged(itemId=candidate['id'], etag=candidate['_etag'], deduplicationId=candidate.get('deduplicationId'))
+                    continue
+                item['postCount'] = (candidate.get('postCount') or 0) + 1
             leaseId = uuid.uuid4().hex
             item['leaseId'] = leaseId
             item['visibleDate'] = now + expectedProcessingSeconds
@@ -170,27 +178,38 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
                 break
         return messages
 
-    async def complete_message(self, message: CosmosMessage) -> None:
-        if message.deduplicationId is None:
+    async def _remove_message(self, itemId: str, etag: str, deduplicationId: str | None) -> None:
+        if deduplicationId is None:
             await self.container.delete_item(
-                item=message.id,
+                item=itemId,
                 partition_key=self.queueName,
-                etag=message.etag,
+                etag=etag,
                 match_condition=MatchConditions.IfNotModified,
             )
             return
 
-        deduplicationKey = f'{self.queueName}:{message.deduplicationId}'
+        deduplicationKey = f'{self.queueName}:{deduplicationId}'
         deduplicationItemId = f'dedup-{hashlib.sha256(deduplicationKey.encode()).hexdigest()}'
         await self.container.execute_item_batch(
             batch_operations=[
-                ('delete', (message.id,), {'if_match_etag': message.etag}),
+                ('delete', (itemId,), {'if_match_etag': etag}),
                 ('delete', (deduplicationItemId,)),
             ],
             partition_key=self.queueName,
         )
 
-    async def retry_message(self, message: CosmosMessage, delaySeconds: int = 0) -> None:
+    async def _remove_message_if_unchanged(self, itemId: str, etag: str, deduplicationId: str | None) -> None:
+        try:
+            await self._remove_message(itemId=itemId, etag=etag, deduplicationId=deduplicationId)
+        except (cosmos_exceptions.CosmosHttpResponseError, cosmos_exceptions.CosmosBatchOperationError) as exception:
+            # NOTE(krishan711): 412 means another worker changed the message first, so it now owns it
+            if exception.status_code != 412:  # noqa: PLR2004
+                raise
+
+    async def complete_message(self, message: CosmosMessage) -> None:
+        await self._remove_message(itemId=message.id, etag=message.etag, deduplicationId=message.deduplicationId)
+
+    async def _reschedule_message(self, message: CosmosMessage, delaySeconds: float, extraOperations: list[dict[str, Any]]) -> None:  # type: ignore[explicit-any]
         try:
             await self.container.patch_item(
                 item=message.id,
@@ -200,6 +219,7 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
                     {'op': 'set', 'path': '/visibleDate', 'value': time.time() + delaySeconds},
                     {'op': 'set', 'path': '/postCount', 'value': (message.postCount or 0) + 1},
                     {'op': 'set', 'path': '/postDate', 'value': date_util.datetime_from_now().isoformat()},
+                    *extraOperations,
                 ],
                 etag=message.etag,
                 match_condition=MatchConditions.IfNotModified,
@@ -209,9 +229,17 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
             if exception.status_code != 412:  # noqa: PLR2004
                 raise
 
-    async def fail_message(self, message: CosmosMessage, errorMessage: str | None) -> bool:  # noqa: ARG002
-        # NOTE(krishan711): the message reappears once its lease expires
-        return False
+    async def retry_message(self, message: CosmosMessage, delaySeconds: int = 0) -> None:
+        await self._reschedule_message(message=message, delaySeconds=delaySeconds, extraOperations=[])
+
+    async def fail_message(self, message: CosmosMessage, errorMessage: str | None) -> bool:
+        postCount = message.postCount or 0
+        if postCount >= self.maxAttempts:
+            # NOTE(krishan711): cosmos keeps no message history, so a message out of attempts is removed like a completed one
+            await self._remove_message_if_unchanged(itemId=message.id, etag=message.etag, deduplicationId=message.deduplicationId)
+            return False
+        await self._reschedule_message(message=message, delaySeconds=self.failureRetryDelaySeconds * postCount, extraOperations=[{'op': 'set', 'path': '/lastError', 'value': errorMessage}])
+        return True
 
     async def extend_message_lease(self, message: CosmosMessage, expectedProcessingSeconds: int) -> bool:
         try:
