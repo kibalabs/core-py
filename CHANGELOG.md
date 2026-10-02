@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `pollLogIntervalSeconds` (default 600) to `MessageQueueProcessor`: `Retrieving messages...` is now logged on the first poll and then at most once per interval instead of on every poll, so it still shows the worker is alive without flooding the logs; pass `0` to log every poll as before
 - [MAJOR] Updated `RestEthClient` to raise `RpcServerException` (a `ServerException` keeping the original status code and message, with the original exception as its cause) when the node responds with a 5xx, so callers can tell node failures apart from other server errors; `RequesterTimeoutException` is still raised unchanged. Code catching `InternalServerErrorException` (or `BadGatewayException`, `ServiceUnavailableException`, …) around `RestEthClient` calls must catch `RpcServerException` instead
 - [MINOR] Added `RestEthClient.get_code`
 - [MINOR] Added optional `maxConcurrentRequestCount` and `semaphore` to `RestEthClient` to limit concurrent requests; pass the same `semaphore` to several clients to limit them together (it takes precedence over `maxConcurrentRequestCount`)

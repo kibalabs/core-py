@@ -40,11 +40,13 @@ class MessageLeaseLostException(InternalServerErrorException):
 
 
 class MessageQueueProcessor[MessageType: Message]:
-    def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, notificationClients: list[NotificationClient], requestIdHolder: RequestIdHolder | None = None) -> None:
+    def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, notificationClients: list[NotificationClient], requestIdHolder: RequestIdHolder | None = None, pollLogIntervalSeconds: float = 600) -> None:
         self.queue = queue
         self.messageProcessor = messageProcessor
         self.notificationClients = notificationClients
         self.requestIdHolder = requestIdHolder
+        self.pollLogIntervalSeconds = pollLogIntervalSeconds
+        self._lastPollLogTime: float | None = None
 
     async def _handle_failure(self, message: MessageType, exception: Exception, requestId: str) -> int:
         logging.error('Caught exception whilst processing message:')
@@ -117,7 +119,10 @@ class MessageQueueProcessor[MessageType: Message]:
             self.requestIdHolder.set_value(value=None)
 
     async def execute_batch(self, batchSize: int, expectedProcessingSeconds: int = 300, longPollSeconds: int = 20, shouldProcessInParallel: bool = False) -> int:
-        logging.info('Retrieving messages...')
+        now = time.monotonic()
+        if self._lastPollLogTime is None or now - self._lastPollLogTime >= self.pollLogIntervalSeconds:
+            logging.info('Retrieving messages...')
+            self._lastPollLogTime = now
         messages = await self.queue.get_messages(expectedProcessingSeconds=expectedProcessingSeconds, longPollSeconds=longPollSeconds, limit=batchSize)
         if shouldProcessInParallel:
             await asyncio.gather(*[self._process_message(message=message, expectedProcessingSeconds=expectedProcessingSeconds) for message in messages])
