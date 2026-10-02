@@ -18,7 +18,7 @@ class KibaException(Exception):  # noqa: N818
     def from_exception(exception: Exception, statusCode: int = 500) -> KibaException:
         if isinstance(exception, KibaException):
             return exception
-        return KibaException(message=str(exception) or exception.__class__.__name__, statusCode=statusCode, exceptionType=exception.__class__.__name__)
+        return KibaException(message=str(exception), statusCode=statusCode, exceptionType=exception.__class__.__name__)
 
     @classmethod
     def from_headers(cls, message: str | None, statusCode: int, headers: Mapping[str, str]) -> KibaException:  # noqa: ARG003

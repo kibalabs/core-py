@@ -53,7 +53,7 @@ class MessageQueueProcessor[MessageType: Message]:
         await self.queue.fail_message(message=message, errorMessage=kibaException.message)
         for client in self.notificationClients:
             try:
-                await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{kibaException.message}```')
+                await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{kibaException.exceptionType}: {kibaException.message}```')
             except Exception as notificationException:  # noqa: BLE001
                 logging.error('Failed to send message failure notification:')
                 logging.exception(notificationException)

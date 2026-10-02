@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
-- [PATCH] Updated `KibaException.from_exception` to use the exception class name as the message when the exception has no text (e.g. `httpx` timeouts), so failure notifications and stored queue errors are never blank
+- [PATCH] Updated `MessageQueueProcessor` failure notifications to show the exception type before its message, so failures from exceptions without text (e.g. `httpx` timeouts) are still identifiable
 - [MINOR] Added `authorize_bearer_jwt_request` for validating bearer JWTs in `RouteAuthResolver` implementations; it and `authorize_bearer_jwt` now only strip the leading `Bearer ` prefix, let cancellation propagate, and log why a JWT was rejected
 - [MINOR] Made the `route` `authResolver` optional for routes without `auth`; setting `auth` without an `authResolver` raises `ValueError` at registration
 - [MAJOR] Replaced `MessageQueue.delete_message` with `complete_message`, and added abstract `retry_message` (reschedule with a delay) and `fail_message` (apply the queue's failure policy); `MessageQueueProcessor` now reschedules `MessageNeedsReprocessingException` messages with `retry_message`
