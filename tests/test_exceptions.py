@@ -3,6 +3,7 @@ import email.utils
 
 from core.exceptions import HTTP_EXCEPTIONS_MAP
 from core.exceptions import BadRequestException
+from core.exceptions import KibaException
 from core.exceptions import RedirectException
 from core.exceptions import TooManyRequestsException
 
@@ -69,3 +70,14 @@ class TestRedirectException:
         headers = exception.outgoing_headers()
         assert headers['Location'] == 'https://example.com'
         assert headers['Cache-Control'] == f'max-age={60 * 60 * 24 * 365}'
+
+
+class TestFromException:
+
+    def test_keeps_the_exception_text(self):
+        exception = KibaException.from_exception(exception=ValueError('bad value'))
+        assert (exception.message, exception.exceptionType) == ('bad value', 'ValueError')
+
+    def test_uses_the_class_name_when_the_exception_has_no_text(self):
+        exception = KibaException.from_exception(exception=TimeoutError())
+        assert (exception.message, exception.exceptionType) == ('TimeoutError', 'TimeoutError')
