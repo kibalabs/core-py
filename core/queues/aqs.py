@@ -96,9 +96,9 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         await self.send_message(message=message, delaySeconds=delaySeconds)
         await self.complete_message(message=message)
 
-    async def fail_message(self, message: AqsMessage, errorMessage: str | None) -> None:
+    async def fail_message(self, message: AqsMessage, errorMessage: str | None) -> bool:  # noqa: ARG002
         # NOTE(krishan711): the message reappears after its visibility timeout
-        pass
+        return False
 
     async def extend_message_lease(self, message: AqsMessage, expectedProcessingSeconds: int) -> bool:
         if not self._aqsClient:

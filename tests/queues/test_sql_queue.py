@@ -132,6 +132,29 @@ async def test_processor_fails_message_even_when_notifications_fail(workers: tup
     assert (await _rows(queue=workerA))[0]['status'] == 'failed'
 
 
+@pytest.mark.parametrize(('shouldNotifyRetriedFailures', 'expectedNotificationCounts'), [(True, [1, 2, 3]), (False, [0, 0, 1])])
+async def test_processor_only_notifies_retried_failures_when_enabled(workers: tuple[SqlMessageQueue, SqlMessageQueue], shouldNotifyRetriedFailures: bool, expectedNotificationCounts: list[int]):
+    workerA, _ = workers
+    notifications: list[str] = []
+
+    class BrokenProcessor(MessageProcessor):
+        async def process_message(self, message: Message) -> None:
+            raise ValueError('boom')
+
+    class RecordingNotificationClient(NotificationClient):
+        async def post(self, messageText: str) -> KibaResponse:
+            notifications.append(messageText)
+            return typing.cast(KibaResponse, None)
+
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=BrokenProcessor(), notificationClients=[RecordingNotificationClient()], shouldNotifyRetriedFailures=shouldNotifyRetriedFailures)
+    await workerA.send_message(message=_message())
+    for expectedNotificationCount in expectedNotificationCounts:
+        assert await processor.execute(longPollSeconds=0)
+        assert len(notifications) == expectedNotificationCount
+        await _make_visible(queue=workerA, messageId=(await _rows(queue=workerA))[0]['id'])
+    assert (await _rows(queue=workerA))[0]['status'] == 'failed'
+
+
 async def test_concurrent_claims_never_hand_out_the_same_message(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     await workers[0].send_messages(messages=[_message(deduplicationId=None, userId=str(index)) for index in range(20)])
     results = await asyncio.gather(*[worker.get_messages(limit=3) for _ in range(5) for worker in workers])
@@ -257,7 +280,8 @@ async def test_failed_message_backs_off_then_fails_after_max_attempts(workers: t
     for attempt in range(1, 4):
         message = await _claim(queue=workerA)
         assert message.postCount == attempt
-        await workerA.fail_message(message=message, errorMessage=f'boom {attempt}')
+        isRetryScheduled = await workerA.fail_message(message=message, errorMessage=f'boom {attempt}')
+        assert isRetryScheduled == (attempt < 3)  # noqa: PLR2004
         row = await _row(queue=workerA, messageId=message.id)
         if attempt < 3:  # noqa: PLR2004
             assert row['status'] == 'pending'

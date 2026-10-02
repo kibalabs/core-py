@@ -39,7 +39,8 @@ class MessageQueue[MessageType: Message](ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def fail_message(self, message: MessageType, errorMessage: str | None) -> None:
+    async def fail_message(self, message: MessageType, errorMessage: str | None) -> bool:
+        # NOTE(krishan711): returns whether the queue itself scheduled another attempt; queues where the platform decides on redelivery return False
         raise NotImplementedError
 
     @abc.abstractmethod
