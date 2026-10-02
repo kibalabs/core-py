@@ -6,7 +6,7 @@ from collections.abc import MutableMapping
 from core.exceptions import BadRequestException, InternalServerErrorException, NotFoundException, ServerException, ServiceUnavailableException, TooManyRequestsException
 from core.requester import Requester, KibaResponse
 from core.requester.requester import RequesterTimeoutException, ResponseException
-from core.web3.eth_client import RestEthClient, RpcServerException, ThrottledRestEthClient
+from core.web3.eth_client import RestEthClient, RpcServerException
 from core.util.typing_util import Json
 
 
@@ -537,10 +537,8 @@ class TestRestEthClient:
         assert result == '0x'
         assert mock_requester.requests_made[0]['dataDict']['params'] == ['0x1234567890123456789012345678901234567890', 'latest']
 
-    @pytest.mark.asyncio
-    async def test_throttled_clients_share_the_semaphore(self, mock_requester):
-        semaphore = asyncio.Semaphore(2)
-        clients = [ThrottledRestEthClient(url='https://test-rpc-url.com', requester=mock_requester, chainId=chainId, semaphore=semaphore) for chainId in (1, 8453)]
+    @staticmethod
+    async def _max_concurrent_request_count(mock_requester, clients) -> int:
         activeCount = 0
         maxActiveCount = 0
         async def mock_post_json_slow(*args, **kwargs):
@@ -552,8 +550,26 @@ class TestRestEthClient:
             return MockResponse({'jsonrpc': '2.0', 'result': hex(436), 'id': None})
         mock_requester.post_json = mock_post_json_slow
         results = await asyncio.gather(*[client.get_latest_block_number() for client in clients for _ in range(3)])
-        assert results == [436] * 6
-        assert maxActiveCount == 2
+        assert results == [436] * 3 * len(clients)
+        return maxActiveCount
+
+    @pytest.mark.asyncio
+    async def test_requests_are_not_limited_by_default(self, client, mock_requester):
+        assert client.semaphore is None
+        assert await self._max_concurrent_request_count(mock_requester=mock_requester, clients=[client]) == 3
+
+    @pytest.mark.asyncio
+    async def test_max_concurrent_request_count_limits_each_client(self, mock_requester):
+        clients = [RestEthClient(url='https://test-rpc-url.com', requester=mock_requester, chainId=chainId, maxConcurrentRequestCount=2) for chainId in (1, 8453)]
+        assert clients[0].semaphore is not clients[1].semaphore
+        assert await self._max_concurrent_request_count(mock_requester=mock_requester, clients=clients) == 4
+
+    @pytest.mark.asyncio
+    async def test_shared_semaphore_limits_clients_together(self, mock_requester):
+        semaphore = asyncio.Semaphore(2)
+        clients = [RestEthClient(url='https://test-rpc-url.com', requester=mock_requester, chainId=chainId, semaphore=semaphore, maxConcurrentRequestCount=5) for chainId in (1, 8453)]
+        assert all(client.semaphore is semaphore for client in clients)
+        assert await self._max_concurrent_request_count(mock_requester=mock_requester, clients=clients) == 2
 
     @pytest.mark.asyncio
     async def test_fill_transaction_params_all_provided(self, client, mock_requester):

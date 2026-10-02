@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import typing
 from typing import Any
 
@@ -305,12 +306,26 @@ class Web3EthClient(EthClientInterface):
 
 class RestEthClient(EthClientInterface):
     # NOTE(krishan711): find docs at https://eth.wiki/json-rpc/API
-    def __init__(self, url: str, requester: Requester, chainId: int, isTestnet: bool = False, shouldBackoffRetryOnRateLimit: bool = True, retryLimit: int = 10) -> None:
+    def __init__(
+        self,
+        url: str,
+        requester: Requester,
+        chainId: int,
+        isTestnet: bool = False,
+        shouldBackoffRetryOnRateLimit: bool = True,
+        retryLimit: int = 10,
+        maxConcurrentRequestCount: int | None = None,
+        semaphore: asyncio.Semaphore | None = None,
+    ) -> None:
         super().__init__(web3Connection=Web3(), chainId=chainId, isTestnet=isTestnet)
         self.url = url
         self.requester = requester
         self.shouldBackoffRetryOnRateLimit = shouldBackoffRetryOnRateLimit
         self.retryLimit = retryLimit
+        # NOTE(krishan711): pass the same semaphore to several clients to cap their combined concurrent requests, or set maxConcurrentRequestCount to cap just this client
+        if semaphore is None and maxConcurrentRequestCount is not None:
+            semaphore = asyncio.Semaphore(maxConcurrentRequestCount)
+        self.semaphore = semaphore
         self.w3 = Web3()
 
     @staticmethod
@@ -318,44 +333,45 @@ class RestEthClient(EthClientInterface):
         return int(value, 16)
 
     async def _make_request(self, method: str, params: ListAny | None = None) -> DictStrAny:
-        retryCount = 0
-        initialBackoffSeconds = 1.0
-        responseDict: DictStrAny = {}
-        while True:
-            try:
-                response = await self.requester.post_json(
-                    url=self.url,
-                    dataDict={'jsonrpc': '2.0', 'method': method, 'params': params or [], 'id': None},
-                    timeout=10,
-                )
-                responseDict = response.json()
-                if responseDict.get('error'):
-                    errorMessage = responseDict['error'].get('message') or responseDict['error'].get('details') or json_util.dumps(responseDict['error'])
-                    raise BadRequestException(message=errorMessage)
-            except ClientException as exception:
-                # NOTE(krishan711): this is just here to debug 429s from coinbase, remove when done
-                logging.info(f'caught exception on _make_request: {exception!s}')
-                exceptionMessage = exception.message or ''
-                if (
-                    isinstance(exception, TooManyRequestsException)
-                    # NOTE(krishan711): sometimes coinbase returns an error message with 200 status
-                    or 'over rate limit' in exceptionMessage
-                    or '429 Too Many Requests' in exceptionMessage
-                ):
-                    if not self.shouldBackoffRetryOnRateLimit or retryCount >= self.retryLimit:
-                        raise
-                    retryCount += 1
-                    exponentialBackoffSeconds = initialBackoffSeconds * (2 ** (retryCount - 1))
-                    logging.info(f'Retrying {method} after {exponentialBackoffSeconds} seconds due to rate limit exceeded: {exception!s}')
-                    await asyncio.sleep(exponentialBackoffSeconds)
-                    continue
-                raise
-            except (ServerException, ResponseException) as exception:
-                # NOTE(krishan711): timeouts are raised from the requester rather than the node so they keep their own type
-                if isinstance(exception, RequesterTimeoutException) or exception.statusCode < 500:  # noqa: PLR2004
+        async with self.semaphore or contextlib.nullcontext():
+            retryCount = 0
+            initialBackoffSeconds = 1.0
+            responseDict: DictStrAny = {}
+            while True:
+                try:
+                    response = await self.requester.post_json(
+                        url=self.url,
+                        dataDict={'jsonrpc': '2.0', 'method': method, 'params': params or [], 'id': None},
+                        timeout=10,
+                    )
+                    responseDict = response.json()
+                    if responseDict.get('error'):
+                        errorMessage = responseDict['error'].get('message') or responseDict['error'].get('details') or json_util.dumps(responseDict['error'])
+                        raise BadRequestException(message=errorMessage)
+                except ClientException as exception:
+                    # NOTE(krishan711): this is just here to debug 429s from coinbase, remove when done
+                    logging.info(f'caught exception on _make_request: {exception!s}')
+                    exceptionMessage = exception.message or ''
+                    if (
+                        isinstance(exception, TooManyRequestsException)
+                        # NOTE(krishan711): sometimes coinbase returns an error message with 200 status
+                        or 'over rate limit' in exceptionMessage
+                        or '429 Too Many Requests' in exceptionMessage
+                    ):
+                        if not self.shouldBackoffRetryOnRateLimit or retryCount >= self.retryLimit:
+                            raise
+                        retryCount += 1
+                        exponentialBackoffSeconds = initialBackoffSeconds * (2 ** (retryCount - 1))
+                        logging.info(f'Retrying {method} after {exponentialBackoffSeconds} seconds due to rate limit exceeded: {exception!s}')
+                        await asyncio.sleep(exponentialBackoffSeconds)
+                        continue
                     raise
-                raise RpcServerException(message=exception.message, statusCode=exception.statusCode) from exception
-            return responseDict
+                except (ServerException, ResponseException) as exception:
+                    # NOTE(krishan711): timeouts are raised from the requester rather than the node so they keep their own type
+                    if isinstance(exception, RequesterTimeoutException) or exception.statusCode < 500:  # noqa: PLR2004
+                        raise
+                    raise RpcServerException(message=exception.message, statusCode=exception.statusCode) from exception
+                return responseDict
 
     async def get_latest_block_number(self) -> int:
         response = await self._make_request(method='eth_blockNumber')
@@ -499,13 +515,3 @@ class RestEthClient(EthClientInterface):
         response = await self._make_request(method='eth_sendRawTransaction', params=[transactionData])
         return typing.cast(str, response['result'])
 
-
-class ThrottledRestEthClient(RestEthClient):
-    # NOTE(krishan711): pass the same semaphore to several clients to cap their combined concurrent requests
-    def __init__(self, url: str, requester: Requester, chainId: int, semaphore: asyncio.Semaphore, isTestnet: bool = False, shouldBackoffRetryOnRateLimit: bool = True, retryLimit: int = 10) -> None:
-        super().__init__(url=url, requester=requester, chainId=chainId, isTestnet=isTestnet, shouldBackoffRetryOnRateLimit=shouldBackoffRetryOnRateLimit, retryLimit=retryLimit)
-        self.semaphore = semaphore
-
-    async def _make_request(self, method: str, params: ListAny | None = None) -> DictStrAny:
-        async with self.semaphore:
-            return await super()._make_request(method=method, params=params)
