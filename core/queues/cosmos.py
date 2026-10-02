@@ -209,9 +209,9 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
             if exception.status_code != 412:  # noqa: PLR2004
                 raise
 
-    async def fail_message(self, message: CosmosMessage, errorMessage: str | None) -> None:
+    async def fail_message(self, message: CosmosMessage, errorMessage: str | None) -> bool:  # noqa: ARG002
         # NOTE(krishan711): the message reappears once its lease expires
-        pass
+        return False
 
     async def extend_message_lease(self, message: CosmosMessage, expectedProcessingSeconds: int) -> bool:
         try:

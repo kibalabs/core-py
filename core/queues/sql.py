@@ -212,14 +212,15 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
     async def retry_message(self, message: SqlMessage, delaySeconds: int = 0) -> None:
         await self._reschedule_message(message=message, delaySeconds=delaySeconds, extraValues={})
 
-    async def fail_message(self, message: SqlMessage, errorMessage: str | None) -> None:
+    async def fail_message(self, message: SqlMessage, errorMessage: str | None) -> bool:
         postCount = message.postCount or 0
         if postCount >= self.maxAttempts:
             async with self.database.create_transaction() as connection:
                 query = self._owned_update(message=message).values(status=MESSAGE_STATUS_FAILED, lockToken=None, completedDate=self.database.now(), lastError=errorMessage)
                 await self.database.execute(query=query, connection=connection)
-            return
+            return False
         await self._reschedule_message(message=message, delaySeconds=self.failureRetryDelaySeconds * postCount, extraValues={'lastError': errorMessage})
+        return True
 
     async def _reschedule_message(self, message: SqlMessage, delaySeconds: float, extraValues: dict[str, Any]) -> None:  # type: ignore[explicit-any]
         async with self.database.create_transaction() as connection:

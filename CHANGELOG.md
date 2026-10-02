@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `shouldNotifyRetriedFailures` (default `True`) to `MessageQueueProcessor`: when `False`, failure notifications are only sent once the queue gives up on a message, not for failures it will retry. `MessageQueue.fail_message` now returns whether the queue scheduled another attempt: `SqlMessageQueue` returns `True` until `maxAttempts` is reached, while `SqsMessageQueue`, `AqsMessageQueue` and `CosmosMessageQueue` always return `False` as the platform decides on redelivery, so they keep notifying every failure
 - [MINOR] Added `pollLogIntervalSeconds` (default 600) to `MessageQueueProcessor`: `Retrieving messages...` is now logged on the first poll and then at most once per interval instead of on every poll, so it still shows the worker is alive without flooding the logs; pass `0` to log every poll as before
 - [MAJOR] Updated `RestEthClient` to raise `RpcServerException` (a `ServerException` keeping the original status code and message, with the original exception as its cause) when the node responds with a 5xx, so callers can tell node failures apart from other server errors; `RequesterTimeoutException` is still raised unchanged. Code catching `InternalServerErrorException` (or `BadGatewayException`, `ServiceUnavailableException`, …) around `RestEthClient` calls must catch `RpcServerException` instead
 - [MINOR] Added `RestEthClient.get_code`

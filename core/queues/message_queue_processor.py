@@ -40,25 +40,29 @@ class MessageLeaseLostException(InternalServerErrorException):
 
 
 class MessageQueueProcessor[MessageType: Message]:
-    def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, notificationClients: list[NotificationClient], requestIdHolder: RequestIdHolder | None = None, pollLogIntervalSeconds: float = 600) -> None:
+    def __init__(self, queue: MessageQueue[MessageType], messageProcessor: MessageProcessor, notificationClients: list[NotificationClient], requestIdHolder: RequestIdHolder | None = None, pollLogIntervalSeconds: float = 600, shouldNotifyRetriedFailures: bool = True) -> None:
         self.queue = queue
         self.messageProcessor = messageProcessor
         self.notificationClients = notificationClients
         self.requestIdHolder = requestIdHolder
         self.pollLogIntervalSeconds = pollLogIntervalSeconds
+        self.shouldNotifyRetriedFailures = shouldNotifyRetriedFailures
         self._lastPollLogTime: float | None = None
 
     async def _handle_failure(self, message: MessageType, exception: Exception, requestId: str) -> int:
         logging.error('Caught exception whilst processing message:')
         logging.exception(exception)
         kibaException = KibaException.from_exception(exception=exception)
-        await self.queue.fail_message(message=message, errorMessage=kibaException.message)
-        for client in self.notificationClients:
-            try:
-                await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{kibaException.exceptionType}: {kibaException.message}```')
-            except Exception as notificationException:  # noqa: BLE001
-                logging.error('Failed to send message failure notification:')
-                logging.exception(notificationException)
+        isRetryScheduled = await self.queue.fail_message(message=message, errorMessage=kibaException.message)
+        if isRetryScheduled and not self.shouldNotifyRetriedFailures:
+            logging.info(msg=f'Skipping failure notification for message:{message.command} as another attempt is scheduled')
+        else:
+            for client in self.notificationClients:
+                try:
+                    await client.post(messageText=f'Error processing message: {message.command}\n```\n{requestId}\n{message.content}\n{kibaException.exceptionType}: {kibaException.message}```')
+                except Exception as notificationException:  # noqa: BLE001
+                    logging.error('Failed to send message failure notification:')
+                    logging.exception(notificationException)
         return exception.statusCode if isinstance(exception, KibaException) else 500
 
     async def _keep_message_alive(self, message: MessageType, expectedProcessingSeconds: int, stopEvent: asyncio.Event) -> bool:
