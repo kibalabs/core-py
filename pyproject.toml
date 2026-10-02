@@ -49,6 +49,9 @@ requester = [
 web3 = [
     "web3>=7.16.0,<8.0.0",
 ]
+cron = [
+    "apscheduler>=3.11.0,<4",
+]
 types = [
     "types-aiobotocore[essential]>=3.9.1",
     "types-aiofiles>=25.1.0.20260518",
