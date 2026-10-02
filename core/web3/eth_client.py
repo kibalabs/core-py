@@ -24,8 +24,11 @@ from core.exceptions import BadRequestException
 from core.exceptions import ClientException
 from core.exceptions import KibaException
 from core.exceptions import NotFoundException
+from core.exceptions import ServerException
 from core.exceptions import TooManyRequestsException
 from core.requester import Requester
+from core.requester.requester import RequesterTimeoutException
+from core.requester.requester import ResponseException
 from core.util import chain_util
 from core.util import json_util
 from core.util.typing_util import JsonObject
@@ -59,6 +62,11 @@ class TransactionFailedException(KibaException):
         output = super().to_dict()
         typing.cast(JsonObject, output['fields'])['transactionReceipt'] = json_util.loads(json_util.dumps(self.transactionReceipt))
         return output
+
+
+class RpcServerException(ServerException):
+    def __init__(self, message: str | None = None, statusCode: int = 500) -> None:
+        super().__init__(message=message or 'RPC Server Error', statusCode=statusCode)
 
 
 class EthClientInterface:
@@ -342,6 +350,11 @@ class RestEthClient(EthClientInterface):
                     await asyncio.sleep(exponentialBackoffSeconds)
                     continue
                 raise
+            except (ServerException, ResponseException) as exception:
+                # NOTE(krishan711): timeouts are raised from the requester rather than the node so they keep their own type
+                if isinstance(exception, RequesterTimeoutException) or exception.statusCode < 500:  # noqa: PLR2004
+                    raise
+                raise RpcServerException(message=exception.message, statusCode=exception.statusCode) from exception
             return responseDict
 
     async def get_latest_block_number(self) -> int:
@@ -393,6 +406,10 @@ class RestEthClient(EthClientInterface):
         if response['result'] is None:
             raise NotFoundException
         return typing.cast(TxReceipt, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionReceipt](response['result']))
+
+    async def get_code(self, address: str, blockNumber: int | None = None) -> str:
+        response = await self._make_request(method='eth_getCode', params=[address, hex(blockNumber) if blockNumber is not None else 'latest'])
+        return str(response.get('result', '0x'))
 
     async def get_log_entries(
         self,
@@ -481,3 +498,14 @@ class RestEthClient(EthClientInterface):
             transactionData = '0x' + transactionData
         response = await self._make_request(method='eth_sendRawTransaction', params=[transactionData])
         return typing.cast(str, response['result'])
+
+
+class ThrottledRestEthClient(RestEthClient):
+    # NOTE(krishan711): pass the same semaphore to several clients to cap their combined concurrent requests
+    def __init__(self, url: str, requester: Requester, chainId: int, semaphore: asyncio.Semaphore, isTestnet: bool = False, shouldBackoffRetryOnRateLimit: bool = True, retryLimit: int = 10) -> None:
+        super().__init__(url=url, requester=requester, chainId=chainId, isTestnet=isTestnet, shouldBackoffRetryOnRateLimit=shouldBackoffRetryOnRateLimit, retryLimit=retryLimit)
+        self.semaphore = semaphore
+
+    async def _make_request(self, method: str, params: ListAny | None = None) -> DictStrAny:
+        async with self.semaphore:
+            return await super()._make_request(method=method, params=params)
