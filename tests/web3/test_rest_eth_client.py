@@ -3,9 +3,10 @@ import pytest
 from typing import Any
 from collections.abc import MutableMapping
 
-from core.exceptions import BadRequestException, NotFoundException, TooManyRequestsException
+from core.exceptions import BadRequestException, InternalServerErrorException, NotFoundException, ServerException, ServiceUnavailableException, TooManyRequestsException
 from core.requester import Requester, KibaResponse
-from core.web3.eth_client import RestEthClient
+from core.requester.requester import RequesterTimeoutException, ResponseException
+from core.web3.eth_client import RestEthClient, RpcServerException
 from core.util.typing_util import Json
 
 
@@ -492,6 +493,83 @@ class TestRestEthClient:
         mock_requester.post_json = mock_post_json_rate_limit
         with pytest.raises(TooManyRequestsException):
             await client.get_latest_block_number()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('exception', [
+        InternalServerErrorException(message='{"jsonrpc":"2.0","error":{"code":-32000,"message":"internal error"}}'),
+        ServiceUnavailableException(message='upstream connect error or disconnect/reset before headers'),
+        ResponseException(message='unknown', statusCode=599),
+    ])
+    async def test_server_error_raises_rpc_server_exception(self, client, mock_requester, exception):
+        call_count = 0
+        async def mock_post_json_server_error(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            raise exception
+        mock_requester.post_json = mock_post_json_server_error
+        with pytest.raises(RpcServerException) as exceptionInfo:
+            await client.get_latest_block_number()
+        assert exceptionInfo.value.statusCode == exception.statusCode
+        assert exceptionInfo.value.message == exception.message
+        assert exceptionInfo.value.__cause__ is exception
+        assert isinstance(exceptionInfo.value, ServerException)
+        assert call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_timeout_keeps_requester_timeout_exception(self, client, mock_requester):
+        async def mock_post_json_timeout(*args, **kwargs):
+            raise RequesterTimeoutException(method='POST', url='https://test-rpc-url.com', timeoutSeconds=10, durationSeconds=10, timeoutType='ReadTimeout')
+        mock_requester.post_json = mock_post_json_timeout
+        with pytest.raises(RequesterTimeoutException):
+            await client.get_latest_block_number()
+
+    @pytest.mark.asyncio
+    async def test_get_code_success(self, client, mock_requester):
+        mock_requester.responses['eth_getCode'] = {'jsonrpc': '2.0', 'result': '0x6080', 'id': None}
+        result = await client.get_code(address='0x1234567890123456789012345678901234567890', blockNumber=436)
+        assert result == '0x6080'
+        assert mock_requester.requests_made[0]['dataDict']['params'] == ['0x1234567890123456789012345678901234567890', hex(436)]
+
+    @pytest.mark.asyncio
+    async def test_get_code_defaults_to_latest(self, client, mock_requester):
+        mock_requester.responses['eth_getCode'] = {'jsonrpc': '2.0', 'result': '0x', 'id': None}
+        result = await client.get_code(address='0x1234567890123456789012345678901234567890')
+        assert result == '0x'
+        assert mock_requester.requests_made[0]['dataDict']['params'] == ['0x1234567890123456789012345678901234567890', 'latest']
+
+    @staticmethod
+    async def _max_concurrent_request_count(mock_requester, clients) -> int:
+        activeCount = 0
+        maxActiveCount = 0
+        async def mock_post_json_slow(*args, **kwargs):
+            nonlocal activeCount, maxActiveCount
+            activeCount += 1
+            maxActiveCount = max(maxActiveCount, activeCount)
+            await asyncio.sleep(0.01)
+            activeCount -= 1
+            return MockResponse({'jsonrpc': '2.0', 'result': hex(436), 'id': None})
+        mock_requester.post_json = mock_post_json_slow
+        results = await asyncio.gather(*[client.get_latest_block_number() for client in clients for _ in range(3)])
+        assert results == [436] * 3 * len(clients)
+        return maxActiveCount
+
+    @pytest.mark.asyncio
+    async def test_requests_are_not_limited_by_default(self, client, mock_requester):
+        assert client.semaphore is None
+        assert await self._max_concurrent_request_count(mock_requester=mock_requester, clients=[client]) == 3
+
+    @pytest.mark.asyncio
+    async def test_max_concurrent_request_count_limits_each_client(self, mock_requester):
+        clients = [RestEthClient(url='https://test-rpc-url.com', requester=mock_requester, chainId=chainId, maxConcurrentRequestCount=2) for chainId in (1, 8453)]
+        assert clients[0].semaphore is not clients[1].semaphore
+        assert await self._max_concurrent_request_count(mock_requester=mock_requester, clients=clients) == 4
+
+    @pytest.mark.asyncio
+    async def test_shared_semaphore_limits_clients_together(self, mock_requester):
+        semaphore = asyncio.Semaphore(2)
+        clients = [RestEthClient(url='https://test-rpc-url.com', requester=mock_requester, chainId=chainId, semaphore=semaphore, maxConcurrentRequestCount=5) for chainId in (1, 8453)]
+        assert all(client.semaphore is semaphore for client in clients)
+        assert await self._max_concurrent_request_count(mock_requester=mock_requester, clients=clients) == 2
 
     @pytest.mark.asyncio
     async def test_fill_transaction_params_all_provided(self, client, mock_requester):
