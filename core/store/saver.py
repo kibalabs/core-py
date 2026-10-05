@@ -39,7 +39,7 @@ class Saver:
         async with self.database.create_transaction() as connection:
             yield connection
 
-    async def _execute(self, query: TypedReturnsRows[ResultType], connection: DatabaseConnection | None = None) -> Result[ResultType]:
+    async def _execute(self, query: TypedReturnsRows[*ResultType], connection: DatabaseConnection | None = None) -> Result[*ResultType]:
         try:
             if connection:
                 return await self.database.execute(query=query, connection=connection)

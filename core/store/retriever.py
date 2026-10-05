@@ -110,7 +110,7 @@ def datetime_to_column_value(column: sqlalchemy.ColumnElement[typing.Any], dt: d
     return date_util.datetime_to_utc_naive_datetime(dt=dt)
 
 
-def apply_order(query: Select[ResultType], table: Table, order: Order) -> Select[ResultType]:
+def apply_order(query: Select[*ResultType], table: Table, order: Order) -> Select[*ResultType]:
     if isinstance(order, RandomOrder):
         query = query.order_by(sqlalchemy.sql.functions.random())
     else:
@@ -119,7 +119,7 @@ def apply_order(query: Select[ResultType], table: Table, order: Order) -> Select
     return query
 
 
-def apply_orders(query: Select[ResultType], table: Table, orders: Sequence[Order]) -> Select[ResultType]:
+def apply_orders(query: Select[*ResultType], table: Table, orders: Sequence[Order]) -> Select[*ResultType]:
     for order in orders:
         query = apply_order(query=query, table=table, order=order)
     return query
@@ -259,7 +259,7 @@ def get_field_filters_conditions(table: Table, fieldFilters: Sequence[FieldFilte
     return [condition for fieldFilter in fieldFilters for condition in get_field_filter_conditions(table=table, fieldFilter=fieldFilter)]
 
 
-def apply_field_filters(query: Select[ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[ResultType]:
+def apply_field_filters(query: Select[*ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[*ResultType]:
     return query.where(*get_field_filters_conditions(table=table, fieldFilters=fieldFilters))
 
 
@@ -267,32 +267,32 @@ class Retriever:
     def __init__(self, database: Database) -> None:
         self.database = database
 
-    def _apply_order(self, query: Select[ResultType], table: Table, order: Order) -> Select[ResultType]:
+    def _apply_order(self, query: Select[*ResultType], table: Table, order: Order) -> Select[*ResultType]:
         return apply_order(query=query, table=table, order=order)
 
-    def _apply_orders(self, query: Select[ResultType], table: Table, orders: Sequence[Order]) -> Select[ResultType]:
+    def _apply_orders(self, query: Select[*ResultType], table: Table, orders: Sequence[Order]) -> Select[*ResultType]:
         return apply_orders(query=query, table=table, orders=orders)
 
-    def _apply_string_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: StringFieldFilter) -> Select[ResultType]:
+    def _apply_string_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: StringFieldFilter) -> Select[*ResultType]:
         return query.where(*get_string_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_uuid_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: UUIDFieldFilter) -> Select[ResultType]:
+    def _apply_uuid_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: UUIDFieldFilter) -> Select[*ResultType]:
         return query.where(*get_uuid_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_date_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: DateFieldFilter) -> Select[ResultType]:
+    def _apply_date_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: DateFieldFilter) -> Select[*ResultType]:
         return query.where(*get_date_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_integer_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: IntegerFieldFilter) -> Select[ResultType]:
+    def _apply_integer_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: IntegerFieldFilter) -> Select[*ResultType]:
         return query.where(*get_integer_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_float_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: FloatFieldFilter) -> Select[ResultType]:
+    def _apply_float_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: FloatFieldFilter) -> Select[*ResultType]:
         return query.where(*get_float_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_boolean_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: BooleanFieldFilter) -> Select[ResultType]:
+    def _apply_boolean_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: BooleanFieldFilter) -> Select[*ResultType]:
         return query.where(*get_boolean_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: FieldFilter) -> Select[ResultType]:
+    def _apply_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: FieldFilter) -> Select[*ResultType]:
         return query.where(*get_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_field_filters(self, query: Select[ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[ResultType]:
+    def _apply_field_filters(self, query: Select[*ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[*ResultType]:
         return apply_field_filters(query=query, table=table, fieldFilters=fieldFilters)

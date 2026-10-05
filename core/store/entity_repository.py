@@ -79,7 +79,7 @@ class EntityRepository(typing.Generic[EntityType]):  # noqa: UP046
     def from_row(self, row: RowMapping) -> EntityType:
         return self.modelClass.model_validate(self._get_field_values(row=row))
 
-    def force_from_result(self, result: Result[typing.Any]) -> EntityType:  # type: ignore[explicit-any]
+    def force_from_result(self, result: Result[*tuple[typing.Any, ...]]) -> EntityType:  # type: ignore[explicit-any]
         row = result.mappings().first()
         if row is None:
             raise NotFoundException
