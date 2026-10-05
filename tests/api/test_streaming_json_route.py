@@ -184,3 +184,14 @@ def test_error_thrown_by_endpoint(client):
     data = dataList[0]
     assert data["request_name"] == "Name"
     assert data["request_age"] == 30
+
+
+@pytest.mark.parametrize("content", ["true", "[1, 2]", "\"text\"", "null", "1"])
+def test_streaming_json_route_with_non_object_json(client, content):
+    response = client.post(
+        "/test?name=NonObject&age=1",
+        content=content,
+        headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == 400
+    assert "expected an object" in response.json().get("message", "")

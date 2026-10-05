@@ -134,3 +134,14 @@ def test_json_route_empty_body(client):
     data = response.json()
     assert data["request_name"] == "EmptyBody"
     assert data["request_age"] == 50
+
+
+@pytest.mark.parametrize("content", ["true", "[1, 2]", "\"text\"", "null", "1"])
+def test_json_route_with_non_object_json(client, content):
+    response = client.post(
+        "/test?name=NonObject&age=1",
+        content=content,
+        headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == 400
+    assert "expected an object" in response.json().get("message", "")
