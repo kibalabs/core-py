@@ -16,44 +16,44 @@ api = [
     "uvicorn[standard]>=0.53.0",
 ]
 core-api = [
-    "starlette>=1.6.0",
+    "starlette>=1.7.0",
     "uvicorn[standard]>=0.53.0",
 ]
 storage = [
-    "aiobotocore>=3.9.1",
+    "aiobotocore>=3.9.2",
 ]
 # TODO(krishan711): remove this in next major update
 queues = [
-    "aiobotocore>=3.9.1",
+    "aiobotocore>=3.9.2",
 ]
 queue-sqs = [
-    "aiobotocore>=3.9.1",
+    "aiobotocore>=3.9.2",
 ]
 queue-aqs = [
-    "azure-storage-queue[aio]>=12.17.0",
+    "azure-storage-queue[aio]>=12.18.0",
 ]
 queue-cosmos = [
-    "azure-cosmos>=4.17.0",
+    "azure-cosmos>=4.17.1",
 ]
 database-psql = [
-    "sqlalchemy[asyncio]>=2.0.54",
+    "sqlalchemy[asyncio]>=2.1.3",
     "asyncpg>=0.31.0",
 ]
 database-sqlite = [
-    "sqlalchemy[asyncio]>=2.0.54",
+    "sqlalchemy[asyncio]>=2.1.3",
     "aiosqlite>=0.22.1",
 ]
 requester = [
-    "httpx2>=2.13.0",
+    "httpx2>=2.13.1",
 ]
 web3 = [
     "web3>=7.16.0,<8.0.0",
 ]
 cron = [
-    "apscheduler>=3.11.0,<4",
+    "apscheduler>=3.11.3,<4",
 ]
 types = [
-    "types-aiobotocore[essential]>=3.9.1",
+    "types-aiobotocore[essential]>=3.9.2",
     "types-aiofiles>=25.1.0.20260518",
 ]
 

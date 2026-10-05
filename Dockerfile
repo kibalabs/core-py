@@ -1,4 +1,4 @@
-FROM python:3.12.0-slim
+FROM python:3.14.8-slim
 
 RUN apt-get update && apt-get install --yes --no-install-recommends make git
 
