@@ -16,6 +16,7 @@ from core.exceptions import InternalServerErrorException
 from core.queues.message_queue import MessageQueue
 from core.queues.model import Message
 from core.store.database import Database
+from core.store.database import DatabaseTable
 from core.util import process_util
 
 MESSAGE_STATUS_PENDING = 'pending'
@@ -61,7 +62,7 @@ class SqlMessage(Message):
     lockToken: str
 
     @classmethod
-    def from_row(cls, row: RowMapping, table: sqlalchemy.Table) -> SqlMessage:
+    def from_row(cls, row: RowMapping, table: DatabaseTable) -> SqlMessage:
         return cls(
             id=row[table.c.id],
             command=row[table.c.command],
@@ -79,7 +80,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
         self,
         database: Database,
         queueName: str,
-        table: sqlalchemy.Table = QueueMessagesTable,
+        table: DatabaseTable = QueueMessagesTable,
         pollIntervalSeconds: float = 1.0,
         maxAttempts: int = 3,
         failureRetryDelaySeconds: int = 60,

@@ -12,7 +12,9 @@ from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.sql.base import ReadOnlyColumnCollection
 from sqlalchemy.sql.dml import UpdateBase
+from sqlalchemy.sql.elements import KeyedColumnElement
 from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from core import logging
@@ -21,6 +23,9 @@ from core.util import json_util
 
 DatabaseConnection = AsyncConnection
 ResultType = TypeVarTuple('ResultType')
+# NOTE(krishan711): these spell out sqlalchemy 2.1's default column collections. mypy's disallow_any_explicit rejects bare Table / FromClause annotations because the defaults contain Any, but not uses of these aliases
+DatabaseTable = sqlalchemy.Table[ReadOnlyColumnCollection[str, sqlalchemy.Column[typing.Any]]]  # type: ignore[explicit-any]
+DatabaseFromClause = sqlalchemy.FromClause[ReadOnlyColumnCollection[str, KeyedColumnElement[typing.Any]]]  # type: ignore[explicit-any]
 
 
 class Database:

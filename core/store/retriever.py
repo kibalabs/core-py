@@ -7,11 +7,11 @@ from enum import Enum
 
 import sqlalchemy
 import sqlalchemy.sql.functions
-from sqlalchemy import Table
 from sqlalchemy.sql import ColumnElement
 from sqlalchemy.sql import Select
 
 from core.store.database import Database
+from core.store.database import DatabaseTable
 from core.store.database import ResultType
 from core.util import date_util
 
@@ -110,7 +110,7 @@ def datetime_to_column_value(column: sqlalchemy.ColumnElement[typing.Any], dt: d
     return date_util.datetime_to_utc_naive_datetime(dt=dt)
 
 
-def apply_order(query: Select[*ResultType], table: Table, order: Order) -> Select[*ResultType]:
+def apply_order(query: Select[*ResultType], table: DatabaseTable, order: Order) -> Select[*ResultType]:
     if isinstance(order, RandomOrder):
         query = query.order_by(sqlalchemy.sql.functions.random())
     else:
@@ -119,13 +119,13 @@ def apply_order(query: Select[*ResultType], table: Table, order: Order) -> Selec
     return query
 
 
-def apply_orders(query: Select[*ResultType], table: Table, orders: Sequence[Order]) -> Select[*ResultType]:
+def apply_orders(query: Select[*ResultType], table: DatabaseTable, orders: Sequence[Order]) -> Select[*ResultType]:
     for order in orders:
         query = apply_order(query=query, table=table, order=order)
     return query
 
 
-def get_string_field_filter_conditions(table: Table, fieldFilter: StringFieldFilter) -> list[ColumnElement[bool]]:
+def get_string_field_filter_conditions(table: DatabaseTable, fieldFilter: StringFieldFilter) -> list[ColumnElement[bool]]:
     field = table.c[fieldFilter.fieldName]
     conditions: list[ColumnElement[bool]] = []
     if fieldFilter.eq is not None:
@@ -139,7 +139,7 @@ def get_string_field_filter_conditions(table: Table, fieldFilter: StringFieldFil
     return conditions
 
 
-def get_uuid_field_filter_conditions(table: Table, fieldFilter: UUIDFieldFilter) -> list[ColumnElement[bool]]:
+def get_uuid_field_filter_conditions(table: DatabaseTable, fieldFilter: UUIDFieldFilter) -> list[ColumnElement[bool]]:
     field = table.c[fieldFilter.fieldName]
     conditions: list[ColumnElement[bool]] = []
     if fieldFilter.eq is not None:
@@ -153,7 +153,7 @@ def get_uuid_field_filter_conditions(table: Table, fieldFilter: UUIDFieldFilter)
     return conditions
 
 
-def get_date_field_filter_conditions(table: Table, fieldFilter: DateFieldFilter) -> list[ColumnElement[bool]]:
+def get_date_field_filter_conditions(table: DatabaseTable, fieldFilter: DateFieldFilter) -> list[ColumnElement[bool]]:
     field = table.c[fieldFilter.fieldName]
     conditions: list[ColumnElement[bool]] = []
     if fieldFilter.eq is not None:
@@ -175,7 +175,7 @@ def get_date_field_filter_conditions(table: Table, fieldFilter: DateFieldFilter)
     return conditions
 
 
-def get_integer_field_filter_conditions(table: Table, fieldFilter: IntegerFieldFilter) -> list[ColumnElement[bool]]:
+def get_integer_field_filter_conditions(table: DatabaseTable, fieldFilter: IntegerFieldFilter) -> list[ColumnElement[bool]]:
     # NOTE(krishan711): `field == value` / `field.in_(values)` let SQLAlchemy's `Numeric.coerce_compared_value`
     # re-infer a bind param type from the compared Python `int` (typically `BigInteger`, i.e. int64) instead of
     # keeping `field.type` (e.g. `Numeric(78, 0)` for uint256 columns). Binding explicitly with `type_=field.type`
@@ -201,7 +201,7 @@ def get_integer_field_filter_conditions(table: Table, fieldFilter: IntegerFieldF
     return conditions
 
 
-def get_float_field_filter_conditions(table: Table, fieldFilter: FloatFieldFilter) -> list[ColumnElement[bool]]:
+def get_float_field_filter_conditions(table: DatabaseTable, fieldFilter: FloatFieldFilter) -> list[ColumnElement[bool]]:
     field = table.c[fieldFilter.fieldName]
     conditions: list[ColumnElement[bool]] = []
     if fieldFilter.eq is not None:
@@ -223,7 +223,7 @@ def get_float_field_filter_conditions(table: Table, fieldFilter: FloatFieldFilte
     return conditions
 
 
-def get_boolean_field_filter_conditions(table: Table, fieldFilter: BooleanFieldFilter) -> list[ColumnElement[bool]]:
+def get_boolean_field_filter_conditions(table: DatabaseTable, fieldFilter: BooleanFieldFilter) -> list[ColumnElement[bool]]:
     field = table.c[fieldFilter.fieldName]
     conditions: list[ColumnElement[bool]] = []
     if fieldFilter.eq is not None:
@@ -233,7 +233,7 @@ def get_boolean_field_filter_conditions(table: Table, fieldFilter: BooleanFieldF
     return conditions
 
 
-def get_field_filter_conditions(table: Table, fieldFilter: FieldFilter) -> list[ColumnElement[bool]]:
+def get_field_filter_conditions(table: DatabaseTable, fieldFilter: FieldFilter) -> list[ColumnElement[bool]]:
     field = table.c[fieldFilter.fieldName]
     conditions: list[ColumnElement[bool]] = []
     if fieldFilter.isNull:
@@ -255,11 +255,11 @@ def get_field_filter_conditions(table: Table, fieldFilter: FieldFilter) -> list[
     return conditions
 
 
-def get_field_filters_conditions(table: Table, fieldFilters: Sequence[FieldFilter]) -> list[ColumnElement[bool]]:
+def get_field_filters_conditions(table: DatabaseTable, fieldFilters: Sequence[FieldFilter]) -> list[ColumnElement[bool]]:
     return [condition for fieldFilter in fieldFilters for condition in get_field_filter_conditions(table=table, fieldFilter=fieldFilter)]
 
 
-def apply_field_filters(query: Select[*ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[*ResultType]:
+def apply_field_filters(query: Select[*ResultType], table: DatabaseTable, fieldFilters: Sequence[FieldFilter]) -> Select[*ResultType]:
     return query.where(*get_field_filters_conditions(table=table, fieldFilters=fieldFilters))
 
 
@@ -267,32 +267,32 @@ class Retriever:
     def __init__(self, database: Database) -> None:
         self.database = database
 
-    def _apply_order(self, query: Select[*ResultType], table: Table, order: Order) -> Select[*ResultType]:
+    def _apply_order(self, query: Select[*ResultType], table: DatabaseTable, order: Order) -> Select[*ResultType]:
         return apply_order(query=query, table=table, order=order)
 
-    def _apply_orders(self, query: Select[*ResultType], table: Table, orders: Sequence[Order]) -> Select[*ResultType]:
+    def _apply_orders(self, query: Select[*ResultType], table: DatabaseTable, orders: Sequence[Order]) -> Select[*ResultType]:
         return apply_orders(query=query, table=table, orders=orders)
 
-    def _apply_string_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: StringFieldFilter) -> Select[*ResultType]:
+    def _apply_string_field_filter(self, query: Select[*ResultType], table: DatabaseTable, fieldFilter: StringFieldFilter) -> Select[*ResultType]:
         return query.where(*get_string_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_uuid_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: UUIDFieldFilter) -> Select[*ResultType]:
+    def _apply_uuid_field_filter(self, query: Select[*ResultType], table: DatabaseTable, fieldFilter: UUIDFieldFilter) -> Select[*ResultType]:
         return query.where(*get_uuid_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_date_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: DateFieldFilter) -> Select[*ResultType]:
+    def _apply_date_field_filter(self, query: Select[*ResultType], table: DatabaseTable, fieldFilter: DateFieldFilter) -> Select[*ResultType]:
         return query.where(*get_date_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_integer_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: IntegerFieldFilter) -> Select[*ResultType]:
+    def _apply_integer_field_filter(self, query: Select[*ResultType], table: DatabaseTable, fieldFilter: IntegerFieldFilter) -> Select[*ResultType]:
         return query.where(*get_integer_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_float_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: FloatFieldFilter) -> Select[*ResultType]:
+    def _apply_float_field_filter(self, query: Select[*ResultType], table: DatabaseTable, fieldFilter: FloatFieldFilter) -> Select[*ResultType]:
         return query.where(*get_float_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_boolean_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: BooleanFieldFilter) -> Select[*ResultType]:
+    def _apply_boolean_field_filter(self, query: Select[*ResultType], table: DatabaseTable, fieldFilter: BooleanFieldFilter) -> Select[*ResultType]:
         return query.where(*get_boolean_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_field_filter(self, query: Select[*ResultType], table: Table, fieldFilter: FieldFilter) -> Select[*ResultType]:
+    def _apply_field_filter(self, query: Select[*ResultType], table: DatabaseTable, fieldFilter: FieldFilter) -> Select[*ResultType]:
         return query.where(*get_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
-    def _apply_field_filters(self, query: Select[*ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[*ResultType]:
+    def _apply_field_filters(self, query: Select[*ResultType], table: DatabaseTable, fieldFilters: Sequence[FieldFilter]) -> Select[*ResultType]:
         return apply_field_filters(query=query, table=table, fieldFilters=fieldFilters)
