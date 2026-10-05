@@ -4,7 +4,7 @@ import datetime
 import typing
 import weakref
 from collections.abc import AsyncIterator
-from typing import TypeVar
+from typing import TypeVarTuple
 
 import sqlalchemy
 import sqlalchemy.exc
@@ -20,7 +20,7 @@ from core.exceptions import InternalServerErrorException
 from core.util import json_util
 
 DatabaseConnection = AsyncConnection
-ResultType = TypeVar('ResultType', bound=tuple)  # type: ignore[type-arg]
+ResultType = TypeVarTuple('ResultType')
 
 
 class Database:
@@ -140,10 +140,10 @@ class Database:
                 self._connectionContext.reset(token)
 
     @typing.overload
-    async def execute(self, query: TypedReturnsRows[ResultType], connection: DatabaseConnection | None = None) -> Result[ResultType]: ...
+    async def execute(self, query: TypedReturnsRows[*ResultType], connection: DatabaseConnection | None = None) -> Result[*ResultType]: ...
     @typing.overload
-    async def execute(self, query: sqlalchemy.sql.Executable, connection: DatabaseConnection | None = None) -> Result[typing.Any]: ...  # type: ignore[explicit-any]
-    async def execute(self, query: sqlalchemy.sql.Executable, connection: DatabaseConnection | None = None) -> Result[typing.Any]:  # type: ignore[explicit-any]
+    async def execute(self, query: sqlalchemy.sql.Executable, connection: DatabaseConnection | None = None) -> Result[*tuple[typing.Any, ...]]: ...  # type: ignore[explicit-any]
+    async def execute(self, query: sqlalchemy.sql.Executable, connection: DatabaseConnection | None = None) -> Result[*tuple[typing.Any, ...]]:  # type: ignore[explicit-any]
         if not self._engine:
             raise InternalServerErrorException(message='Connection has not been established. Please called collect() first.')
         if not connection:
@@ -152,4 +152,4 @@ class Database:
             raise InternalServerErrorException(message='No connection found. Please provide a connection or call create_context_connection() for the context.')
         if isinstance(query, UpdateBase):
             self._connectionsWithWrites.add(connection)
-        return typing.cast(Result[typing.Any], await connection.execute(statement=query))  # type: ignore[explicit-any]
+        return typing.cast(Result[*tuple[typing.Any, ...]], await connection.execute(statement=query))  # type: ignore[explicit-any]
