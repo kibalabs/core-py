@@ -30,6 +30,8 @@ def json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
                     body = typing.cast(JsonObject, json_util.loads(bodyBytes.decode()))
                 except json_util.JsonDecodeException as exception:
                     raise BadRequestException(f'Invalid JSON body: {exception}')
+                if not isinstance(body, dict):
+                    raise BadRequestException('Invalid JSON body: expected an object')
             allParams = {**pathParams, **body, **queryParams}
             try:
                 requestParams = requestType(**allParams)
