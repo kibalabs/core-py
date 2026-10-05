@@ -1,15 +1,19 @@
 import dataclasses
 import datetime
+import typing
+import uuid
 from collections.abc import Sequence
 from enum import Enum
 
 import sqlalchemy
 import sqlalchemy.sql.functions
 from sqlalchemy import Table
+from sqlalchemy.sql import ColumnElement
 from sqlalchemy.sql import Select
 
 from core.store.database import Database
 from core.store.database import ResultType
+from core.util import date_util
 
 
 class Direction(Enum):
@@ -41,6 +45,14 @@ class StringFieldFilter(FieldFilter):
     ne: str | None = None
     containedIn: Sequence[str] | None = None
     notContainedIn: Sequence[str] | None = None
+
+
+@dataclasses.dataclass
+class UUIDFieldFilter(FieldFilter):
+    eq: uuid.UUID | str | None = None
+    ne: uuid.UUID | str | None = None
+    containedIn: Sequence[uuid.UUID | str] | None = None
+    notContainedIn: Sequence[uuid.UUID | str] | None = None
 
 
 @dataclasses.dataclass
@@ -85,122 +97,202 @@ class BooleanFieldFilter(FieldFilter):
     ne: bool | None = None
 
 
+def uuid_from_value(value: uuid.UUID | str) -> uuid.UUID:
+    if isinstance(value, uuid.UUID):
+        return value
+    return uuid.UUID(hex=value)
+
+
+def datetime_to_column_value(column: sqlalchemy.ColumnElement[typing.Any], dt: datetime.datetime) -> datetime.datetime:  # type: ignore[explicit-any]
+    # NOTE(krishan711): columns without a timezone store naive utc datetimes, columns with one store aware utc datetimes
+    if getattr(column.type, 'timezone', False):
+        return date_util.datetime_to_utc(dt=dt)
+    return date_util.datetime_to_utc_naive_datetime(dt=dt)
+
+
+def apply_order(query: Select[ResultType], table: Table, order: Order) -> Select[ResultType]:
+    if isinstance(order, RandomOrder):
+        query = query.order_by(sqlalchemy.sql.functions.random())
+    else:
+        field = table.c[order.fieldName]
+        query = query.order_by(field.asc() if order.direction == Direction.ASCENDING else field.desc())
+    return query
+
+
+def apply_orders(query: Select[ResultType], table: Table, orders: Sequence[Order]) -> Select[ResultType]:
+    for order in orders:
+        query = apply_order(query=query, table=table, order=order)
+    return query
+
+
+def get_string_field_filter_conditions(table: Table, fieldFilter: StringFieldFilter) -> list[ColumnElement[bool]]:
+    field = table.c[fieldFilter.fieldName]
+    conditions: list[ColumnElement[bool]] = []
+    if fieldFilter.eq is not None:
+        conditions.append(field == fieldFilter.eq)
+    if fieldFilter.ne is not None:
+        conditions.append(field != fieldFilter.ne)
+    if fieldFilter.containedIn is not None:
+        conditions.append(field.in_(fieldFilter.containedIn))
+    if fieldFilter.notContainedIn is not None:
+        conditions.append(field.not_in(fieldFilter.notContainedIn))
+    return conditions
+
+
+def get_uuid_field_filter_conditions(table: Table, fieldFilter: UUIDFieldFilter) -> list[ColumnElement[bool]]:
+    field = table.c[fieldFilter.fieldName]
+    conditions: list[ColumnElement[bool]] = []
+    if fieldFilter.eq is not None:
+        conditions.append(field == uuid_from_value(value=fieldFilter.eq))
+    if fieldFilter.ne is not None:
+        conditions.append(field != uuid_from_value(value=fieldFilter.ne))
+    if fieldFilter.containedIn is not None:
+        conditions.append(field.in_([uuid_from_value(value=value) for value in fieldFilter.containedIn]))
+    if fieldFilter.notContainedIn is not None:
+        conditions.append(field.not_in([uuid_from_value(value=value) for value in fieldFilter.notContainedIn]))
+    return conditions
+
+
+def get_date_field_filter_conditions(table: Table, fieldFilter: DateFieldFilter) -> list[ColumnElement[bool]]:
+    field = table.c[fieldFilter.fieldName]
+    conditions: list[ColumnElement[bool]] = []
+    if fieldFilter.eq is not None:
+        conditions.append(field == datetime_to_column_value(column=field, dt=fieldFilter.eq))
+    if fieldFilter.ne is not None:
+        conditions.append(field != datetime_to_column_value(column=field, dt=fieldFilter.ne))
+    if fieldFilter.lte is not None:
+        conditions.append(field <= datetime_to_column_value(column=field, dt=fieldFilter.lte))
+    if fieldFilter.lt is not None:
+        conditions.append(field < datetime_to_column_value(column=field, dt=fieldFilter.lt))
+    if fieldFilter.gte is not None:
+        conditions.append(field >= datetime_to_column_value(column=field, dt=fieldFilter.gte))
+    if fieldFilter.gt is not None:
+        conditions.append(field > datetime_to_column_value(column=field, dt=fieldFilter.gt))
+    if fieldFilter.containedIn is not None:
+        conditions.append(field.in_([datetime_to_column_value(column=field, dt=value) for value in fieldFilter.containedIn]))
+    if fieldFilter.notContainedIn is not None:
+        conditions.append(field.not_in([datetime_to_column_value(column=field, dt=value) for value in fieldFilter.notContainedIn]))
+    return conditions
+
+
+def get_integer_field_filter_conditions(table: Table, fieldFilter: IntegerFieldFilter) -> list[ColumnElement[bool]]:
+    # NOTE(krishan711): `field == value` / `field.in_(values)` let SQLAlchemy's `Numeric.coerce_compared_value`
+    # re-infer a bind param type from the compared Python `int` (typically `BigInteger`, i.e. int64) instead of
+    # keeping `field.type` (e.g. `Numeric(78, 0)` for uint256 columns). Binding explicitly with `type_=field.type`
+    # avoids an asyncpg `OverflowError` for any value outside the int64 range.
+    field = table.c[fieldFilter.fieldName]
+    conditions: list[ColumnElement[bool]] = []
+    if fieldFilter.eq is not None:
+        conditions.append(field == sqlalchemy.bindparam(None, fieldFilter.eq, type_=field.type))
+    if fieldFilter.ne is not None:
+        conditions.append(field != sqlalchemy.bindparam(None, fieldFilter.ne, type_=field.type))
+    if fieldFilter.lte is not None:
+        conditions.append(field <= sqlalchemy.bindparam(None, fieldFilter.lte, type_=field.type))
+    if fieldFilter.lt is not None:
+        conditions.append(field < sqlalchemy.bindparam(None, fieldFilter.lt, type_=field.type))
+    if fieldFilter.gte is not None:
+        conditions.append(field >= sqlalchemy.bindparam(None, fieldFilter.gte, type_=field.type))
+    if fieldFilter.gt is not None:
+        conditions.append(field > sqlalchemy.bindparam(None, fieldFilter.gt, type_=field.type))
+    if fieldFilter.containedIn is not None:
+        conditions.append(field.in_(sqlalchemy.bindparam(None, fieldFilter.containedIn, type_=field.type, expanding=True)))
+    if fieldFilter.notContainedIn is not None:
+        conditions.append(field.not_in(sqlalchemy.bindparam(None, fieldFilter.notContainedIn, type_=field.type, expanding=True)))
+    return conditions
+
+
+def get_float_field_filter_conditions(table: Table, fieldFilter: FloatFieldFilter) -> list[ColumnElement[bool]]:
+    field = table.c[fieldFilter.fieldName]
+    conditions: list[ColumnElement[bool]] = []
+    if fieldFilter.eq is not None:
+        conditions.append(field == fieldFilter.eq)
+    if fieldFilter.ne is not None:
+        conditions.append(field != fieldFilter.ne)
+    if fieldFilter.lte is not None:
+        conditions.append(field <= fieldFilter.lte)
+    if fieldFilter.lt is not None:
+        conditions.append(field < fieldFilter.lt)
+    if fieldFilter.gte is not None:
+        conditions.append(field >= fieldFilter.gte)
+    if fieldFilter.gt is not None:
+        conditions.append(field > fieldFilter.gt)
+    if fieldFilter.containedIn is not None:
+        conditions.append(field.in_(fieldFilter.containedIn))
+    if fieldFilter.notContainedIn is not None:
+        conditions.append(field.not_in(fieldFilter.notContainedIn))
+    return conditions
+
+
+def get_boolean_field_filter_conditions(table: Table, fieldFilter: BooleanFieldFilter) -> list[ColumnElement[bool]]:
+    field = table.c[fieldFilter.fieldName]
+    conditions: list[ColumnElement[bool]] = []
+    if fieldFilter.eq is not None:
+        conditions.append(field == fieldFilter.eq)
+    if fieldFilter.ne is not None:
+        conditions.append(field != fieldFilter.ne)
+    return conditions
+
+
+def get_field_filter_conditions(table: Table, fieldFilter: FieldFilter) -> list[ColumnElement[bool]]:
+    field = table.c[fieldFilter.fieldName]
+    conditions: list[ColumnElement[bool]] = []
+    if fieldFilter.isNull:
+        conditions.append(field.is_(None))
+    if fieldFilter.isNotNull:
+        conditions.append(field.is_not(None))
+    if isinstance(fieldFilter, StringFieldFilter):
+        conditions += get_string_field_filter_conditions(table=table, fieldFilter=fieldFilter)
+    if isinstance(fieldFilter, UUIDFieldFilter):
+        conditions += get_uuid_field_filter_conditions(table=table, fieldFilter=fieldFilter)
+    if isinstance(fieldFilter, DateFieldFilter):
+        conditions += get_date_field_filter_conditions(table=table, fieldFilter=fieldFilter)
+    if isinstance(fieldFilter, IntegerFieldFilter):
+        conditions += get_integer_field_filter_conditions(table=table, fieldFilter=fieldFilter)
+    if isinstance(fieldFilter, FloatFieldFilter):
+        conditions += get_float_field_filter_conditions(table=table, fieldFilter=fieldFilter)
+    if isinstance(fieldFilter, BooleanFieldFilter):
+        conditions += get_boolean_field_filter_conditions(table=table, fieldFilter=fieldFilter)
+    return conditions
+
+
+def get_field_filters_conditions(table: Table, fieldFilters: Sequence[FieldFilter]) -> list[ColumnElement[bool]]:
+    return [condition for fieldFilter in fieldFilters for condition in get_field_filter_conditions(table=table, fieldFilter=fieldFilter)]
+
+
+def apply_field_filters(query: Select[ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[ResultType]:
+    return query.where(*get_field_filters_conditions(table=table, fieldFilters=fieldFilters))
+
+
 class Retriever:
     def __init__(self, database: Database) -> None:
         self.database = database
 
     def _apply_order(self, query: Select[ResultType], table: Table, order: Order) -> Select[ResultType]:
-        if isinstance(order, RandomOrder):
-            query = query.order_by(sqlalchemy.sql.functions.random())
-        else:
-            field = table.c[order.fieldName]
-            query = query.order_by(field.asc() if order.direction == Direction.ASCENDING else field.desc())
-        return query
+        return apply_order(query=query, table=table, order=order)
 
     def _apply_orders(self, query: Select[ResultType], table: Table, orders: Sequence[Order]) -> Select[ResultType]:
-        for order in orders:
-            query = self._apply_order(query=query, table=table, order=order)
-        return query
+        return apply_orders(query=query, table=table, orders=orders)
 
     def _apply_string_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: StringFieldFilter) -> Select[ResultType]:
-        field = table.c[fieldFilter.fieldName]
-        if fieldFilter.eq is not None:
-            query = query.where(field == fieldFilter.eq)
-        if fieldFilter.ne is not None:
-            query = query.where(field != fieldFilter.ne)
-        if fieldFilter.containedIn is not None:
-            query = query.where(field.in_(fieldFilter.containedIn))
-        if fieldFilter.notContainedIn is not None:
-            query = query.where(field.not_in(fieldFilter.notContainedIn))
-        return query
+        return query.where(*get_string_field_filter_conditions(table=table, fieldFilter=fieldFilter))
+
+    def _apply_uuid_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: UUIDFieldFilter) -> Select[ResultType]:
+        return query.where(*get_uuid_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
     def _apply_date_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: DateFieldFilter) -> Select[ResultType]:
-        field = table.c[fieldFilter.fieldName]
-        if fieldFilter.eq is not None:
-            query = query.where(field == fieldFilter.eq)
-        if fieldFilter.ne is not None:
-            query = query.where(field != fieldFilter.ne)
-        if fieldFilter.lte is not None:
-            query = query.where(field <= fieldFilter.lte)
-        if fieldFilter.lt is not None:
-            query = query.where(field < fieldFilter.lt)
-        if fieldFilter.gte is not None:
-            query = query.where(field >= fieldFilter.gte)
-        if fieldFilter.gt is not None:
-            query = query.where(field > fieldFilter.gt)
-        if fieldFilter.containedIn is not None:
-            query = query.where(field.in_(fieldFilter.containedIn))
-        if fieldFilter.notContainedIn is not None:
-            query = query.where(field.not_in(fieldFilter.notContainedIn))
-        return query
+        return query.where(*get_date_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
     def _apply_integer_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: IntegerFieldFilter) -> Select[ResultType]:
-        field = table.c[fieldFilter.fieldName]
-        if fieldFilter.eq is not None:
-            query = query.where(field == fieldFilter.eq)
-        if fieldFilter.ne is not None:
-            query = query.where(field != fieldFilter.ne)
-        if fieldFilter.lte is not None:
-            query = query.where(field <= fieldFilter.lte)
-        if fieldFilter.lt is not None:
-            query = query.where(field < fieldFilter.lt)
-        if fieldFilter.gte is not None:
-            query = query.where(field >= fieldFilter.gte)
-        if fieldFilter.gt is not None:
-            query = query.where(field > fieldFilter.gt)
-        if fieldFilter.containedIn is not None:
-            query = query.where(field.in_(fieldFilter.containedIn))
-        if fieldFilter.notContainedIn is not None:
-            query = query.where(field.not_in(fieldFilter.notContainedIn))
-        return query
+        return query.where(*get_integer_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
     def _apply_float_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: FloatFieldFilter) -> Select[ResultType]:
-        field = table.c[fieldFilter.fieldName]
-        if fieldFilter.eq is not None:
-            query = query.where(field == fieldFilter.eq)
-        if fieldFilter.ne is not None:
-            query = query.where(field != fieldFilter.ne)
-        if fieldFilter.lte is not None:
-            query = query.where(field <= fieldFilter.lte)
-        if fieldFilter.lt is not None:
-            query = query.where(field < fieldFilter.lt)
-        if fieldFilter.gte is not None:
-            query = query.where(field >= fieldFilter.gte)
-        if fieldFilter.gt is not None:
-            query = query.where(field > fieldFilter.gt)
-        if fieldFilter.containedIn is not None:
-            query = query.where(field.in_(fieldFilter.containedIn))
-        if fieldFilter.notContainedIn is not None:
-            query = query.where(field.not_in(fieldFilter.notContainedIn))
-        return query
+        return query.where(*get_float_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
     def _apply_boolean_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: BooleanFieldFilter) -> Select[ResultType]:
-        field = table.c[fieldFilter.fieldName]
-        if fieldFilter.eq is not None:
-            query = query.where(field == fieldFilter.eq)
-        if fieldFilter.ne is not None:
-            query = query.where(field != fieldFilter.ne)
-        return query
+        return query.where(*get_boolean_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
     def _apply_field_filter(self, query: Select[ResultType], table: Table, fieldFilter: FieldFilter) -> Select[ResultType]:
-        field = table.c[fieldFilter.fieldName]
-        if fieldFilter.isNull:
-            query = query.where(field.is_(None))
-        if fieldFilter.isNotNull:
-            query = query.where(field.is_not(None))
-        if isinstance(fieldFilter, StringFieldFilter):
-            query = self._apply_string_field_filter(query=query, table=table, fieldFilter=fieldFilter)
-        if isinstance(fieldFilter, DateFieldFilter):
-            query = self._apply_date_field_filter(query=query, table=table, fieldFilter=fieldFilter)
-        if isinstance(fieldFilter, IntegerFieldFilter):
-            query = self._apply_integer_field_filter(query=query, table=table, fieldFilter=fieldFilter)
-        if isinstance(fieldFilter, FloatFieldFilter):
-            query = self._apply_float_field_filter(query=query, table=table, fieldFilter=fieldFilter)
-        if isinstance(fieldFilter, BooleanFieldFilter):
-            query = self._apply_boolean_field_filter(query=query, table=table, fieldFilter=fieldFilter)
-        return query
+        return query.where(*get_field_filter_conditions(table=table, fieldFilter=fieldFilter))
 
     def _apply_field_filters(self, query: Select[ResultType], table: Table, fieldFilters: Sequence[FieldFilter]) -> Select[ResultType]:
-        for fieldFilter in fieldFilters:
-            query = self._apply_field_filter(query=query, table=table, fieldFilter=fieldFilter)
-        return query
+        return apply_field_filters(query=query, table=table, fieldFilters=fieldFilters)

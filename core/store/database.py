@@ -61,10 +61,13 @@ class Database:
             await self._engine.dispose()
             self._engine = None
 
-    def now(self, seconds: float = 0) -> sqlalchemy.ColumnElement[datetime.datetime]:
+    def get_dialect_name(self) -> str:
         if not self._engine:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
-        dialectName = self._engine.dialect.name
+        return self._engine.dialect.name
+
+    def now(self, seconds: float = 0) -> sqlalchemy.ColumnElement[datetime.datetime]:
+        dialectName = self.get_dialect_name()
         if dialectName == 'postgresql':
             return sqlalchemy.func.now() + datetime.timedelta(seconds=seconds)
         if dialectName == 'sqlite':
