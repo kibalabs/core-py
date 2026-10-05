@@ -76,6 +76,22 @@ class UpperNameEntityRepository(EntityRepository[Item]):
         return value
 
 
+class CountedItem(Item):
+    doubleCount: int
+
+
+class CountedItemEntityRepository(EntityRepository[CountedItem]):
+    def __init__(self) -> None:
+        super().__init__(table=ItemsTable, modelClass=CountedItem)
+        self.doubleCountColumn = (ItemsTable.c.count * 2).label('doubleCount')
+
+    def list_select_columns(self) -> list[sqlalchemy.ColumnElement[typing.Any]]:  # type: ignore[explicit-any]
+        return [*self.table.columns, self.doubleCountColumn]
+
+    def _get_field_values(self, row: sqlalchemy.RowMapping) -> dict[str, typing.Any]:  # type: ignore[explicit-any]
+        return {**super()._get_field_values(row=row), 'doubleCount': row[self.doubleCountColumn.key]}
+
+
 ItemsRepository = EntityRepository(table=ItemsTable, modelClass=Item)
 EventsRepository = EntityRepository(table=EventsTable, modelClass=Event)
 
@@ -237,3 +253,14 @@ async def test_subclasses_can_add_conversions(database: Database):
     async with database.create_transaction() as connection:
         item = await repository.create(database=database, connection=connection, name='a', count=1, amount=1)
     assert item.name == 'A'
+
+
+async def test_subclasses_can_select_extra_columns(database: Database):
+    repository = CountedItemEntityRepository()
+    async with database.create_transaction() as connection:
+        item = await repository.create(database=database, connection=connection, name='a', count=2, amount=1)
+        updatedItem = await repository.update(database=database, connection=connection, itemId=item.itemId, count=3)
+        listedItems = await repository.list_many(database=database, connection=connection)
+    assert item.doubleCount == 4
+    assert updatedItem.doubleCount == 6
+    assert [listedItem.doubleCount for listedItem in listedItems] == [6]
