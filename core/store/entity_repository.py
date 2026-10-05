@@ -14,6 +14,7 @@ from core.exceptions import KibaException
 from core.exceptions import NotFoundException
 from core.store.database import Database
 from core.store.database import DatabaseConnection
+from core.store.database import DatabaseTable
 from core.store.retriever import FieldFilter
 from core.store.retriever import Order
 from core.store.retriever import apply_field_filters
@@ -37,7 +38,7 @@ class EntityRepository(typing.Generic[EntityType]):  # noqa: UP046
 
     def __init__(
         self,
-        table: sqlalchemy.Table,
+        table: DatabaseTable,
         modelClass: type[EntityType],
     ) -> None:
         self.table = table

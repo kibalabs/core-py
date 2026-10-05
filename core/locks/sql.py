@@ -11,6 +11,7 @@ from core.exceptions import LockedException
 from core.locks.lock import Lock
 from core.locks.model import LockLease
 from core.store.database import Database
+from core.store.database import DatabaseTable
 from core.util import date_util
 from core.util import process_util
 
@@ -31,7 +32,7 @@ LocksTable = sqlalchemy.Table(
 
 
 class SqlLock(Lock):
-    def __init__(self, database: Database, table: sqlalchemy.Table = LocksTable, pollIntervalSeconds: float = 1.0, owner: str | None = None) -> None:
+    def __init__(self, database: Database, table: DatabaseTable = LocksTable, pollIntervalSeconds: float = 1.0, owner: str | None = None) -> None:
         self.database = database
         self.table = table
         self.pollIntervalSeconds = pollIntervalSeconds
