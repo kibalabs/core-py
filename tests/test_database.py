@@ -193,6 +193,7 @@ async def test_isolated_context_connection_reports_uncommitted_writes_in_the_out
             async with database.create_isolated_context_connection():
                 pass
         assert 'ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES' in caplog.text
+        assert 'first uncommitted write at tests/test_database.py:192 in test_isolated_context_connection_reports_uncommitted_writes_in_the_outer_context_connection' in caplog.text
     await database.disconnect()
 
 

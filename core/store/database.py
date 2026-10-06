@@ -1,6 +1,8 @@
 import contextlib
 import contextvars
 import datetime
+import os
+import traceback
 import typing
 import weakref
 from collections.abc import AsyncIterator
@@ -26,6 +28,14 @@ ResultType = TypeVarTuple('ResultType')
 # NOTE(krishan711): these spell out sqlalchemy 2.1's default column collections. mypy's disallow_any_explicit rejects bare Table / FromClause annotations because the defaults contain Any, but not uses of these aliases
 DatabaseTable = sqlalchemy.Table[ReadOnlyColumnCollection[str, sqlalchemy.Column[typing.Any]]]  # type: ignore[explicit-any]
 DatabaseFromClause = sqlalchemy.FromClause[ReadOnlyColumnCollection[str, KeyedColumnElement[typing.Any]]]  # type: ignore[explicit-any]
+_STORE_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+_WRITE_LOCATION_FRAME_COUNT = 3
+
+
+def _get_write_location() -> str:
+    # NOTE(krishan711): the nearest frames outside core.store and sqlalchemy, so a log without the stack still says which code wrote
+    frames = [frame for frame in reversed(traceback.extract_stack()) if not frame.filename.startswith(_STORE_DIRECTORY) and f'{os.sep}sqlalchemy{os.sep}' not in frame.filename]
+    return ' <- '.join(f'{"/".join(frame.filename.split(os.sep)[-2:])}:{frame.lineno} in {frame.name}' for frame in frames[:_WRITE_LOCATION_FRAME_COUNT])
 
 
 class Database:
@@ -46,7 +56,7 @@ class Database:
         self.shouldRaiseOnUncommittedWrites = shouldRaiseOnUncommittedWrites
         self._engine: AsyncEngine | None = None
         self._connectionContext = contextvars.ContextVar[DatabaseConnection | None]('_connectionContext')
-        self._connectionsWithWrites = weakref.WeakSet[DatabaseConnection]()
+        self._connectionWriteLocations = weakref.WeakKeyDictionary[DatabaseConnection, str]()
 
     async def connect(self, poolSize: int = 100) -> None:
         if not self._engine:
@@ -126,14 +136,14 @@ class Database:
     # Everything in the block runs on a new transaction that commits when the block exits, independent of the
     # outer transaction, which becomes the context connection again afterwards. It cannot see the outer
     # transaction's uncommitted writes and will block forever on rows the outer transaction has written, so
-    # callers must commit their writes before entering. Violations are logged (with the caller's stack) for now.
+    # callers must commit their writes before entering. Violations are logged with where the first uncommitted write happened.
     @contextlib.asynccontextmanager
     async def create_isolated_context_connection(self) -> AsyncIterator[DatabaseConnection]:
         if not self._engine:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
         outerConnection = self._get_context_connection()
-        if outerConnection is not None and outerConnection in self._connectionsWithWrites:
-            errorMessage = 'ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES: an isolated context connection was opened while the outer context connection has uncommitted writes'
+        if outerConnection is not None and outerConnection in self._connectionWriteLocations:
+            errorMessage = f'ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES: an isolated context connection was opened while the outer context connection has uncommitted writes (first uncommitted write at {self._connectionWriteLocations[outerConnection]})'
             if self.shouldRaiseOnUncommittedWrites:
                 raise InternalServerErrorException(message=errorMessage)
             logging.error(errorMessage, stack_info=True)
@@ -155,6 +165,6 @@ class Database:
             connection = self._get_context_connection()
         if not connection:
             raise InternalServerErrorException(message='No connection found. Please provide a connection or call create_context_connection() for the context.')
-        if isinstance(query, UpdateBase):
-            self._connectionsWithWrites.add(connection)
+        if isinstance(query, UpdateBase) and connection not in self._connectionWriteLocations:
+            self._connectionWriteLocations[connection] = _get_write_location()
         return typing.cast(Result[*tuple[typing.Any, ...]], await connection.execute(statement=query))  # type: ignore[explicit-any]
