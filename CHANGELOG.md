@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `UNDEFINED` and `UpdateValue[T]` to `core.util.typing_util` for partial updates: `UpdateValue[T]` is `T` or the `UNDEFINED` sentinel (pydantic's `MISSING`), so an update can tell "not provided" (`UNDEFINED`) apart from an explicit `None`
 - [MINOR] Added `core.store.entity_repository.EntityRepository`, which reads and writes rows of a table as pydantic models: `create`, `update`, `upsert`, `upsert_many` (postgres and sqlite), `delete`, `list_many`, `get_first`, `get`, `get_one` and `get_one_or_none`. It exposes UUID columns as strings and datetimes as aware utc datetimes, dumps pydantic values in JSON columns, generates ids for UUID primary keys and stamps `createdDate`/`updatedDate` when the table has them; subclasses can override `_convert_value_from_db`/`_convert_value_to_db` for other columns
 - [MINOR] Added `UUIDFieldFilter` (accepts `uuid.UUID` or `str` values) and module-level `apply_orders`, `apply_field_filters` and `get_field_filters_conditions` (conditions usable on selects, updates and deletes) to `core.store.retriever`; `Retriever` now uses them
 - [PATCH] Updated `DateFieldFilter` to convert values to utc for the column (naive for columns without a timezone, aware otherwise) so aware datetimes in any timezone compare correctly
