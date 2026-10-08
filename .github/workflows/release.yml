@@ -1,39 +1,34 @@
 name: Release
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+concurrency:
+  group: release
 jobs:
-  deploy-package:
+  push-version-tag:
     runs-on: ubuntu-latest
-    env:
-      DOCKER_IMAGE: build
-      PYPI_PUBLISH_TOKEN: ${{ secrets.PYPI_PUBLISH_TOKEN }}
+    # NOTE(krishan711): the release environment only allows main and holds the deploy key, the only thing allowed to push version tags. Unlike the GITHUB_TOKEN, a push with it starts the workflows that publish the tag.
+    environment: release
+    permissions:
+      contents: read
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
-      - name: Check the package version is the same as the tag
-        run: |
-          version=$(python3 setup.py --version)
-          if [ "${{ github.ref }}" != "refs/tags/v${version}" ]; then
-            echo "version in setup.py (v${version}) is different to the given tag (${{ github.ref }})"
-            exit 1;
-          fi
-      - name: Build docker image
-        run: docker build --tag $DOCKER_IMAGE .
-      - name: Publish package to pypi
-        run: docker run -e UV_PUBLISH_TOKEN=$PYPI_PUBLISH_TOKEN $DOCKER_IMAGE /bin/bash -c " make publish"
-  create-release:
-    needs: deploy-package
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v2
-      - name: Create Release
-        uses: actions/create-release@v1
+        uses: actions/checkout@v7
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+      - name: Push the version tag
+        run: |
+          version="v$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")"
+          if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::pyproject.toml version $version is not X.Y.Z"
+            exit 1
+          fi
+          existingSha="$(git ls-remote origin "refs/tags/$version" | cut -f1)"
+          if [[ "$existingSha" == "$GITHUB_SHA" ]]; then
+            echo "$version is already tagged on this commit; if publishing failed, re-run the workflow run for the tag"
+          elif [[ -n "$existingSha" ]]; then
+            echo "::error::$version already exists on $existingSha, bump the version in pyproject.toml"
+            exit 1
+          else
+            git tag "$version"
+            git push origin "refs/tags/$version"
+          fi
