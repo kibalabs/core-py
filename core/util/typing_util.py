@@ -19,7 +19,7 @@ class Undefined(enum.Enum):
         return 'UNDEFINED'
 
     @classmethod
-    def __get_pydantic_core_schema__(cls, sourceType: typing.Any, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:  # type: ignore[explicit-any]  # noqa: ARG003
+    def __get_pydantic_core_schema__(cls, sourceType: typing.Any, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:  # type: ignore[explicit-any]
         # NOTE(krishan711): only the default can be UNDEFINED, input values (e.g. "UNDEFINED" in json) must never validate to it
         return core_schema.is_instance_schema(cls)
 
