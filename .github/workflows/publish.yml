@@ -1,0 +1,29 @@
+name: Publish
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  deploy-package:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_IMAGE: build
+      PYPI_PUBLISH_TOKEN: ${{ secrets.PYPI_PUBLISH_TOKEN }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+      - name: Build docker image
+        run: docker build --tag $DOCKER_IMAGE .
+      - name: Publish package to pypi
+        run: docker run -e UV_PUBLISH_TOKEN=$PYPI_PUBLISH_TOKEN $DOCKER_IMAGE /bin/bash -c " make publish"
+  create-release:
+    needs: deploy-package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create ${{ github.ref_name }} --title "Release ${{ github.ref_name }}" --generate-notes
