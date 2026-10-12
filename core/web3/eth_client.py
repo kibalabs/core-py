@@ -15,6 +15,7 @@ from web3.types import FilterParams
 from web3.types import HexBytes
 from web3.types import HexStr
 from web3.types import LogReceipt
+from web3.types import RPCEndpoint
 from web3.types import TxData
 from web3.types import TxParams
 from web3.types import TxReceipt
@@ -273,7 +274,9 @@ class Web3EthClient(EthClientInterface):
         return self.w3.eth.get_block(blockNumber, shouldHydrateTransactions)
 
     async def get_block_uncle_count(self, blockNumber: int) -> int:
-        return typing.cast(int, self.w3.eth.get_uncle_count(blockNumber))
+        # NOTE(krishan711): web3py v8 removed get_uncle_count so call the rpc method directly
+        result = self.w3.manager.request_blocking(RPCEndpoint('eth_getUncleCountByBlockNumber'), [hex(blockNumber)])
+        return result if isinstance(result, int) else int(result, 16)
 
     async def get_transaction_count(self, address: str) -> int:
         return self.w3.eth.get_transaction_count(chain_util.normalize_address_checksum(value=address))
@@ -403,7 +406,7 @@ class RestEthClient(EthClientInterface):
         response = await self._make_request(method='eth_getUncleCountByBlockNumber', params=[hex(blockNumber)])
         if response['result'] is None:
             raise NotFoundException
-        return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getUncleCountByBlockNumber](response['result']))
+        return self._hex_to_int(value=response['result'])
 
     async def get_transaction_count(self, address: str) -> int:
         response = await self._make_request(method='eth_getTransactionCount', params=[address, 'latest'])

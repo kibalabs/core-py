@@ -86,6 +86,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - [MINOR] Added `KibaException.from_headers`/`outgoing_headers` hooks so exceptions can be built from and emit response headers; used by `TooManyRequestsException` (`Retry-After`, now also parsed automatically by `Requester` from 429 responses) and `RedirectException` (`Location`/`Cache-Control`), and applied generically by `ExceptionHandlingMiddleware`
 
 ### Changed
+- [MAJOR] Update web3 to 8.0.0 (`EthClient.get_block_uncle_count` now calls `eth_getUncleCountByBlockNumber` directly as web3 removed `get_uncle_count`)
 
 ### Removed
 
