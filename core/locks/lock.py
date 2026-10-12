@@ -2,7 +2,7 @@ import abc
 import asyncio
 import contextlib
 from abc import ABC
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 
 from core import logging
 from core.exceptions import LockedException
@@ -55,7 +55,7 @@ class Lock(ABC):
                 return
 
     @contextlib.asynccontextmanager
-    async def with_lock(self, name: str, ttlSeconds: int = 60, maxWaitSeconds: float = 0) -> AsyncIterator[LockLease]:
+    async def with_lock(self, name: str, ttlSeconds: int = 60, maxWaitSeconds: float = 0) -> AsyncGenerator[LockLease]:
         lease = await self.acquire(name=name, ttlSeconds=ttlSeconds, maxWaitSeconds=maxWaitSeconds)
         keepAliveTask = asyncio.create_task(self._keep_alive(lease=lease))
         try:

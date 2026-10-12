@@ -30,7 +30,7 @@ class RequestContextHolder[RequestContextType: RequestContext]:
         return value
 
     @contextmanager
-    def use_value(self, value: RequestContextType) -> typing.Iterator[RequestContextType]:
+    def use_value(self, value: RequestContextType) -> typing.Generator[RequestContextType]:
         token = self._valueContext.set(value)
         try:
             yield value

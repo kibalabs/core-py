@@ -3,7 +3,7 @@ import contextvars
 import datetime
 import typing
 import weakref
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from typing import TypeVarTuple
 
 import sqlalchemy
@@ -80,7 +80,7 @@ class Database:
         raise InternalServerErrorException(message=f'Database.now does not support dialect: {dialectName}')
 
     @contextlib.asynccontextmanager
-    async def create_transaction(self) -> AsyncIterator[DatabaseConnection]:
+    async def create_transaction(self) -> AsyncGenerator[DatabaseConnection]:
         if not self._engine:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
         async with self._engine.begin() as connection:
@@ -102,7 +102,7 @@ class Database:
     # uncaught exception raised whilst parallel queries are running.
     # We have the forced reconnect at the bottom just to catch for this wierd case.
     @contextlib.asynccontextmanager
-    async def create_context_connection(self) -> AsyncIterator[DatabaseConnection]:
+    async def create_context_connection(self) -> AsyncGenerator[DatabaseConnection]:
         if not self._engine:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
         if self._get_context_connection() is not None:
@@ -128,7 +128,7 @@ class Database:
     # transaction's uncommitted writes and will block forever on rows the outer transaction has written, so
     # callers must commit their writes before entering. Violations are logged (with the caller's stack) for now.
     @contextlib.asynccontextmanager
-    async def create_isolated_context_connection(self) -> AsyncIterator[DatabaseConnection]:
+    async def create_isolated_context_connection(self) -> AsyncGenerator[DatabaseConnection]:
         if not self._engine:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
         outerConnection = self._get_context_connection()

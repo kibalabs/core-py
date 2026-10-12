@@ -1,5 +1,5 @@
 import contextlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -35,7 +35,7 @@ class Saver:
         self.database = database
 
     @contextlib.asynccontextmanager
-    async def create_transaction(self) -> AsyncIterator[DatabaseConnection]:
+    async def create_transaction(self) -> AsyncGenerator[DatabaseConnection]:
         async with self.database.create_transaction() as connection:
             yield connection
 
