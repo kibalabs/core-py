@@ -10,7 +10,7 @@ jobs:
       PYPI_PUBLISH_TOKEN: ${{ secrets.PYPI_PUBLISH_TOKEN }}
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
           # NOTE(krishan711): need full history to calculate difference
           fetch-depth: 0
