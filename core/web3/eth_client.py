@@ -316,10 +316,12 @@ class RestEthClient(EthClientInterface):
         retryLimit: int = 10,
         maxConcurrentRequestCount: int | None = None,
         semaphore: asyncio.Semaphore | None = None,
+        timeoutSeconds: int = 10,
     ) -> None:
         super().__init__(web3Connection=Web3(), chainId=chainId, isTestnet=isTestnet)
         self.url = url
         self.requester = requester
+        self.timeoutSeconds = timeoutSeconds
         self.shouldBackoffRetryOnRateLimit = shouldBackoffRetryOnRateLimit
         self.retryLimit = retryLimit
         # NOTE(krishan711): pass the same semaphore to several clients to cap their combined concurrent requests, or set maxConcurrentRequestCount to cap just this client
@@ -342,7 +344,7 @@ class RestEthClient(EthClientInterface):
                     response = await self.requester.post_json(
                         url=self.url,
                         dataDict={'jsonrpc': '2.0', 'method': method, 'params': params or [], 'id': None},
-                        timeout=10,
+                        timeout=self.timeoutSeconds,
                     )
                     responseDict = response.json()
                     if responseDict.get('error'):

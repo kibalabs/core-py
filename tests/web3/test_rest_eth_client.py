@@ -572,6 +572,19 @@ class TestRestEthClient:
         assert await self._max_concurrent_request_count(mock_requester=mock_requester, clients=clients) == 2
 
     @pytest.mark.asyncio
+    async def test_requests_use_default_timeout(self, client, mock_requester):
+        mock_requester.responses['eth_blockNumber'] = {'jsonrpc': '2.0', 'result': '0x1b4', 'id': None}
+        await client.get_latest_block_number()
+        assert mock_requester.requests_made[0]['timeout'] == 10
+
+    @pytest.mark.asyncio
+    async def test_requests_use_timeout_seconds(self, mock_requester):
+        mock_requester.responses['eth_blockNumber'] = {'jsonrpc': '2.0', 'result': '0x1b4', 'id': None}
+        client = RestEthClient(url='https://test-rpc-url.com', requester=mock_requester, chainId=1, timeoutSeconds=3)
+        await client.get_latest_block_number()
+        assert mock_requester.requests_made[0]['timeout'] == 3
+
+    @pytest.mark.asyncio
     async def test_fill_transaction_params_all_provided(self, client, mock_requester):
         params = {
             'to': '0x1234567890123456789012345678901234567890',
