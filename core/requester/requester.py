@@ -57,9 +57,9 @@ class RequesterTimeoutException(GatewayTimeoutException):
 
 
 class Requester:
-    def __init__(self, headers: Mapping[str, str] | None = None, shouldFollowRedirects: bool = True) -> None:
+    def __init__(self, headers: Mapping[str, str] | None = None, shouldFollowRedirects: bool = True, proxyUrl: str | None = None) -> None:
         self.headers = headers or {}
-        self.client = httpx.AsyncClient(follow_redirects=shouldFollowRedirects)
+        self.client = httpx.AsyncClient(follow_redirects=shouldFollowRedirects, proxy=proxyUrl)
 
     async def get(self, url: str, dataDict: Json | None = None, data: bytes | None = None, timeout: int | None = 10, headers: MutableMapping[str, str] | None = None, outputFilePath: str | None = None) -> KibaResponse:
         return await self.make_request(method='GET', url=url, dataDict=dataDict, data=data, timeout=timeout, headers=headers, outputFilePath=outputFilePath)
