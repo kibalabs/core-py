@@ -211,7 +211,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
             return result.first() is not None
 
     async def retry_message(self, message: SqlMessage, delaySeconds: int = 0) -> None:
-        await self._reschedule_message(message=message, delaySeconds=delaySeconds, extraValues={})
+        await self._reschedule_message(message=message, delaySeconds=delaySeconds, extraValues=self._attempt_values())
 
     async def fail_message(self, message: SqlMessage, errorMessage: str | None) -> bool:
         postCount = message.postCount or 0
@@ -220,21 +220,39 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                 query = self._owned_update(message=message).values(status=MESSAGE_STATUS_FAILED, lockToken=None, completedDate=self.database.now(), lastError=errorMessage)
                 await self.database.execute(query=query, connection=connection)
             return False
-        await self._reschedule_message(message=message, delaySeconds=self.failureRetryDelaySeconds * postCount, extraValues={'lastError': errorMessage})
+        await self._reschedule_message(message=message, delaySeconds=self.failureRetryDelaySeconds * postCount, extraValues={**self._attempt_values(), 'lastError': errorMessage})
         return True
+
+    async def release_message(self, message: SqlMessage) -> None:
+        await self._reschedule_message(message=message, delaySeconds=0, extraValues={})
+
+    def _attempt_values(self) -> dict[str, Any]:  # type: ignore[explicit-any]
+        return {'postCount': self.table.c.postCount + 1, 'postDate': self.database.now()}
 
     async def _reschedule_message(self, message: SqlMessage, delaySeconds: float, extraValues: dict[str, Any]) -> None:  # type: ignore[explicit-any]
         async with self.database.create_transaction() as connection:
             try:
                 async with connection.begin_nested():
-                    query = self._owned_update(message=message).values(status=MESSAGE_STATUS_PENDING, lockToken=None, visibleDate=self.database.now(seconds=delaySeconds), postCount=self.table.c.postCount + 1, postDate=self.database.now(), **extraValues)
+                    query = self._owned_update(message=message).values(status=MESSAGE_STATUS_PENDING, lockToken=None, visibleDate=self.database.now(seconds=delaySeconds), **extraValues)
                     await self.database.execute(query=query, connection=connection)
             except sqlalchemy.exc.IntegrityError:
                 # NOTE(krishan711): an identical message was enqueued while this one ran, so it will do the work instead
                 query = self._owned_update(message=message).values(status=MESSAGE_STATUS_DEDUPLICATED, lockToken=None, completedDate=self.database.now())
                 await self.database.execute(query=query, connection=connection)
 
-    async def get_message_count(self, shouldSkipRemovingNonRetained: bool = False) -> int:
+    async def delete_expired_messages(self) -> int:
+        async with self.database.create_transaction() as connection:
+            query = (
+                sqlalchemy.delete(self.table)
+                .where(self.table.c.queueName == self.queueName)
+                .where(self.table.c.status.in_([MESSAGE_STATUS_SUCCEEDED, MESSAGE_STATUS_DEDUPLICATED]))
+                .where(self.table.c.completedDate < self.database.now(seconds=-self.retentionSeconds))
+                .returning(self.table.c.id)
+            )
+            result = await self.database.execute(query=query, connection=connection)
+            return len(result.all())
+
+    async def get_message_count(self) -> int:
         countQuery = (
             sqlalchemy.select(sqlalchemy.func.count())
             .select_from(self.table)
@@ -243,14 +261,6 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
             .where(self.table.c.visibleDate <= self.database.now())
         )
         async with self.database.create_transaction() as connection:
-            if not shouldSkipRemovingNonRetained:
-                deleteQuery = (
-                    sqlalchemy.delete(self.table)
-                    .where(self.table.c.queueName == self.queueName)
-                    .where(self.table.c.status.in_([MESSAGE_STATUS_SUCCEEDED, MESSAGE_STATUS_DEDUPLICATED]))
-                    .where(self.table.c.completedDate < self.database.now(seconds=-self.retentionSeconds))
-                )
-                await self.database.execute(query=deleteQuery, connection=connection)
             result = await self.database.execute(query=countQuery, connection=connection)
         return int(result.scalar_one())
 

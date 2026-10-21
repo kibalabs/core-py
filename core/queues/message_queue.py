@@ -48,6 +48,15 @@ class MessageQueue[MessageType: Message](ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
+    async def release_message(self, message: MessageType) -> None:
+        # NOTE(krishan711): hands a claimed message back to be claimed again straight away without using an attempt, e.g. when the worker shuts down
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def delete_expired_messages(self) -> int:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     async def get_message_count(self) -> int:
         raise NotImplementedError
 

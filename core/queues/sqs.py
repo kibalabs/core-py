@@ -131,6 +131,14 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
             raise
         return True
 
+    async def release_message(self, message: SqsMessage) -> None:
+        # NOTE(krishan711): SQS still counts the next receive towards the queue's redrive policy
+        await self.extend_message_lease(message=message, expectedProcessingSeconds=0)
+
+    async def delete_expired_messages(self) -> int:
+        # NOTE(krishan711): SQS deletes messages when they are completed and expires the rest itself
+        return 0
+
     async def get_message_count(self) -> int:
         if not self._sqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to count messages')

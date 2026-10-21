@@ -1,5 +1,6 @@
 import asyncio
 import os
+import signal
 import typing
 from collections.abc import AsyncIterator
 from typing import Any
@@ -262,6 +263,66 @@ async def test_processor_cancellation_propagates_even_when_the_lease_was_lost(wo
         await executeTask
 
 
+async def test_processor_releases_a_cancelled_message_without_using_an_attempt(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+
+    class SlowProcessor(MessageProcessor):
+        async def process_message(self, message: Message) -> None:
+            await asyncio.sleep(10)
+
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=SlowProcessor(), notificationClients=[])
+    await workerA.send_message(message=_message())
+    executeTask = asyncio.create_task(processor.execute(longPollSeconds=0))
+    await asyncio.sleep(0.3)
+    executeTask.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await executeTask
+    row = (await _rows(queue=workerA))[0]
+    assert (row['status'], row['post_count'], row['lock_token']) == ('pending', 1, None)
+    assert (await _claim(queue=workerA)).postCount == 1
+
+
+async def test_processor_finishes_the_current_message_and_releases_the_rest_on_shutdown(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    processedUserIds: list[str] = []
+
+    class ShutdownRequestingProcessor(MessageProcessor):
+        async def process_message(self, message: Message) -> None:
+            processedUserIds.append(str(typing.cast(dict[str, Any], message.content)['userId']))  # type: ignore[explicit-any]
+            processor.request_shutdown()
+
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=ShutdownRequestingProcessor(), notificationClients=[])
+    await workerA.send_messages(messages=[_message(deduplicationId=None, userId=str(index)) for index in range(3)])
+    assert await processor.run_batches(batchSize=3, longPollSeconds=0) == 3  # noqa: PLR2004
+    assert processedUserIds == ['0']
+    assert [(row['status'], row['post_count']) for row in await _rows(queue=workerA)] == [('succeeded', 1), ('pending', 1), ('pending', 1)]
+
+
+async def test_processor_stops_promptly_when_signalled_while_idle(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=typing.cast(MessageProcessor, None), notificationClients=[])
+    runTask = asyncio.create_task(processor.run(longPollSeconds=0, sleepTime=30))
+    await asyncio.sleep(0.3)
+    os.kill(os.getpid(), signal.SIGTERM)
+    assert await asyncio.wait_for(runTask, timeout=5) is False
+
+
+async def test_processor_deletes_expired_messages_while_running(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    await workerA.send_message(message=_message())
+    message = await _claim(queue=workerA)
+    await workerA.complete_message(message=message)
+    async with workerA.database.create_transaction() as connection:
+        await workerA.database.execute(query=sqlalchemy.update(workerA.table).values(completedDate=date_util.datetime_from_now(days=-8)), connection=connection)
+    processor = MessageQueueProcessor(queue=workerA, messageProcessor=typing.cast(MessageProcessor, None), notificationClients=[])
+    runTask = asyncio.create_task(processor.run(longPollSeconds=0, sleepTime=30))
+    await asyncio.sleep(0.3)
+    processor.request_shutdown()
+    await asyncio.wait_for(runTask, timeout=5)
+    assert await _rows(queue=workerA) == []
+
+
+
 async def test_expired_lease_with_no_attempts_left_is_failed(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     workerA, _ = workers
     await workerA.send_message(message=_message())
@@ -315,7 +376,27 @@ async def test_retry_is_folded_into_an_identical_pending_message(workers: tuple[
     assert [row['status'] for row in await _rows(queue=workerA)] == ['deduplicated', 'pending']
 
 
-async def test_message_count_removes_only_old_finished_messages_unless_skipped(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+async def test_release_hands_the_message_back_without_using_an_attempt(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    message = await _claim(queue=workerA)
+    await workerA.release_message(message=message)
+    releasedMessage = await _claim(queue=workerB)
+    assert (releasedMessage.id, releasedMessage.postCount) == (message.id, 1)
+
+
+async def test_release_after_losing_the_lease_leaves_the_new_holder_untouched(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    staleMessage = await _claim(queue=workerA)
+    await _make_visible(queue=workerA, messageId=staleMessage.id)
+    await _claim(queue=workerB)
+    await workerA.release_message(message=staleMessage)
+    row = await _row(queue=workerA, messageId=staleMessage.id)
+    assert (row['status'], row['owner']) == ('running', 'worker-b')
+
+
+async def test_delete_expired_messages_removes_only_old_finished_messages(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     workerA, _ = workers
     await workerA.send_messages(messages=[_message(deduplicationId=None, userId=str(index)) for index in range(4)])
     succeededMessage, failedMessage, recentMessage = await workerA.get_messages(limit=3)
@@ -324,9 +405,9 @@ async def test_message_count_removes_only_old_finished_messages_unless_skipped(w
     await workerA.complete_message(message=recentMessage)
     async with workerA.database.create_transaction() as connection:
         await workerA.database.execute(query=sqlalchemy.update(workerA.table).where(workerA.table.c.id.in_([succeededMessage.id, failedMessage.id])).values(completedDate=date_util.datetime_from_now(days=-8)), connection=connection)
-    assert await workerA.get_message_count(shouldSkipRemovingNonRetained=True) == 1
-    assert len(await _rows(queue=workerA)) == 4  # noqa: PLR2004
     assert await workerA.get_message_count() == 1
+    assert len(await _rows(queue=workerA)) == 4  # noqa: PLR2004
+    assert await workerA.delete_expired_messages() == 1
     assert [row['status'] for row in await _rows(queue=workerA)] == ['failed', 'succeeded', 'pending']
 
 

@@ -85,6 +85,15 @@ async def test_completed_message_is_removed_and_can_be_sent_again(workers: tuple
     assert await workerA.get_message_count() == 1
 
 
+async def test_release_hands_the_message_back_without_using_an_attempt(workers: tuple[CosmosMessageQueue, CosmosMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    message = await _claim(queue=workerA)
+    await workerA.release_message(message=message)
+    releasedMessage = await _claim(queue=workerB)
+    assert (releasedMessage.id, releasedMessage.postCount) == (message.id, 1)
+
+
 async def test_retry_reschedules_the_same_message_with_a_delay(workers: tuple[CosmosMessageQueue, CosmosMessageQueue]):
     workerA, _ = workers
     await workerA.send_message(message=_message())
