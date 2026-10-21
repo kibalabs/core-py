@@ -113,6 +113,14 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         message.popReceipt = updatedMessage.pop_receipt
         return True
 
+    async def release_message(self, message: AqsMessage) -> None:
+        # NOTE(krishan711): a message whose lease was already lost is left alone
+        await self.extend_message_lease(message=message, expectedProcessingSeconds=0)
+
+    async def delete_expired_messages(self) -> int:
+        # NOTE(krishan711): azure deletes messages when they are completed and expires the rest itself
+        return 0
+
     async def get_message_count(self) -> int:
         if not self._aqsClient:
             raise InternalServerErrorException('You need to call .connect() before trying to count messages')

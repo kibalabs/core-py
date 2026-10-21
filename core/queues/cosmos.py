@@ -258,6 +258,27 @@ class CosmosMessageQueue(MessageQueue[CosmosMessage]):
         message.etag = str(updatedItem['_etag'])
         return True
 
+    async def release_message(self, message: CosmosMessage) -> None:
+        try:
+            await self.container.patch_item(
+                item=message.id,
+                partition_key=self.queueName,
+                patch_operations=[
+                    {'op': 'set', 'path': '/leaseId', 'value': None},
+                    {'op': 'set', 'path': '/visibleDate', 'value': time.time()},
+                ],
+                etag=message.etag,
+                match_condition=MatchConditions.IfNotModified,
+            )
+        except cosmos_exceptions.CosmosHttpResponseError as exception:
+            # NOTE(krishan711): 412 means another worker now owns the message and 404 that it was already completed
+            if exception.status_code not in {404, 412}:
+                raise
+
+    async def delete_expired_messages(self) -> int:
+        # NOTE(krishan711): cosmos keeps no message history, completed messages are removed straight away
+        return 0
+
     async def get_message_count(self) -> int:
         counts = self.container.query_items(
             query='SELECT COUNT(1) AS messageCount FROM c WHERE c.itemType = @itemType AND c.queueName = @queueName AND c.visibleDate <= @now',

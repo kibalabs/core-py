@@ -43,6 +43,13 @@ async def _claim(queue: AqsMessageQueue, expectedProcessingSeconds: int = 300) -
     return message
 
 
+async def test_released_message_can_be_received_again_straight_away(workers: tuple[AqsMessageQueue, AqsMessageQueue]):
+    workerA, workerB = workers
+    await workerA.send_message(message=_message())
+    await workerA.release_message(message=await _claim(queue=workerA))
+    await _claim(queue=workerB)
+
+
 async def test_extended_message_stays_invisible_and_can_still_be_completed(workers: tuple[AqsMessageQueue, AqsMessageQueue]):
     workerA, workerB = workers
     await workerA.send_message(message=_message())
