@@ -132,7 +132,7 @@ class SqsMessageQueue(MessageQueue[SqsMessage]):
         return True
 
     async def release_message(self, message: SqsMessage) -> None:
-        # NOTE(krishan711): SQS still counts the next receive towards the queue's redrive policy
+        # NOTE(krishan711): a message whose lease was already lost is left alone; SQS still counts the next receive towards the queue's redrive policy
         await self.extend_message_lease(message=message, expectedProcessingSeconds=0)
 
     async def delete_expired_messages(self) -> int:

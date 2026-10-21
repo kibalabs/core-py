@@ -114,6 +114,7 @@ class AqsMessageQueue(MessageQueue[AqsMessage]):
         return True
 
     async def release_message(self, message: AqsMessage) -> None:
+        # NOTE(krishan711): a message whose lease was already lost is left alone
         await self.extend_message_lease(message=message, expectedProcessingSeconds=0)
 
     async def delete_expired_messages(self) -> int:

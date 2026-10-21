@@ -19,6 +19,7 @@ from core.util.value_holder import RequestIdHolder
 
 LOCKED_MAX_RETRY_COUNT = 3
 LOCKED_RETRY_DELAY_SECONDS = 30
+SHUTDOWN_SIGNALS = (signal.SIGTERM, signal.SIGINT)
 
 
 class MessageProcessor(ABC):
@@ -194,7 +195,7 @@ class MessageQueueProcessor[MessageType: Message]:
         self.request_shutdown()
         # NOTE(krishan711): a second signal falls back to the default handler so an impatient interrupt still stops the process
         loop = asyncio.get_running_loop()
-        for shutdownSignal in (signal.SIGTERM, signal.SIGINT):
+        for shutdownSignal in SHUTDOWN_SIGNALS:
             loop.remove_signal_handler(shutdownSignal)
 
     async def run_batches(
@@ -207,7 +208,7 @@ class MessageQueueProcessor[MessageType: Message]:
         shouldProcessInParallel: bool = False,
     ) -> int:
         loop = asyncio.get_running_loop()
-        for shutdownSignal in (signal.SIGTERM, signal.SIGINT):
+        for shutdownSignal in SHUTDOWN_SIGNALS:
             loop.add_signal_handler(shutdownSignal, self._on_shutdown_signal, shutdownSignal)
         processedMessageCount = 0
         try:
@@ -220,7 +221,7 @@ class MessageQueueProcessor[MessageType: Message]:
                         await asyncio.wait_for(self._shutdownEvent.wait(), timeout=sleepTime)
                 processedMessageCount += innerProcessedMessageCount
         finally:
-            for shutdownSignal in (signal.SIGTERM, signal.SIGINT):
+            for shutdownSignal in SHUTDOWN_SIGNALS:
                 loop.remove_signal_handler(shutdownSignal)
         if self._shutdownEvent.is_set():
             logging.info('Shutdown requested, stopped processing messages')

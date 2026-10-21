@@ -288,7 +288,7 @@ async def test_processor_finishes_the_current_message_and_releases_the_rest_on_s
 
     class ShutdownRequestingProcessor(MessageProcessor):
         async def process_message(self, message: Message) -> None:
-            processedUserIds.append(str(typing.cast(dict[str, Any], message.content)['userId']))  # type: ignore[explicit-any]
+            processedUserIds.append(str(message.content['userId']))
             processor.request_shutdown()
 
     processor = MessageQueueProcessor(queue=workerA, messageProcessor=ShutdownRequestingProcessor(), notificationClients=[])

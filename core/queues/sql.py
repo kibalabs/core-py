@@ -211,7 +211,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
             return result.first() is not None
 
     async def retry_message(self, message: SqlMessage, delaySeconds: int = 0) -> None:
-        await self._reschedule_message(message=message, delaySeconds=delaySeconds, extraValues=self._attempt_values())
+        await self._reschedule_message(message=message, delaySeconds=delaySeconds, shouldCountAttempt=True)
 
     async def fail_message(self, message: SqlMessage, errorMessage: str | None) -> bool:
         postCount = message.postCount or 0
@@ -220,20 +220,20 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                 query = self._owned_update(message=message).values(status=MESSAGE_STATUS_FAILED, lockToken=None, completedDate=self.database.now(), lastError=errorMessage)
                 await self.database.execute(query=query, connection=connection)
             return False
-        await self._reschedule_message(message=message, delaySeconds=self.failureRetryDelaySeconds * postCount, extraValues={**self._attempt_values(), 'lastError': errorMessage})
+        await self._reschedule_message(message=message, delaySeconds=self.failureRetryDelaySeconds * postCount, shouldCountAttempt=True, extraValues={'lastError': errorMessage})
         return True
 
     async def release_message(self, message: SqlMessage) -> None:
-        await self._reschedule_message(message=message, delaySeconds=0, extraValues={})
+        await self._reschedule_message(message=message, delaySeconds=0, shouldCountAttempt=False)
 
-    def _attempt_values(self) -> dict[str, Any]:  # type: ignore[explicit-any]
-        return {'postCount': self.table.c.postCount + 1, 'postDate': self.database.now()}
-
-    async def _reschedule_message(self, message: SqlMessage, delaySeconds: float, extraValues: dict[str, Any]) -> None:  # type: ignore[explicit-any]
+    async def _reschedule_message(self, message: SqlMessage, delaySeconds: float, shouldCountAttempt: bool, extraValues: dict[str, Any] | None = None) -> None:  # type: ignore[explicit-any]
+        values = {'status': MESSAGE_STATUS_PENDING, 'lockToken': None, 'visibleDate': self.database.now(seconds=delaySeconds), **(extraValues or {})}
+        if shouldCountAttempt:
+            values |= {'postCount': self.table.c.postCount + 1, 'postDate': self.database.now()}
         async with self.database.create_transaction() as connection:
             try:
                 async with connection.begin_nested():
-                    query = self._owned_update(message=message).values(status=MESSAGE_STATUS_PENDING, lockToken=None, visibleDate=self.database.now(seconds=delaySeconds), **extraValues)
+                    query = self._owned_update(message=message).values(values)
                     await self.database.execute(query=query, connection=connection)
             except sqlalchemy.exc.IntegrityError:
                 # NOTE(krishan711): an identical message was enqueued while this one ran, so it will do the work instead
