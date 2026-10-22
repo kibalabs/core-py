@@ -18,6 +18,7 @@ api = [
 core-api = [
     "starlette>=1.7.0",
     "uvicorn[standard]>=0.54.0",
+    "python-multipart>=0.0.29",
 ]
 storage = [
     "aiobotocore>=3.9.2",
