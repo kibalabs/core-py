@@ -9,10 +9,10 @@ from starlette.requests import Request
 from starlette.responses import StreamingResponse
 
 from core.api.api_request import KibaApiRequest
+from core.api.request_body import read_request_body
 from core.exceptions import BadRequestException
 from core.exceptions import InternalServerErrorException
 from core.util import json_util
-from core.util.typing_util import JsonObject
 
 
 async def _convert_to_json_generator[T: BaseModel](response_iterator: AsyncIterator[T], expectedType: typing.Type[T]) -> AsyncIterator[bytes]:
@@ -31,16 +31,7 @@ def streaming_json_route[ApiRequest: BaseModel, ApiResponse: BaseModel](
         async def async_wrapper(receivedRequest: Request) -> StreamingResponse:
             pathParams = receivedRequest.path_params
             queryParams = receivedRequest.query_params
-            bodyBytes = await receivedRequest.body()
-            if len(bodyBytes) == 0:
-                body: JsonObject = {}
-            else:
-                try:
-                    body = typing.cast(JsonObject, json_util.loads(bodyBytes.decode()))
-                except json_util.JsonDecodeException as exception:
-                    raise BadRequestException(f'Invalid JSON body: {exception}')
-                if not isinstance(body, dict):
-                    raise BadRequestException('Invalid JSON body: expected an object')
+            body = await read_request_body(request=receivedRequest)
             allParams = {**pathParams, **body, **queryParams}
             try:
                 requestParams = requestType(**allParams)

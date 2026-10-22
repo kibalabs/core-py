@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from core.api.json_route import json_route
 from core.api.api_request import KibaApiRequest
+from core.api.uploaded_file import UploadedFile
 from core.api.middleware.exception_handling_middleware import ExceptionHandlingMiddleware
 from core.api.request_context import RequestContext
 from core.api.request_context import RequestContextHolder
@@ -30,6 +31,18 @@ class ExampleResponse(BaseModel):
     path_echo: str | None = None
 
 
+class UploadRequest(BaseModel):
+    file: UploadedFile
+    age: int
+
+
+class UploadResponse(BaseModel):
+    filename: str | None
+    content_type: str | None
+    content: str
+    age: int
+
+
 @pytest.fixture
 def client():
     @json_route(requestType=ExampleRequest, responseType=ExampleResponse)
@@ -52,9 +65,20 @@ def client():
         )
 
 
+    @json_route(requestType=UploadRequest, responseType=UploadResponse)
+    async def test_upload_endpoint(request: KibaApiRequest[UploadRequest]) -> UploadResponse:
+        return UploadResponse(
+            filename=request.data.file.filename,
+            content_type=request.data.file.contentType,
+            content=request.data.file.content.decode(),
+            age=request.data.age,
+        )
+
+
     app = Starlette(routes=[
         Route("/test", test_endpoint, methods=["POST"]),
         Route("/test/{path_param}", test_path_endpoint, methods=["POST"]),
+        Route("/upload", test_upload_endpoint, methods=["POST"]),
     ])
     app.add_middleware(ExceptionHandlingMiddleware)
     app.add_middleware(RequestContextMiddleware, requestContextHolder=requestContextHolder, requestContextFactory=create_request_context)
@@ -145,3 +169,23 @@ def test_json_route_with_non_object_json(client, content):
     )
     assert response.status_code == 400
     assert "expected an object" in response.json().get("message", "")
+
+
+def test_json_route_with_multipart_body_passes_files_and_fields(client):
+    response = client.post(
+        "/upload",
+        files={"file": ("scan.dcm", b"file-content", "application/dicom")},
+        data={"age": "41"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"filename": "scan.dcm", "content_type": "application/dicom", "content": "file-content", "age": 41}
+
+
+def test_json_route_with_multipart_body_rejects_repeated_fields(client):
+    response = client.post(
+        "/upload",
+        files=[("file", ("first.dcm", b"first", "application/dicom")), ("file", ("second.dcm", b"second", "application/dicom"))],
+        data={"age": "41"},
+    )
+    assert response.status_code == 400
+    assert "file is given more than once" in response.json().get("message", "")
