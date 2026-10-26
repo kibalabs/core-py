@@ -1,6 +1,7 @@
 import pytest
 from starlette.applications import Starlette
 from starlette.routing import Route
+from starlette.datastructures import UploadFile
 from starlette.testclient import TestClient
 from pydantic import BaseModel
 
@@ -189,3 +190,21 @@ def test_json_route_with_multipart_body_rejects_repeated_fields(client):
     )
     assert response.status_code == 400
     assert "file is given more than once" in response.json().get("message", "")
+
+
+def test_json_route_with_multipart_body_closes_uploaded_files(client, monkeypatch):
+    closedFilenames = []
+    originalClose = UploadFile.close
+
+    async def close(self):
+        closedFilenames.append(self.filename)
+        await originalClose(self)
+
+    monkeypatch.setattr(UploadFile, "close", close)
+    response = client.post(
+        "/upload",
+        files={"file": ("scan.dcm", b"file-content", "application/dicom")},
+        data={"age": "41"},
+    )
+    assert response.status_code == 200
+    assert closedFilenames == ["scan.dcm"]
