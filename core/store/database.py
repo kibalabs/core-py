@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import contextvars
 import datetime
@@ -47,6 +48,7 @@ class Database:
         self._engine: AsyncEngine | None = None
         self._connectionContext = contextvars.ContextVar[DatabaseConnection | None]('_connectionContext')
         self._connectionsWithWrites = weakref.WeakSet[DatabaseConnection]()
+        self._connectionLocks = weakref.WeakKeyDictionary[DatabaseConnection, asyncio.Lock]()
 
     async def connect(self, poolSize: int = 100) -> None:
         if not self._engine:
@@ -85,6 +87,16 @@ class Database:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
         async with self._engine.begin() as connection:
             yield connection
+
+    # NOTE(krishan711): a connection can only run one operation at a time, so execute and commit_context_connection wait
+    # for each other. e.g. DatabaseConnectionMiddleware commits when the response starts, which (behind a BaseHTTPMiddleware)
+    # can be while the route, in another task, is still running queries for a streaming response
+    def _get_connection_lock(self, connection: DatabaseConnection) -> asyncio.Lock:
+        lock = self._connectionLocks.get(connection)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._connectionLocks[connection] = lock
+        return lock
 
     def _get_context_connection(self) -> DatabaseConnection | None:
         try:
@@ -128,8 +140,9 @@ class Database:
         connection = self._get_context_connection()
         if not connection:
             raise InternalServerErrorException(message='No connection found. Please call create_context_connection() for the context.')
-        await connection.commit()
-        self._connectionsWithWrites.discard(connection)
+        async with self._get_connection_lock(connection=connection):
+            await connection.commit()
+            self._connectionsWithWrites.discard(connection)
 
     # NOTE(krishan711): unlike create_context_connection this may be used inside an existing context connection.
     # Everything in the block runs on a new transaction that commits when the block exits, independent of the
@@ -164,6 +177,7 @@ class Database:
             connection = self._get_context_connection()
         if not connection:
             raise InternalServerErrorException(message='No connection found. Please provide a connection or call create_context_connection() for the context.')
-        if isinstance(query, UpdateBase):
-            self._connectionsWithWrites.add(connection)
-        return typing.cast(Result[*tuple[typing.Any, ...]], await connection.execute(statement=query))  # type: ignore[explicit-any]
+        async with self._get_connection_lock(connection=connection):
+            if isinstance(query, UpdateBase):
+                self._connectionsWithWrites.add(connection)
+            return typing.cast(Result[*tuple[typing.Any, ...]], await connection.execute(statement=query))  # type: ignore[explicit-any]

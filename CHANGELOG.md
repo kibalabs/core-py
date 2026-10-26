@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [PATCH] Fixed `DatabaseConnectionMiddleware`'s commit when the response starts failing ("another operation is in progress") for streaming responses behind a `BaseHTTPMiddleware`: `Database.execute` and `Database.commit_context_connection` now wait for each other on the same connection
 - [MINOR] Added `Database.commit_context_connection` to commit the context connection's writes so far; anything run on it afterwards is committed when the context connection ends
 - [PATCH] Updated `DatabaseConnectionMiddleware` to commit before the response starts, so a client can't get the response and make its next request before the request's writes are visible (writes made while streaming are still committed when the request ends)
 - [PATCH] Fixed `json_route` and `streaming_json_route` leaving the temporary files of multipart uploads open
