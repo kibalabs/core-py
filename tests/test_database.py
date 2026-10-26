@@ -229,3 +229,58 @@ async def test_isolated_context_connection_raises_on_uncommitted_outer_writes_wh
             async with database.create_isolated_context_connection():
                 pass
     await database.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_commit_context_connection_makes_writes_visible_before_the_context_ends(database):
+    metadata = MetaData()
+    records = Table('records', metadata, Column('name', sqlalchemy.Text, primary_key=True))
+    await database.connect(poolSize=2)
+    async with database.create_transaction() as connection:
+        await connection.run_sync(metadata.create_all)
+
+    with pytest.raises(ValueError, match='rollback'):
+        async with database.create_context_connection():
+            await database.execute(insert(records).values(name='committed'))
+            await database.commit_context_connection()
+            async with database.create_transaction() as connection:
+                result = await database.execute(select(records.c.name), connection=connection)
+            assert result.scalars().all() == ['committed']
+            await database.execute(insert(records).values(name='rolledback'))
+            raise ValueError('rollback')
+
+    async with database.create_transaction() as connection:
+        result = await database.execute(select(records.c.name), connection=connection)
+    assert result.scalars().all() == ['committed']
+    await database.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_writes_after_commit_context_connection_are_committed_when_the_context_ends(database, caplog):
+    metadata = MetaData()
+    records = Table('records', metadata, Column('name', sqlalchemy.Text, primary_key=True))
+    await database.connect(poolSize=2)
+    async with database.create_transaction() as connection:
+        await connection.run_sync(metadata.create_all)
+
+    with caplog.at_level(logging.ERROR):
+        async with database.create_context_connection():
+            await database.execute(insert(records).values(name='first'))
+            await database.commit_context_connection()
+            async with database.create_isolated_context_connection():
+                pass
+            await database.execute(insert(records).values(name='second'))
+    assert 'ISOLATED_CONNECTION_AFTER_UNCOMMITTED_WRITES' not in caplog.text
+
+    async with database.create_transaction() as connection:
+        result = await database.execute(select(records.c.name).order_by(records.c.name), connection=connection)
+    assert result.scalars().all() == ['first', 'second']
+    await database.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_commit_context_connection_requires_a_context_connection(database):
+    await database.connect(poolSize=1)
+    with pytest.raises(InternalServerErrorException, match='No connection found'):
+        await database.commit_context_connection()
+    await database.disconnect()

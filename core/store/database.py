@@ -107,12 +107,12 @@ class Database:
             raise InternalServerErrorException(message='Engine has not been established. Please called collect() first.')
         if self._get_context_connection() is not None:
             raise InternalServerErrorException(message='Connection has already been established in this context.')
-        connection = None
         try:
-            async with self._engine.begin() as connection:
+            async with self._engine.connect() as connection:
                 self._connectionContext.set(connection)
                 try:
                     yield connection
+                    await self.commit_context_connection()
                 finally:
                     self._connectionContext.set(None)
         except sqlalchemy.exc.InterfaceError as exception:
@@ -121,6 +121,15 @@ class Database:
             logging.error(f'Database connection error (likely concurrent operations): {exception}. Forcing reconnect. You MUST ensure that you are not running parallel queries on the same connection.')
             await self.disconnect()
             await self.connect()
+
+    # NOTE(krishan711): commits what the context connection has done so far. Anything run on it afterwards is in a new
+    # transaction, which is committed when the context connection ends (or rolled back if it ends with an exception).
+    async def commit_context_connection(self) -> None:
+        connection = self._get_context_connection()
+        if not connection:
+            raise InternalServerErrorException(message='No connection found. Please call create_context_connection() for the context.')
+        await connection.commit()
+        self._connectionsWithWrites.discard(connection)
 
     # NOTE(krishan711): unlike create_context_connection this may be used inside an existing context connection.
     # Everything in the block runs on a new transaction that commits when the block exits, independent of the

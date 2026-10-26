@@ -12,12 +12,13 @@ from core.util.typing_util import JsonObject
 
 async def read_request_body(request: Request) -> Mapping[str, object]:
     if request.headers.get('Content-Type', '').startswith('multipart/form-data'):
-        form = await request.form()
         body: dict[str, object] = {}
-        for key, value in form.multi_items():
-            if key in body:
-                raise BadRequestException(f'Invalid form body: {key} is given more than once')
-            body[key] = UploadedFile(filename=value.filename, contentType=value.content_type, content=await value.read()) if isinstance(value, UploadFile) else value
+        # NOTE(krishan711): the form is closed on exit so uploaded files' temporary files are closed (their content has been read by then)
+        async with request.form() as form:
+            for key, value in form.multi_items():
+                if key in body:
+                    raise BadRequestException(f'Invalid form body: {key} is given more than once')
+                body[key] = UploadedFile(filename=value.filename, contentType=value.content_type, content=await value.read()) if isinstance(value, UploadFile) else value
         return body
     bodyBytes = await request.body()
     if len(bodyBytes) == 0:

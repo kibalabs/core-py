@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `Database.commit_context_connection` to commit the context connection's writes so far; anything run on it afterwards is committed when the context connection ends
+- [PATCH] Updated `DatabaseConnectionMiddleware` to commit before the response starts, so a client can't get the response and make its next request before the request's writes are visible (writes made while streaming are still committed when the request ends)
+- [PATCH] Fixed `json_route` and `streaming_json_route` leaving the temporary files of multipart uploads open
 - [MINOR] Updated `json_route` and `streaming_json_route` (and so `route`) to accept `multipart/form-data` bodies: form fields are used like JSON body fields and uploaded files are passed as `core.api.uploaded_file.UploadedFile` (`filename`, `contentType`, `content`), so request models can declare `file: UploadedFile`. A field given more than once raises `BadRequestException`. The `core-api` extra now installs `python-multipart`
 - [MAJOR] Added abstract `MessageQueue.release_message` to hand a claimed message back to be claimed again straight away without using an attempt (`SqlMessageQueue` and `CosmosMessageQueue` keep `postCount`; `SqsMessageQueue` and `AqsMessageQueue` make the message visible again, though SQS still counts the next receive towards its redrive policy)
 - [MAJOR] Added abstract `MessageQueue.delete_expired_messages`: `SqlMessageQueue` deletes `succeeded` and `deduplicated` messages older than `retentionSeconds` (the other queues remove messages on completion and return 0). `SqlMessageQueue.get_message_count` no longer deletes them and its `shouldSkipRemovingNonRetained` parameter is removed
