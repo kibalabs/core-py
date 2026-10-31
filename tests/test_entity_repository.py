@@ -172,6 +172,49 @@ async def test_upsert_inserts_then_updates(database: Database):
     assert upsertedItem.count == 2
 
 
+async def test_upsert_with_false_update_where_keeps_and_returns_the_stored_row(database: Database):
+    item = await _create_item(database=database, name='a', count=1)
+    async with database.create_transaction() as connection:
+        upsertedItem = await ItemsRepository.upsert(database=database, connection=connection, constraintColumnNames=['name'], updateWhere=lambda excluded: excluded.count > ItemsTable.c.count, name='a', count=0, amount=5)
+        storedItem = await ItemsRepository.get(database=database, connection=connection, idValue=item.itemId)
+    assert upsertedItem == item
+    assert storedItem == item
+
+
+async def test_upsert_with_false_update_where_finds_the_stored_row_by_converted_constraint_values(database: Database):
+    repository = UpperNameEntityRepository(table=ItemsTable, modelClass=Item)
+    async with database.create_transaction() as connection:
+        item = await repository.create(database=database, connection=connection, name='a', count=1, amount=1)
+        upsertedItem = await repository.upsert(database=database, connection=connection, constraintColumnNames=['name'], updateWhere=lambda _excluded: sqlalchemy.false(), name='a', count=2, amount=1)
+    assert upsertedItem == item
+
+
+async def test_upsert_with_true_update_where_updates_the_row(database: Database):
+    item = await _create_item(database=database, name='a', count=1)
+    async with database.create_transaction() as connection:
+        upsertedItem = await ItemsRepository.upsert(database=database, connection=connection, constraintColumnNames=['name'], updateWhere=lambda excluded: excluded.count > ItemsTable.c.count, name='a', count=2, amount=5)
+    assert (upsertedItem.itemId, upsertedItem.createdDate, upsertedItem.count, upsertedItem.amount) == (item.itemId, item.createdDate, 2, 5)
+
+
+async def test_upsert_with_update_where_still_inserts_new_rows(database: Database):
+    async with database.create_transaction() as connection:
+        upsertedItem = await ItemsRepository.upsert(database=database, connection=connection, constraintColumnNames=['name'], updateWhere=lambda _excluded: sqlalchemy.false(), name='a', count=1, amount=1)
+        storedItems = await ItemsRepository.list_many(database=database, connection=connection, fieldFilters=[])
+    assert storedItems == [upsertedItem]
+
+
+async def test_upsert_only_when_values_changed(database: Database):
+    def changed(excluded: typing.Any) -> sqlalchemy.ColumnElement[bool]:  # type: ignore[explicit-any]
+        return sqlalchemy.or_(ItemsTable.c.count.is_distinct_from(excluded.count), ItemsTable.c.expiryDate.is_distinct_from(excluded.expiryDate))
+
+    async with database.create_transaction() as connection:
+        item = await ItemsRepository.upsert(database=database, connection=connection, constraintColumnNames=['name'], updateWhere=changed, name='a', count=1, amount=1, expiryDate=None)
+        unchangedItem = await ItemsRepository.upsert(database=database, connection=connection, constraintColumnNames=['name'], updateWhere=changed, name='a', count=1, amount=1, expiryDate=None)
+        changedItem = await ItemsRepository.upsert(database=database, connection=connection, constraintColumnNames=['name'], updateWhere=changed, name='a', count=1, amount=1, expiryDate=datetime.datetime(2030, 1, 1, tzinfo=datetime.UTC))
+    assert unchangedItem == item
+    assert (changedItem.itemId, changedItem.expiryDate) == (item.itemId, datetime.datetime(2030, 1, 1, tzinfo=datetime.UTC))
+
+
 async def test_upsert_many_inserts_and_updates(database: Database):
     item = await _create_item(database=database, name='a')
     async with database.create_transaction() as connection:
