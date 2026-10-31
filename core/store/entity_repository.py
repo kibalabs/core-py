@@ -9,6 +9,7 @@ from sqlalchemy.dialects import sqlite as sqlalchemy_sqlite
 from sqlalchemy.engine import Result
 from sqlalchemy.engine import RowMapping
 from sqlalchemy.sql import Select
+from sqlalchemy.sql.base import ReadOnlyColumnCollection
 
 from core.exceptions import KibaException
 from core.exceptions import NotFoundException
@@ -25,6 +26,7 @@ from core.store.retriever import uuid_from_value
 from core.util import date_util
 
 EntityType = typing.TypeVar('EntityType', bound=BaseModel)
+UpsertUpdateWhere = typing.Callable[[ReadOnlyColumnCollection[str, typing.Any]], sqlalchemy.ColumnElement[bool]]  # type: ignore[explicit-any]
 
 
 class EntityRepository(typing.Generic[EntityType]):  # noqa: UP046
@@ -135,7 +137,8 @@ class EntityRepository(typing.Generic[EntityType]):  # noqa: UP046
         result = await database.execute(query=self.table.update().where(self.idColumn == idValue).values(updateValues).returning(*self.list_select_columns()), connection=connection)
         return self.force_from_result(result=result)
 
-    async def upsert(self, database: Database, constraintColumnNames: list[str], connection: DatabaseConnection | None = None, **kwargs) -> EntityType:  # type: ignore[no-untyped-def]  # noqa: ANN003
+    # NOTE(krishan711): updateWhere gets the conflicting row's new values (`excluded`) and only updates when it is true; when it is false nothing is written and the stored row is returned
+    async def upsert(self, database: Database, constraintColumnNames: list[str], connection: DatabaseConnection | None = None, updateWhere: UpsertUpdateWhere | None = None, **kwargs) -> EntityType:  # type: ignore[no-untyped-def]  # noqa: ANN003
         updateValues = self._create_values(kwargs=kwargs, shouldAddUpdatedDate=True, shouldAddCreatedDate=False)
         insertValues = self._create_values(kwargs=kwargs, shouldAddUpdatedDate=True, shouldAddCreatedDate=True)
         self._add_generated_id(values=insertValues)
@@ -144,9 +147,16 @@ class EntityRepository(typing.Generic[EntityType]):  # noqa: UP046
         doUpdateStatement = insertStatement.on_conflict_do_update(
             index_elements=constraintColumns,
             set_=updateValues,
+            where=updateWhere(insertStatement.excluded) if updateWhere is not None else None,
         )
         result = await database.execute(query=doUpdateStatement.returning(*self.list_select_columns()), connection=connection)
-        return self.force_from_result(result=result)
+        row = result.mappings().first()
+        if row is None and updateWhere is not None:
+            storedQuery = self.build_select().where(*[column == insertValues[column] for column in constraintColumns])
+            row = (await database.execute(query=storedQuery, connection=connection)).mappings().first()
+        if row is None:
+            raise NotFoundException
+        return self.from_row(row=row)
 
     async def upsert_many(self, database: Database, constraintColumnNames: list[str], rowDicts: list[dict[str, typing.Any]], connection: DatabaseConnection | None = None) -> list[EntityType]:  # type: ignore[explicit-any]
         if not rowDicts:
