@@ -116,6 +116,24 @@ async def test_duplicate_send_keeps_the_earliest_visibility(workers: tuple[SqlMe
     assert await workerA.get_message() is not None
 
 
+async def test_higher_priority_messages_are_claimed_before_older_ones(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    await workerA.send_messages(messages=[_message(deduplicationId=None, userId=str(index)) for index in range(3)])
+    await workerA.send_message(message=_message(deduplicationId=None, userId='urgent'), priority=1)
+    messages = await workerA.get_messages(limit=2)
+    assert [message.content['userId'] for message in messages] == ['urgent', '0']
+
+
+async def test_duplicate_send_keeps_the_highest_priority(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    await workerA.send_message(message=_message(deduplicationId=None, userId='other'))
+    await workerA.send_message(message=_message())
+    await workerA.send_message(message=_message(), priority=1)
+    await workerA.send_message(message=_message())
+    assert [(row['content']['userId'], row['priority']) for row in await _rows(queue=workerA)] == [('other', 0), ('user-1', 1)]
+    assert (await _claim(queue=workerA)).content['userId'] == 'user-1'
+
+
 async def test_processor_fails_message_even_when_notifications_fail(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     workerA, _ = workers
 
