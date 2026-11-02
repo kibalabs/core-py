@@ -116,6 +116,24 @@ async def test_duplicate_send_keeps_the_earliest_visibility(workers: tuple[SqlMe
     assert await workerA.get_message() is not None
 
 
+async def test_higher_priority_messages_are_claimed_before_older_ones(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    await workerA.send_messages(messages=[_message(deduplicationId=None, userId=str(index)) for index in range(3)])
+    await workerA.send_message(message=_message(deduplicationId=None, userId='urgent'), priority=1)
+    messages = await workerA.get_messages(limit=2)
+    assert [message.content['userId'] for message in messages] == ['urgent', '0']
+
+
+async def test_duplicate_send_keeps_the_highest_priority(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    await workerA.send_message(message=_message(deduplicationId=None, userId='other'))
+    await workerA.send_message(message=_message())
+    await workerA.send_message(message=_message(), priority=1)
+    await workerA.send_message(message=_message())
+    assert [(row['content']['userId'], row['priority']) for row in await _rows(queue=workerA)] == [('other', 0), ('user-1', 1)]
+    assert (await _claim(queue=workerA)).content['userId'] == 'user-1'
+
+
 async def test_processor_fails_message_even_when_notifications_fail(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     workerA, _ = workers
 
@@ -374,6 +392,15 @@ async def test_retry_is_folded_into_an_identical_pending_message(workers: tuple[
     await workerA.send_message(message=_message())
     await workerA.retry_message(message=message)
     assert [row['status'] for row in await _rows(queue=workerA)] == ['deduplicated', 'pending']
+
+
+async def test_retry_folded_into_a_lower_priority_duplicate_raises_its_priority(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    await workerA.send_message(message=_message(), priority=1)
+    message = await _claim(queue=workerA)
+    await workerA.send_message(message=_message())
+    await workerA.retry_message(message=message)
+    assert [(row['status'], row['priority']) for row in await _rows(queue=workerA)] == [('deduplicated', 1), ('pending', 1)]
 
 
 async def test_release_hands_the_message_back_without_using_an_attempt(workers: tuple[SqlMessageQueue, SqlMessageQueue]):

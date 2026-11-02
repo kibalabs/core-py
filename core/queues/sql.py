@@ -52,6 +52,7 @@ QueueMessagesTable = sqlalchemy.Table(
     sqlalchemy.Column(key='startedDate', name='started_date', type_=sqlalchemy.DateTime(timezone=True), nullable=True),
     sqlalchemy.Column(key='completedDate', name='completed_date', type_=sqlalchemy.DateTime(timezone=True), nullable=True),
     sqlalchemy.Column(key='lastError', name='last_error', type_=sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column(key='priority', name='priority', type_=sqlalchemy.Integer, nullable=False, server_default='0'),
     sqlalchemy.Index('tbl_queue_messages_idx_queue_name_status_visible_date', 'queueName', 'status', 'visibleDate'),
     sqlalchemy.Index('tbl_queue_messages_ux_queue_name_deduplication_id_pending', 'queueName', 'deduplicationId', unique=True, postgresql_where=_PENDING_PREDICATE, sqlite_where=_PENDING_PREDICATE),
 )
@@ -109,10 +110,10 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
             return sqlalchemy_sqlite.insert(self.table)
         raise InternalServerErrorException(message=f'SqlMessageQueue does not support dialect: {dialectName}')
 
-    async def send_message(self, message: Message, delaySeconds: int = 0) -> None:
-        await self.send_messages(messages=[message], delaySeconds=delaySeconds)
+    async def send_message(self, message: Message, delaySeconds: int = 0, priority: int = 0) -> None:
+        await self.send_messages(messages=[message], delaySeconds=delaySeconds, priority=priority)
 
-    async def send_messages(self, messages: Sequence[Message], delaySeconds: int = 0) -> None:
+    async def send_messages(self, messages: Sequence[Message], delaySeconds: int = 0, priority: int = 0) -> None:
         if not messages:
             return
         now = self.database.now()
@@ -136,13 +137,17 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                     'status': MESSAGE_STATUS_PENDING,
                     'visibleDate': self.database.now(seconds=delaySeconds),
                     'createdDate': now,
+                    'priority': priority,
                 }
             )
         async with self.database.create_transaction() as connection:
             insertQuery = self._create_insert(dialectName=connection.dialect.name).values(rows)
             earliest = sqlalchemy.func.least if connection.dialect.name == 'postgresql' else sqlalchemy.func.min
+            highest = sqlalchemy.func.greatest if connection.dialect.name == 'postgresql' else sqlalchemy.func.max
             upsertQuery = insertQuery.on_conflict_do_update(
-                index_elements=[self.table.c.queueName, self.table.c.deduplicationId], index_where=_PENDING_PREDICATE, set_={self.table.c.visibleDate: earliest(self.table.c.visibleDate, insertQuery.excluded.visibleDate)}
+                index_elements=[self.table.c.queueName, self.table.c.deduplicationId],
+                index_where=_PENDING_PREDICATE,
+                set_={self.table.c.visibleDate: earliest(self.table.c.visibleDate, insertQuery.excluded.visibleDate), self.table.c.priority: highest(self.table.c.priority, insertQuery.excluded.priority)},
             )
             await self.database.execute(query=upsertQuery, connection=connection)
 
@@ -175,7 +180,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                 .where(self.table.c.queueName == self.queueName)
                 .where(self.table.c.status.in_([MESSAGE_STATUS_PENDING, MESSAGE_STATUS_RUNNING]))
                 .where(self.table.c.visibleDate <= now)
-                .order_by(self.table.c.visibleDate, self.table.c.id)
+                .order_by(self.table.c.priority.desc(), self.table.c.visibleDate, self.table.c.id)
                 .limit(limit)
                 .with_for_update(skip_locked=True)
             )
@@ -194,7 +199,7 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
             )
             result = await self.database.execute(query=claimQuery, connection=connection)
             rows = result.mappings().all()
-        return sorted((SqlMessage.from_row(row=row, table=self.table) for row in rows), key=lambda message: message.id)
+        return [SqlMessage.from_row(row=row, table=self.table) for row in sorted(rows, key=lambda row: (-row[self.table.c.priority], row[self.table.c.id]))]
 
     def _owned_update(self, message: SqlMessage) -> sqlalchemy.Update:
         return sqlalchemy.update(self.table).where(self.table.c.id == message.id).where(self.table.c.lockToken == message.lockToken).where(self.table.c.status == MESSAGE_STATUS_RUNNING)
@@ -237,6 +242,16 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                     await self.database.execute(query=query, connection=connection)
             except sqlalchemy.exc.IntegrityError:
                 # NOTE(krishan711): an identical message was enqueued while this one ran, so it will do the work instead
+                highest = sqlalchemy.func.greatest if connection.dialect.name == 'postgresql' else sqlalchemy.func.max
+                runningPriority = sqlalchemy.select(self.table.c.priority).where(self.table.c.id == message.id).scalar_subquery()
+                duplicateQuery = (
+                    sqlalchemy.update(self.table)
+                    .where(self.table.c.queueName == self.queueName)
+                    .where(self.table.c.deduplicationId == message.deduplicationId)
+                    .where(self.table.c.status == MESSAGE_STATUS_PENDING)
+                    .values(priority=highest(self.table.c.priority, runningPriority))
+                )
+                await self.database.execute(query=duplicateQuery, connection=connection)
                 query = self._owned_update(message=message).values(status=MESSAGE_STATUS_DEDUPLICATED, lockToken=None, completedDate=self.database.now())
                 await self.database.execute(query=query, connection=connection)
 
