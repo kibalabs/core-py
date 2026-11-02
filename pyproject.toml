@@ -12,23 +12,23 @@ dependencies = [
 
 [project.optional-dependencies]
 api = [
-    "fastapi>=0.146.0",
+    "fastapi>=0.162.0",
     "uvicorn[standard]>=0.54.0",
 ]
 core-api = [
-    "starlette>=1.9.0",
+    "starlette>=1.10.0",
     "uvicorn[standard]>=0.54.0",
     "python-multipart>=0.0.32",
 ]
 storage = [
-    "aiobotocore>=3.9.2",
+    "aiobotocore>=3.10.0",
 ]
 # TODO(krishan711): remove this in next major update
 queues = [
-    "aiobotocore>=3.9.2",
+    "aiobotocore>=3.10.0",
 ]
 queue-sqs = [
-    "aiobotocore>=3.9.2",
+    "aiobotocore>=3.10.0",
 ]
 queue-aqs = [
     "azure-storage-queue[aio]>=12.18.0",
@@ -37,15 +37,15 @@ queue-cosmos = [
     "azure-cosmos>=4.17.1",
 ]
 database-psql = [
-    "sqlalchemy[asyncio]>=2.1.5",
+    "sqlalchemy[asyncio]>=2.1.6",
     "asyncpg>=0.32.0",
 ]
 database-sqlite = [
-    "sqlalchemy[asyncio]>=2.1.5",
+    "sqlalchemy[asyncio]>=2.1.6",
     "aiosqlite>=0.22.1",
 ]
 requester = [
-    "httpx2>=2.14.0",
+    "httpx2>=2.16.0",
 ]
 web3 = [
     "web3>=7.16.0,<8.0.0",
@@ -54,13 +54,13 @@ cron = [
     "apscheduler>=3.11.3,<4",
 ]
 types = [
-    "types-aiobotocore[essential]>=3.9.2",
+    "types-aiobotocore[essential]>=3.10.0",
     "types-aiofiles>=25.1.0.20260518",
 ]
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev20",
+    "kiba-build==0.1.11.dev22",
 ]
 
 [project.urls]
