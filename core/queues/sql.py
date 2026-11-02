@@ -242,6 +242,16 @@ class SqlMessageQueue(MessageQueue[SqlMessage]):
                     await self.database.execute(query=query, connection=connection)
             except sqlalchemy.exc.IntegrityError:
                 # NOTE(krishan711): an identical message was enqueued while this one ran, so it will do the work instead
+                highest = sqlalchemy.func.greatest if connection.dialect.name == 'postgresql' else sqlalchemy.func.max
+                runningPriority = sqlalchemy.select(self.table.c.priority).where(self.table.c.id == message.id).scalar_subquery()
+                duplicateQuery = (
+                    sqlalchemy.update(self.table)
+                    .where(self.table.c.queueName == self.queueName)
+                    .where(self.table.c.deduplicationId == message.deduplicationId)
+                    .where(self.table.c.status == MESSAGE_STATUS_PENDING)
+                    .values(priority=highest(self.table.c.priority, runningPriority))
+                )
+                await self.database.execute(query=duplicateQuery, connection=connection)
                 query = self._owned_update(message=message).values(status=MESSAGE_STATUS_DEDUPLICATED, lockToken=None, completedDate=self.database.now())
                 await self.database.execute(query=query, connection=connection)
 

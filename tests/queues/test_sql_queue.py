@@ -394,6 +394,15 @@ async def test_retry_is_folded_into_an_identical_pending_message(workers: tuple[
     assert [row['status'] for row in await _rows(queue=workerA)] == ['deduplicated', 'pending']
 
 
+async def test_retry_folded_into_a_lower_priority_duplicate_raises_its_priority(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
+    workerA, _ = workers
+    await workerA.send_message(message=_message(), priority=1)
+    message = await _claim(queue=workerA)
+    await workerA.send_message(message=_message())
+    await workerA.retry_message(message=message)
+    assert [(row['status'], row['priority']) for row in await _rows(queue=workerA)] == [('deduplicated', 1), ('pending', 1)]
+
+
 async def test_release_hands_the_message_back_without_using_an_attempt(workers: tuple[SqlMessageQueue, SqlMessageQueue]):
     workerA, workerB = workers
     await workerA.send_message(message=_message())
