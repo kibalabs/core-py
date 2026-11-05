@@ -60,7 +60,7 @@ types = [
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev23",
+    "kiba-build==0.1.11.dev24",
 ]
 
 [project.urls]
