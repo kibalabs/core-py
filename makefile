@@ -45,15 +45,7 @@ clean:
 publish: build
 	@ uv publish
 
-GIT_LAST_TAG=$(shell git describe --tags --abbrev=0)
-GIT_COUNT=$(shell git rev-list $(GIT_LAST_TAG)..HEAD --count)
-VERSION=$(shell python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
 publish-dev:
-	@ # NOTE(krishan711): a version bump is merged before the release workflow tags it, so dev versions only publish once the current version is tagged
-	@ if git rev-parse --quiet --verify "refs/tags/v$(VERSION)" > /dev/null; then \
-		uv run version --part dev --count $(GIT_COUNT) && uv build && uv publish; \
-	else \
-		echo "v$(VERSION) is not tagged yet, so this commit is a pending release: not publishing a dev version"; \
-	fi
+	@ uv run publish-dev
 
 .PHONY: *
