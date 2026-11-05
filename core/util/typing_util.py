@@ -4,12 +4,16 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 
 from pydantic import GetCoreSchemaHandler
+from pydantic import StringConstraints
 from pydantic_core import core_schema
 
 JsonBaseType = str | int | float | bool | None
 type Json = dict[str, 'Json'] | Mapping[str, 'Json'] | list['Json'] | Sequence['Json'] | JsonBaseType
 type JsonObject = dict[str, 'Json']
 type JsonList = list['Json']
+
+UUID_PATTERN = r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+UuidString = typing.Annotated[str, StringConstraints(pattern=UUID_PATTERN)]
 
 
 class Undefined(enum.Enum):
