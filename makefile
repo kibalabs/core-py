@@ -45,11 +45,7 @@ clean:
 publish: build
 	@ uv publish
 
-GIT_LAST_TAG=$(shell git describe --tags --abbrev=0)
-GIT_COUNT=$(shell git rev-list $(GIT_LAST_TAG)..HEAD --count)
 publish-dev:
-	@ uv run version --part dev --count $(GIT_COUNT)
-	@ uv build
-	@ uv publish
+	@ uv run publish-dev
 
 .PHONY: *
