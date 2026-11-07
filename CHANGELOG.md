@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [PATCH] Updated `ExceptionHandlingMiddleware` to answer a client that disconnects before the response starts (starlette's `ClientDisconnect`, e.g. while reading the body) with a 499 instead of logging a traceback and a 500
 - [MAJOR] Added `priority` to `SqlMessageQueue.send_message` and `send_messages` (default 0): visible messages are claimed highest priority first, then by `visibleDate`, and a duplicate send, or a retry folded into a pending duplicate, keeps the higher priority. `tbl_queue_messages` has a new `priority` column (`INTEGER NOT NULL DEFAULT 0`), so apps must add it with a migration before upgrading
 - [PATCH] Fixed `DatabaseConnectionMiddleware`'s commit when the response starts failing ("another operation is in progress") for streaming responses behind a `BaseHTTPMiddleware`: `Database.execute` and `Database.commit_context_connection` now wait for each other on the same connection
 - [MINOR] Added `Database.commit_context_connection` to commit the context connection's writes so far; anything run on it afterwards is committed when the context connection ends
