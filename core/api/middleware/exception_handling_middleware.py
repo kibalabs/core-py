@@ -1,5 +1,6 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
+from starlette.requests import ClientDisconnect
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
@@ -29,6 +30,8 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
         except RedirectException as exception:
             response = Response(status_code=exception.statusCode)
             response.headers.update(exception.outgoing_headers())
+        except ClientDisconnect:
+            response = Response(status_code=499)
         except ClientException as exception:
             if self.shouldSquashClientExceptions:
                 logging.error(f'{exception.exceptionType} occurred: {exception.message}')

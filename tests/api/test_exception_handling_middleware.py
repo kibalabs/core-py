@@ -119,3 +119,24 @@ def test_plain_exception_has_no_extra_headers(plain_error_client):
     assert response.status_code == 400
     assert 'retry-after' not in response.headers
     assert 'location' not in response.headers
+
+
+@pytest.mark.asyncio
+async def test_client_disconnect_while_reading_body_returns_499():
+    @json_route(requestType=SimpleRequest, responseType=SimpleResponse)
+    async def endpoint(request: KibaApiRequest[SimpleRequest]) -> SimpleResponse:
+        return SimpleResponse(result=request.data.value)
+
+    app = Starlette(routes=[Route('/echo', endpoint, methods=['POST'])])
+    app.add_middleware(ExceptionHandlingMiddleware)
+    sentMessages = []
+
+    async def receive():
+        return {'type': 'http.disconnect'}
+
+    async def send(message):
+        sentMessages.append(message)
+
+    scope = {'type': 'http', 'asgi': {'version': '3.0'}, 'method': 'POST', 'path': '/echo', 'headers': [(b'content-type', b'application/json')], 'query_string': b''}
+    await app(scope, receive, send)
+    assert sentMessages[0]['status'] == 499
