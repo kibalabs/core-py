@@ -12,10 +12,12 @@ import urllib.parse
 import uuid
 
 from core import logging
+from core.auth_tokens.auth_token_invalidation_store import AuthTokenInvalidationStore
 from core.exceptions import BadRequestException
 from core.exceptions import KibaException
 from core.exceptions import UnauthorizedException
 from core.http.jwt import KibaJwt
+from core.http.signed_token_manager import SignedTokenManager
 from core.mcp.mcp_identity_provider import McpIdentityProvider
 from core.mcp.model import McpAuthorizationRequest
 from core.mcp.model import McpCachedClient
@@ -23,7 +25,6 @@ from core.mcp.model import McpClient
 from core.mcp.model import McpProviderLogin
 from core.mcp.model import McpTokenPair
 from core.mcp.model import McpUser
-from core.mcp.oauth_store.mcp_oauth_store import McpOAuthStore
 from core.util import date_util
 from core.util import json_util
 from core.util.typing_util import JsonObject
@@ -32,7 +33,6 @@ if typing.TYPE_CHECKING:
     from core.requester import Requester
 
 JWT_KEY_ID = 'mcp-oauth-v1'
-TOKEN_TYPE_KEY = 'tty'
 AUDIENCE_KEY = 'aud'
 CLIENT_ID_KEY = 'cid'
 CLIENT_NAME_KEY = 'cnm'
@@ -60,7 +60,7 @@ class McpOAuthServer:
     def __init__(
         self,
         identityProvider: McpIdentityProvider,
-        store: McpOAuthStore,
+        store: AuthTokenInvalidationStore,
         jwtSecret: str,
         baseUrl: str,
         allowedRedirectUris: list[str] | None = None,
@@ -75,7 +75,7 @@ class McpOAuthServer:
     ) -> None:
         self.identityProvider = identityProvider
         self.store = store
-        self._jwtSecret = jwtSecret.encode('utf-8')
+        self.tokenManager = SignedTokenManager(secret=jwtSecret, keyId=JWT_KEY_ID)
         self.baseUrl = baseUrl.rstrip('/')
         self.allowedRedirectUris = set(allowedRedirectUris) if allowedRedirectUris is not None else None
         # NOTE(krishan711): enables Client ID Metadata Documents; pass a Requester that doesn't follow redirects (SSRF)
@@ -116,7 +116,7 @@ class McpOAuthServer:
         for redirectUri in redirectUris:
             self._ensure_allowed_redirect_uri(redirectUri=redirectUri)
         name = clientName or 'MCP client'
-        clientId = self._create_token(tokenType='mcpClient', lifetime=CLIENT_REGISTRATION_LIFETIME, claims={CLIENT_NAME_KEY: name, CLIENT_REDIRECT_URIS_KEY: redirectUris})
+        clientId = self.tokenManager.create_token(tokenType='mcpClient', lifetime=CLIENT_REGISTRATION_LIFETIME, claims={CLIENT_NAME_KEY: name, CLIENT_REDIRECT_URIS_KEY: redirectUris})
         return {
             'client_id': clientId,
             'client_id_issued_at': int(date_util.datetime_from_now().timestamp()),
@@ -153,11 +153,11 @@ class McpOAuthServer:
         return self._consent_key(request=request) in self._get_consent_keys(consentToken=consentToken)
 
     def create_consent_request_token(self, request: McpAuthorizationRequest) -> str:
-        return self._create_token(tokenType='mcpConsentRequest', lifetime=CONSENT_REQUEST_LIFETIME, claims=self._request_claims(request=request))
+        return self.tokenManager.create_token(tokenType='mcpConsentRequest', lifetime=CONSENT_REQUEST_LIFETIME, claims=self._request_claims(request=request))
 
     def get_consent_request(self, consentRequestToken: str) -> McpAuthorizationRequest:
         try:
-            requestJwt = self._validate_token(tokenString=consentRequestToken, tokenType='mcpConsentRequest')
+            requestJwt = self.tokenManager.validate_token(tokenString=consentRequestToken, tokenType='mcpConsentRequest')
         except UnauthorizedException as exception:
             raise BadRequestException(message='INVALID_CONSENT_REQUEST') from exception
         return self._request_from_jwt(jwt=requestJwt)
@@ -165,11 +165,11 @@ class McpOAuthServer:
     def add_consent(self, consentToken: str | None, request: McpAuthorizationRequest) -> str:
         consentKey = self._consent_key(request=request)
         consentKeys = [*[key for key in self._get_consent_keys(consentToken=consentToken) if key != consentKey], consentKey][-MAX_CONSENT_COUNT:]
-        return self._create_token(tokenType='mcpConsent', lifetime=self.consentLifetime, claims={CONSENTS_KEY: consentKeys})
+        return self.tokenManager.create_token(tokenType='mcpConsent', lifetime=self.consentLifetime, claims={CONSENTS_KEY: consentKeys})
 
     def start_provider_login(self, request: McpAuthorizationRequest) -> McpProviderLogin:
         stateNonce = secrets.token_urlsafe(32)
-        stateToken = self._create_token(tokenType='mcpState', lifetime=self.stateTokenLifetime, claims={**self._request_claims(request=request), STATE_NONCE_KEY: stateNonce})
+        stateToken = self.tokenManager.create_token(tokenType='mcpState', lifetime=self.stateTokenLifetime, claims={**self._request_claims(request=request), STATE_NONCE_KEY: stateNonce})
         return McpProviderLogin(authorizeUrl=self.identityProvider.create_authorize_url(redirectUri=self.providerCallbackUrl, state=stateToken), stateNonce=stateNonce)
 
     def create_client_error_redirect(self, request: McpAuthorizationRequest, error: str) -> str:
@@ -177,12 +177,12 @@ class McpOAuthServer:
 
     async def complete_provider_login(self, providerCode: str | None, stateToken: str, stateNonce: str | None) -> str:
         try:
-            stateJwt = self._validate_token(tokenString=stateToken, tokenType='mcpState')
+            stateJwt = self.tokenManager.validate_token(tokenString=stateToken, tokenType='mcpState')
         except UnauthorizedException as exception:
             raise BadRequestException(message='INVALID_STATE') from exception
         if not stateNonce or not hmac.compare_digest(stateNonce, typing.cast(str, stateJwt.payloadDict[STATE_NONCE_KEY])):
             raise BadRequestException(message='STATE_NOT_FROM_THIS_BROWSER')
-        if not await self.store.claim(key=f'state:{stateJwt.tokenId}', lifetime=self.stateTokenLifetime):
+        if not await self.store.invalidate(key=f'state:{stateJwt.tokenId}', lifetime=self.stateTokenLifetime):
             raise BadRequestException(message='STATE_ALREADY_USED')
         request = self._request_from_jwt(jwt=stateJwt)
         if not providerCode:
@@ -192,11 +192,11 @@ class McpOAuthServer:
         except KibaException as exception:
             logging.warning(f'MCP provider login failed: {exception.message}')
             return self.create_client_error_redirect(request=request, error='access_denied')
-        code = self._create_token(tokenType='mcpCode', lifetime=self.codeTokenLifetime, claims={**self._user_claims(user=user), **self._request_claims(request=request)})
+        code = self.tokenManager.create_token(tokenType='mcpCode', lifetime=self.codeTokenLifetime, claims={**self._user_claims(user=user), **self._request_claims(request=request)})
         return self._client_redirect_url(redirectUri=request.redirectUri, params={'code': code, 'state': request.clientState})
 
     async def exchange_authorization_code(self, code: str, codeVerifier: str, redirectUri: str, clientId: str, resource: str | None) -> McpTokenPair:
-        codeJwt = self._validate_token(tokenString=code, tokenType='mcpCode')
+        codeJwt = self.tokenManager.validate_token(tokenString=code, tokenType='mcpCode')
         if clientId != codeJwt.payloadDict[CLIENT_ID_KEY] or redirectUri != codeJwt.payloadDict[CLIENT_REDIRECT_URI_KEY] or not PKCE_VERIFIER_PATTERN.match(codeVerifier):
             raise UnauthorizedException(message='INVALID_GRANT')
         codeChallenge = base64.urlsafe_b64encode(hashlib.sha256(codeVerifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
@@ -204,43 +204,43 @@ class McpOAuthServer:
             raise UnauthorizedException(message='INVALID_GRANT')
         if not self._is_valid_resource(resource=resource):
             raise UnauthorizedException(message='INVALID_TARGET')
-        if not await self.store.claim(key=f'code:{codeJwt.tokenId}', lifetime=self.codeTokenLifetime):
+        if not await self.store.invalidate(key=f'code:{codeJwt.tokenId}', lifetime=self.codeTokenLifetime):
             raise UnauthorizedException(message='CODE_ALREADY_USED')
         grantExpiryDate = date_util.datetime_from_now(seconds=self.grantLifetime.total_seconds())
         return self._create_token_pair(user=self._user_from_jwt(jwt=codeJwt), clientId=clientId, grantId=str(uuid.uuid4()), grantExpiryTimestamp=int(grantExpiryDate.timestamp()))
 
     async def refresh_tokens(self, refreshToken: str, clientId: str | None, resource: str | None) -> McpTokenPair:
-        refreshJwt = self._validate_token(tokenString=refreshToken, tokenType='mcpRefresh')
+        refreshJwt = self.tokenManager.validate_token(tokenString=refreshToken, tokenType='mcpRefresh')
         tokenClientId = typing.cast(str, refreshJwt.payloadDict[CLIENT_ID_KEY])
         grantId = typing.cast(str, refreshJwt.payloadDict[GRANT_ID_KEY])
         if clientId is not None and clientId != tokenClientId:
             raise UnauthorizedException(message='INVALID_GRANT')
         if not self._is_valid_resource(resource=resource):
             raise UnauthorizedException(message='INVALID_TARGET')
-        if await self.store.is_claimed(key=f'revoked:{grantId}'):
+        if await self.store.is_invalidated(key=f'revoked:{grantId}'):
             raise UnauthorizedException(message='TOKEN_REVOKED')
         user = self._user_from_jwt(jwt=refreshJwt)
         await self.identityProvider.ensure_user_allowed(user=user)
-        if not await self.store.claim(key=f'refresh:{refreshJwt.tokenId}', lifetime=self.refreshTokenLifetime):
+        if not await self.store.invalidate(key=f'refresh:{refreshJwt.tokenId}', lifetime=self.refreshTokenLifetime):
             # NOTE(krishan711): a refresh token used twice has leaked, so the whole grant is revoked
-            await self.store.claim(key=f'revoked:{grantId}', lifetime=self.grantLifetime)
+            await self.store.invalidate(key=f'revoked:{grantId}', lifetime=self.grantLifetime)
             raise UnauthorizedException(message='REFRESH_TOKEN_REUSED')
         return self._create_token_pair(user=user, clientId=tokenClientId, grantId=grantId, grantExpiryTimestamp=typing.cast(int, refreshJwt.payloadDict[GRANT_EXPIRY_KEY]))
 
     async def revoke_token(self, token: str) -> None:
         for tokenType in ('mcpRefresh', 'mcpAccess'):
             try:
-                tokenJwt = self._validate_token(tokenString=token, tokenType=tokenType)
+                tokenJwt = self.tokenManager.validate_token(tokenString=token, tokenType=tokenType)
             except UnauthorizedException:
                 continue
-            await self.store.claim(key=f'revoked:{tokenJwt.payloadDict[GRANT_ID_KEY]}', lifetime=self.grantLifetime)
+            await self.store.invalidate(key=f'revoked:{tokenJwt.payloadDict[GRANT_ID_KEY]}', lifetime=self.grantLifetime)
             return
 
     async def validate_access_token(self, accessToken: str) -> McpUser:
-        accessJwt = self._validate_token(tokenString=accessToken, tokenType='mcpAccess')
+        accessJwt = self.tokenManager.validate_token(tokenString=accessToken, tokenType='mcpAccess')
         if accessJwt.payloadDict.get(AUDIENCE_KEY) != self.resourceUrl:
             raise UnauthorizedException(message='INVALID_AUDIENCE')
-        if await self.store.is_claimed(key=f'revoked:{accessJwt.payloadDict[GRANT_ID_KEY]}'):
+        if await self.store.is_invalidated(key=f'revoked:{accessJwt.payloadDict[GRANT_ID_KEY]}'):
             raise UnauthorizedException(message='TOKEN_REVOKED')
         return self._user_from_jwt(jwt=accessJwt)
 
@@ -261,7 +261,7 @@ class McpOAuthServer:
         if clientId.startswith('https://'):
             return await self._fetch_client_metadata(clientId=clientId)
         try:
-            clientJwt = self._validate_token(tokenString=clientId, tokenType='mcpClient')
+            clientJwt = self.tokenManager.validate_token(tokenString=clientId, tokenType='mcpClient')
         except UnauthorizedException as exception:
             raise BadRequestException(message='INVALID_CLIENT') from exception
         return McpClient(clientId=clientId, clientName=typing.cast(str, clientJwt.payloadDict[CLIENT_NAME_KEY]), redirectUris=typing.cast(list[str], clientJwt.payloadDict[CLIENT_REDIRECT_URIS_KEY]))
@@ -296,7 +296,7 @@ class McpOAuthServer:
         if not consentToken:
             return []
         try:
-            consentJwt = self._validate_token(tokenString=consentToken, tokenType='mcpConsent')
+            consentJwt = self.tokenManager.validate_token(tokenString=consentToken, tokenType='mcpConsent')
         except UnauthorizedException:
             return []
         return typing.cast(list[str], consentJwt.payloadDict.get(CONSENTS_KEY, []))
@@ -329,8 +329,8 @@ class McpOAuthServer:
         refreshLifetime = min(self.refreshTokenLifetime, datetime.datetime.fromtimestamp(grantExpiryTimestamp, tz=datetime.UTC) - date_util.datetime_from_now())
         if refreshLifetime <= datetime.timedelta(0):
             raise UnauthorizedException(message='GRANT_EXPIRED')
-        accessToken = self._create_token(tokenType='mcpAccess', lifetime=min(self.accessTokenLifetime, refreshLifetime), claims={**grantClaims, AUDIENCE_KEY: self.resourceUrl})
-        refreshToken = self._create_token(tokenType='mcpRefresh', lifetime=refreshLifetime, claims=grantClaims)
+        accessToken = self.tokenManager.create_token(tokenType='mcpAccess', lifetime=min(self.accessTokenLifetime, refreshLifetime), claims={**grantClaims, AUDIENCE_KEY: self.resourceUrl})
+        refreshToken = self.tokenManager.create_token(tokenType='mcpRefresh', lifetime=refreshLifetime, claims=grantClaims)
         return McpTokenPair(accessToken=accessToken, refreshToken=refreshToken, expiresInSeconds=int(min(self.accessTokenLifetime, refreshLifetime).total_seconds()))
 
     @staticmethod
@@ -340,40 +340,6 @@ class McpOAuthServer:
     @staticmethod
     def _user_from_jwt(jwt: KibaJwt) -> McpUser:
         return McpUser(userId=typing.cast(str, jwt.payloadDict[KibaJwt.Key.USER_ID]), userName=typing.cast(str, jwt.payloadDict[KibaJwt.Key.USER_NAME]))
-
-    def _create_token(self, tokenType: str, lifetime: datetime.timedelta, claims: JsonObject) -> str:
-        issueDate = date_util.datetime_from_now()
-        jwt = KibaJwt(
-            headerDict={KibaJwt.Key.ALGORITHM: 'HS256', KibaJwt.Key.TYPE: 'JWT', KibaJwt.Key.KEY_ID: JWT_KEY_ID},
-            payloadDict={
-                **claims,
-                KibaJwt.Key.TOKEN_ID: str(uuid.uuid4()),
-                TOKEN_TYPE_KEY: tokenType,
-                KibaJwt.Key.ISSUE_DATE: int(issueDate.timestamp()),
-                KibaJwt.Key.EXPIRY_DATE: int((issueDate + lifetime).timestamp()),
-            },
-        )
-        jwt.signatureBytes = self._sign(jwt=jwt)
-        return jwt.to_string()
-
-    def _validate_token(self, tokenString: str, tokenType: str) -> KibaJwt:
-        try:
-            jwt = KibaJwt.from_string(jwtString=tokenString)
-        except Exception as exception:
-            raise UnauthorizedException(message='INVALID_TOKEN') from exception
-        if not isinstance(jwt.headerDict, dict) or not isinstance(jwt.payloadDict, dict):
-            raise UnauthorizedException(message='INVALID_TOKEN')
-        if jwt.algorithm != 'HS256' or jwt.keyId != JWT_KEY_ID or not hmac.compare_digest(jwt.signatureBytes, self._sign(jwt=jwt)):
-            raise UnauthorizedException(message='INVALID_TOKEN')
-        if jwt.payloadDict.get(TOKEN_TYPE_KEY) != tokenType:
-            raise UnauthorizedException(message='INVALID_TOKEN_TYPE')
-        expiryDate = jwt.expiryDate
-        if not expiryDate or expiryDate <= date_util.datetime_from_now():
-            raise UnauthorizedException(message='TOKEN_EXPIRED')
-        return jwt
-
-    def _sign(self, jwt: KibaJwt) -> bytes:
-        return hmac.new(self._jwtSecret, jwt.verificationString.encode('utf-8'), hashlib.sha256).digest()
 
 
 def _is_ip_address(hostname: str) -> bool:

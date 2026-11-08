@@ -250,7 +250,7 @@ async def test_tokens_from_another_secret_or_expired_are_rejected(identityProvid
     otherTokens = create_oauth_server(identityProvider=identityProvider, secret='other-secret')._create_token_pair(user=McpUser(userId='user-1', userName='Test'), clientId='client', grantId='grant', grantExpiryTimestamp=2_000_000_000)
     with pytest.raises(UnauthorizedException, match='INVALID_TOKEN'):
         await oauthServer.validate_access_token(accessToken=otherTokens.accessToken)
-    expiredToken = oauthServer._create_token(tokenType='mcpAccess', lifetime=datetime.timedelta(seconds=-1), claims={})
+    expiredToken = oauthServer.tokenManager.create_token(tokenType='mcpAccess', lifetime=datetime.timedelta(seconds=-1), claims={})
     with pytest.raises(UnauthorizedException, match='TOKEN_EXPIRED'):
         await oauthServer.validate_access_token(accessToken=expiredToken)
 
