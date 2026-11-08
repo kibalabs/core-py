@@ -99,6 +99,28 @@ async def test_writes_are_rolled_back_when_the_request_fails_before_responding(d
     assert await get_record_names(database=database) == []
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(('path', 'isExcluded'), [('/live-events', True), ('/live-events/123', False), ('/mcp', True), ('/mcp/exports/token', True), ('/v1/mcp', False), ('/', False)])
+async def test_excluded_paths_run_without_a_context_connection(database, path, isExcluded):
+    hasContextConnectionHolder: list[bool] = []
+
+    async def app(scope, receive, send):
+        hasContextConnectionHolder.append(database._get_context_connection() is not None)
+        await send({'type': 'http.response.start', 'status': 200, 'headers': []})
+        await send({'type': 'http.response.body', 'body': b'ok'})
+
+    async def receive():
+        return {'type': 'http.request', 'body': b'', 'more_body': False}
+
+    async def send(message):
+        pass
+
+    middleware = DatabaseConnectionMiddleware(app=app, database=database, excludedPaths={'/live-events'}, excludedPathPrefixes=('/mcp',))
+    await middleware({'type': 'http', 'method': 'GET', 'path': path}, receive, send)
+
+    assert hasContextConnectionHolder == [not isExcluded]
+
+
 async def post_to_app(app) -> tuple[int, bytes]:
     scope = {
         'type': 'http', 'asgi': {'version': '3.0'}, 'http_version': '1.1', 'method': 'POST', 'scheme': 'http', 'path': '/', 'raw_path': b'/',
