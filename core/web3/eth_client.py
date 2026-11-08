@@ -334,7 +334,7 @@ class RestEthClient(EthClientInterface):
     def _hex_to_int(value: str) -> int:
         return int(value, 16)
 
-    async def _make_request(self, method: str, params: ListAny | None = None) -> DictStrAny:
+    async def make_request(self, method: str, params: ListAny | None = None) -> DictStrAny:
         async with self.semaphore or contextlib.nullcontext():
             retryCount = 0
             initialBackoffSeconds = 1.0
@@ -352,7 +352,7 @@ class RestEthClient(EthClientInterface):
                         raise BadRequestException(message=errorMessage)
                 except ClientException as exception:
                     # NOTE(krishan711): this is just here to debug 429s from coinbase, remove when done
-                    logging.info(f'caught exception on _make_request: {exception!s}')
+                    logging.info(f'caught exception on make_request: {exception!s}')
                     exceptionMessage = exception.message or ''
                     if (
                         isinstance(exception, TooManyRequestsException)
@@ -376,13 +376,19 @@ class RestEthClient(EthClientInterface):
                 return responseDict
 
     async def get_latest_block_number(self) -> int:
-        response = await self._make_request(method='eth_blockNumber')
+        response = await self.make_request(method='eth_blockNumber')
         if response['result'] is None:
             raise NotFoundException
         return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_blockNumber](response['result']))
 
+    async def get_safe_block_number(self) -> int:
+        response = await self.make_request(method='eth_getBlockByNumber', params=['safe', False])
+        if response['result'] is None:
+            raise NotFoundException
+        return int(response['result']['number'], 16)
+
     async def get_latest_block(self, shouldHydrateTransactions: bool = False) -> BlockData:
-        response = await self._make_request(method='eth_getBlockByNumber', params=['latest', shouldHydrateTransactions])
+        response = await self.make_request(method='eth_getBlockByNumber', params=['latest', shouldHydrateTransactions])
         if response['result'] is None:
             raise NotFoundException
         if self.isTestnet:
@@ -392,7 +398,7 @@ class RestEthClient(EthClientInterface):
         return typing.cast(BlockData, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getBlockByNumber](response['result']))
 
     async def get_block(self, blockNumber: int, shouldHydrateTransactions: bool = False) -> BlockData:
-        response = await self._make_request(method='eth_getBlockByNumber', params=[hex(blockNumber), shouldHydrateTransactions])
+        response = await self.make_request(method='eth_getBlockByNumber', params=[hex(blockNumber), shouldHydrateTransactions])
         if response['result'] is None:
             raise NotFoundException
         if self.isTestnet:
@@ -402,32 +408,40 @@ class RestEthClient(EthClientInterface):
         return typing.cast(BlockData, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getBlockByNumber](response['result']))
 
     async def get_block_uncle_count(self, blockNumber: int) -> int:
-        response = await self._make_request(method='eth_getUncleCountByBlockNumber', params=[hex(blockNumber)])
+        response = await self.make_request(method='eth_getUncleCountByBlockNumber', params=[hex(blockNumber)])
         if response['result'] is None:
             raise NotFoundException
         return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getUncleCountByBlockNumber](response['result']))
 
     async def get_transaction_count(self, address: str) -> int:
-        response = await self._make_request(method='eth_getTransactionCount', params=[address, 'latest'])
+        response = await self.make_request(method='eth_getTransactionCount', params=[address, 'latest'])
         if response['result'] is None:
             raise NotFoundException
         return typing.cast(int, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionCount](response['result']))
 
     async def get_transaction(self, transactionHash: str) -> TxData:
-        response = await self._make_request(method='eth_getTransactionByHash', params=[transactionHash])
+        response = await self.make_request(method='eth_getTransactionByHash', params=[transactionHash])
         if response['result'] is None:
             raise NotFoundException
         return typing.cast(TxData, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionByHash](response['result']))
 
     async def get_transaction_receipt(self, transactionHash: str) -> TxReceipt:
-        response = await self._make_request(method='eth_getTransactionReceipt', params=[transactionHash])
+        response = await self.make_request(method='eth_getTransactionReceipt', params=[transactionHash])
         if response['result'] is None:
             raise NotFoundException
         return typing.cast(TxReceipt, method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getTransactionReceipt](response['result']))
 
     async def get_code(self, address: str, blockNumber: int | None = None) -> str:
-        response = await self._make_request(method='eth_getCode', params=[address, hex(blockNumber) if blockNumber is not None else 'latest'])
+        response = await self.make_request(method='eth_getCode', params=[address, hex(blockNumber) if blockNumber is not None else 'latest'])
         return str(response.get('result', '0x'))
+
+    async def get_balance(self, address: str, blockNumber: int | None = None) -> int:
+        response = await self.make_request(method='eth_getBalance', params=[address, hex(blockNumber) if blockNumber is not None else 'latest'])
+        return int(response['result'], 16)
+
+    async def get_storage_at(self, address: str, position: str, blockNumber: int | None = None) -> str:
+        response = await self.make_request(method='eth_getStorageAt', params=[address, position, hex(blockNumber) if blockNumber is not None else 'latest'])
+        return str(response['result'])
 
     async def get_log_entries(
         self,
@@ -447,7 +461,7 @@ class RestEthClient(EthClientInterface):
             params['toBlock'] = hex(endBlockNumber)
         if address:
             params['address'] = address
-        response = await self._make_request(method='eth_getLogs', params=[params])
+        response = await self.make_request(method='eth_getLogs', params=[params])
         return typing.cast(list[LogReceipt], method_formatters.PYTHONIC_RESULT_FORMATTERS[RPC.eth_getLogs](response['result']))
 
     async def call(
@@ -461,17 +475,17 @@ class RestEthClient(EthClientInterface):
             'data': chain_util.encode_transaction_data_by_name(contractAbi=contractCall.contractAbi, functionName=contractCall.functionName, arguments=contractCall.arguments),
         }
         functionAbi = chain_util.find_abi_by_name_args(contractAbi=contractCall.contractAbi, functionName=contractCall.functionName, arguments=contractCall.arguments)
-        response = await self._make_request(method='eth_call', params=[params, hex(blockNumber) if blockNumber is not None else 'latest'])
+        response = await self.make_request(method='eth_call', params=[params, hex(blockNumber) if blockNumber is not None else 'latest'])
         decodedResponse = chain_util.decode_function_result(functionAbi=functionAbi, resultData=HexBytes(response['result']))
         return decodedResponse
 
     async def get_max_priority_fee_per_gas(self) -> int:
-        response = await self._make_request(method='eth_maxPriorityFeePerGas')
+        response = await self.make_request(method='eth_maxPriorityFeePerGas')
         maxPriorityFeePerGas = int(response['result'], 16)
         return maxPriorityFeePerGas
 
     async def get_max_fee_per_gas(self, maxPriorityFeePerGas: int | str) -> int:
-        response = await self._make_request(method='eth_getBlockByNumber', params=['pending', False])
+        response = await self.make_request(method='eth_getBlockByNumber', params=['pending', False])
         baseFeePerGas = int(response['result']['baseFeePerGas'], 16)
         intMaxPriorityFeePerGas: int = typing.cast(Wei, int(maxPriorityFeePerGas, 16)) if isinstance(maxPriorityFeePerGas, str) else maxPriorityFeePerGas
         maxFeePerGas = baseFeePerGas + intMaxPriorityFeePerGas
@@ -497,7 +511,7 @@ class RestEthClient(EthClientInterface):
             params['nonce'] = hex(nonce)  # type: ignore[typeddict-item, ty:invalid-assignment]
         if 'gas' not in params:
             if gas is None:
-                response = await self._make_request(method='eth_estimateGas', params=[params])
+                response = await self.make_request(method='eth_estimateGas', params=[params])
                 gas = int(response['result'], 16)
             params['gas'] = hex(gas)  # type: ignore[typeddict-item, ty:invalid-assignment]
         if 'gasPrice' not in params:
@@ -514,6 +528,6 @@ class RestEthClient(EthClientInterface):
     async def send_raw_transaction(self, transactionData: str) -> str:
         if not transactionData.startswith('0x'):
             transactionData = '0x' + transactionData
-        response = await self._make_request(method='eth_sendRawTransaction', params=[transactionData])
+        response = await self.make_request(method='eth_sendRawTransaction', params=[transactionData])
         return typing.cast(str, response['result'])
 

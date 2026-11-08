@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `core.api.middleware.blocked_ip_middleware.BlockedIpMiddleware` to answer 403 to requests from `blockedNetworks` (CIDRs) or a loaded `TorExitList`, checking every hop in `trustedProxyHeaders` and the socket peer
+- [MINOR] Added `core.api.middleware.public_cors_middleware.PublicCorsMiddleware` to let any origin call the given `paths` (add it after starlette's `CORSMiddleware` so it answers their preflights first)
+- [MINOR] Added `core.api.middleware.security_headers_middleware.SecurityHeadersMiddleware` to add fixed headers to every response
+- [MINOR] Added `core.api.middleware.gzip_middleware.GZipMiddleware`, starlette's `GZipMiddleware` with `excludedPaths` and `excludedPathSuffixes` that are never compressed (e.g. responses carrying tokens, against BREACH)
+- [MAJOR] Renamed `RestEthClient._make_request` to `make_request` for RPC methods without a helper (e.g. bundler methods)
+- [MINOR] Added `RestEthClient.get_balance`, `get_storage_at` and `get_safe_block_number`
+- [MINOR] Added `getEthBalance` to `MULTICALL3_ABI`
+- [MINOR] Added `core.web3.erc20` (`ERC20_ABI`, `ERC20_TRANSFER_EVENT_TOPIC`) and `core.web3.erc4626` (`ERC4626_ABI`)
+- [MINOR] Added `core.util.number_util.short_format_number`, matching `shortFormatNumber` in `@kibalabs/core`
+- [MAJOR] Moved `core.mcp.oauth_store` to `core.claims`: `McpOAuthStore`, `DictMcpOAuthStore` and `SqlMcpOAuthStore` are now `ClaimStore`, `DictClaimStore` and `SqlClaimStore`, and `McpOAuthClaimsTable` is now `ClaimsTable` (`tbl_claims`). Apps that already created `tbl_mcp_oauth_claims` can keep it by passing their own table to `SqlClaimStore`
+- [MINOR] Added `core.http.signed_token_manager.SignedTokenManager` to create and validate typed HS256 JWTs (each with its own `tokenId`, so a `ClaimStore` can make them single-use); `McpOAuthServer` uses it for its tokens
 - [MINOR] Added `core.mcp.mcp_server.McpServer` to serve MCP tools over streamable HTTP for both the `2026-07-28` (per-request `_meta`) and `2025-03-26`–`2025-11-25` (`initialize`) protocol eras; tools take a pydantic arguments model and an optional output model
 - [MINOR] Added `core.mcp.mcp_oauth_server.McpOAuthServer`, an OAuth 2.1 authorization server for MCP clients that delegates login to a `core.mcp.mcp_identity_provider.McpIdentityProvider` and shows a per-client consent page first; single-use and revoked tokens are recorded in a `core.mcp.oauth_store` store (`DictMcpOAuthStore`, or `SqlMcpOAuthStore` whose `McpOAuthClaimsTable` apps add to their migrations)
 - [MINOR] Added `core.mcp.mcp_routes.create_mcp_routes` to mount both on a starlette app

@@ -1,10 +1,10 @@
 import datetime
 
-from core.mcp.oauth_store.mcp_oauth_store import McpOAuthStore
+from core.claims.claim_store import ClaimStore
 
 
-# NOTE(krishan711): only safe for a single process that is never restarted mid-flow; use SqlMcpOAuthStore otherwise
-class DictMcpOAuthStore(McpOAuthStore):
+# NOTE(krishan711): only safe for a single process that is never restarted mid-flow; use SqlClaimStore otherwise
+class DictClaimStore(ClaimStore):
     def __init__(self) -> None:
         self._expiryDates: dict[str, datetime.datetime] = {}
 

@@ -3,7 +3,7 @@ from abc import ABC
 from abc import abstractmethod
 
 
-class McpOAuthStore(ABC):
+class ClaimStore(ABC):
     # NOTE(krishan711): must be atomic: only the first claim of an unexpired key returns True
     @abstractmethod
     async def claim(self, key: str, lifetime: datetime.timedelta) -> bool: ...

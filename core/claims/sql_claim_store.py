@@ -4,26 +4,26 @@ import sqlalchemy
 from sqlalchemy.dialects import postgresql as sqlalchemy_psql
 from sqlalchemy.dialects import sqlite as sqlalchemy_sqlite
 
+from core.claims.claim_store import ClaimStore
 from core.exceptions import InternalServerErrorException
-from core.mcp.oauth_store.mcp_oauth_store import McpOAuthStore
 from core.store.database import Database
 from core.store.database import DatabaseTable
 
 # NOTE(krishan711): like LocksTable, this table ships with core-py. To include it in an app's alembic-tracked metadata
-# (so autogenerate creates it), call `McpOAuthClaimsTable.to_metadata(appMetadata)` from the app's schema module.
-McpOAuthMetadata = sqlalchemy.MetaData()
+# (so autogenerate creates it), call `ClaimsTable.to_metadata(appMetadata)` from the app's schema module.
+ClaimsMetadata = sqlalchemy.MetaData()
 
-McpOAuthClaimsTable = sqlalchemy.Table(
-    'tbl_mcp_oauth_claims',
-    McpOAuthMetadata,
+ClaimsTable = sqlalchemy.Table(
+    'tbl_claims',
+    ClaimsMetadata,
     sqlalchemy.Column(key='key', name='key', type_=sqlalchemy.Text, primary_key=True, nullable=False),
     sqlalchemy.Column(key='expiryDate', name='expiry_date', type_=sqlalchemy.DateTime(timezone=True), nullable=False),
-    sqlalchemy.Index('tbl_mcp_oauth_claims_idx_expiry_date', 'expiryDate'),
+    sqlalchemy.Index('tbl_claims_idx_expiry_date', 'expiryDate'),
 )
 
 
-class SqlMcpOAuthStore(McpOAuthStore):
-    def __init__(self, database: Database, table: DatabaseTable = McpOAuthClaimsTable) -> None:
+class SqlClaimStore(ClaimStore):
+    def __init__(self, database: Database, table: DatabaseTable = ClaimsTable) -> None:
         self.database = database
         self.table = table
 
@@ -50,4 +50,4 @@ class SqlMcpOAuthStore(McpOAuthStore):
             return sqlalchemy_psql.insert(self.table)
         if dialectName == 'sqlite':
             return sqlalchemy_sqlite.insert(self.table)
-        raise InternalServerErrorException(message=f'SqlMcpOAuthStore does not support dialect: {dialectName}')
+        raise InternalServerErrorException(message=f'SqlClaimStore does not support dialect: {dialectName}')
