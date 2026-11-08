@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added `core.mcp.mcp_server.McpServer` to serve MCP tools over streamable HTTP for both the `2026-07-28` (per-request `_meta`) and `2025-03-26`–`2025-11-25` (`initialize`) protocol eras; tools take a pydantic arguments model and an optional output model
+- [MINOR] Added `core.mcp.mcp_oauth_server.McpOAuthServer`, an OAuth 2.1 authorization server for MCP clients that delegates login to a `core.mcp.mcp_identity_provider.McpIdentityProvider` and shows a per-client consent page first; single-use and revoked tokens are recorded in a `core.mcp.oauth_store` store (`DictMcpOAuthStore`, or `SqlMcpOAuthStore` whose `McpOAuthClaimsTable` apps add to their migrations)
+- [MINOR] Added `core.mcp.mcp_routes.create_mcp_routes` to mount both on a starlette app
+- [MINOR] Updated `json_route` and `streaming_json_route` (via `read_request_body`) to accept `application/x-www-form-urlencoded` bodies
 - [MINOR] Added `excludedPaths` (exact) and `excludedPathPrefixes` to `DatabaseConnectionMiddleware`: matching requests run without a context connection, e.g. a long-lived SSE stream that shouldn't hold a pooled connection and open transaction, or routes that use a different database
 - [PATCH] Updated `ExceptionHandlingMiddleware` to answer a client that disconnects before the response starts (starlette's `ClientDisconnect`, e.g. while reading the body) with a 499 instead of logging a traceback and a 500
 - [MAJOR] Added `priority` to `SqlMessageQueue.send_message` and `send_messages` (default 0): visible messages are claimed highest priority first, then by `visibleDate`, and a duplicate send, or a retry folded into a pending duplicate, keeps the higher priority. `tbl_queue_messages` has a new `priority` column (`INTEGER NOT NULL DEFAULT 0`), so apps must add it with a migration before upgrading

@@ -11,7 +11,7 @@ from core.util.typing_util import JsonObject
 
 
 async def read_request_body(request: Request) -> Mapping[str, object]:
-    if request.headers.get('Content-Type', '').startswith('multipart/form-data'):
+    if request.headers.get('Content-Type', '').startswith(('multipart/form-data', 'application/x-www-form-urlencoded')):
         body: dict[str, object] = {}
         # NOTE(krishan711): the form is closed on exit so uploaded files' temporary files are closed (their content has been read by then)
         async with request.form() as form:
