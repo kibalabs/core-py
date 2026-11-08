@@ -98,6 +98,13 @@ def test_json_route_with_valid_body(client):
     assert data["request_age"] == 30
 
 
+def test_json_route_with_urlencoded_body(client):
+    response = client.post("/test", data={"name": "Form User", "age": "30"})
+    assert response.status_code == 200
+    assert response.json()["request_name"] == "Form User"
+    assert response.json()["request_age"] == 30
+
+
 def test_json_route_with_path_params(client):
     response = client.post(
         "/test/param-value",
