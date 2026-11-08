@@ -9,7 +9,7 @@ from pydantic import ConfigDict
 from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
-from core.claims.dict_claim_store import DictClaimStore
+from core.auth_tokens.dict_auth_used_token_store import DictAuthUsedTokenStore
 from core.exceptions import BadRequestException
 from core.exceptions import ForbiddenException
 from core.mcp.mcp_identity_provider import McpIdentityProvider
@@ -68,7 +68,7 @@ class EchoResult(BaseModel):
 
 
 def create_oauth_server(identityProvider: McpIdentityProvider, requester: FakeRequester | None = None, secret: str = 'secret', allowedRedirectUris: list[str] | None = None) -> McpOAuthServer:
-    return McpOAuthServer(identityProvider=identityProvider, store=DictClaimStore(), jwtSecret=secret, baseUrl=BASE_URL, allowedRedirectUris=allowedRedirectUris, requester=requester)
+    return McpOAuthServer(identityProvider=identityProvider, store=DictAuthUsedTokenStore(), jwtSecret=secret, baseUrl=BASE_URL, allowedRedirectUris=allowedRedirectUris, requester=requester)
 
 
 def create_mcp_server() -> McpServer:
