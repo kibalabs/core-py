@@ -12,7 +12,7 @@ import urllib.parse
 import uuid
 
 from core import logging
-from core.auth_tokens.auth_used_token_store import AuthUsedTokenStore
+from core.auth_tokens.auth_token_invalidation_store import AuthTokenInvalidationStore
 from core.exceptions import BadRequestException
 from core.exceptions import KibaException
 from core.exceptions import UnauthorizedException
@@ -60,7 +60,7 @@ class McpOAuthServer:
     def __init__(
         self,
         identityProvider: McpIdentityProvider,
-        store: AuthUsedTokenStore,
+        store: AuthTokenInvalidationStore,
         jwtSecret: str,
         baseUrl: str,
         allowedRedirectUris: list[str] | None = None,
@@ -182,7 +182,7 @@ class McpOAuthServer:
             raise BadRequestException(message='INVALID_STATE') from exception
         if not stateNonce or not hmac.compare_digest(stateNonce, typing.cast(str, stateJwt.payloadDict[STATE_NONCE_KEY])):
             raise BadRequestException(message='STATE_NOT_FROM_THIS_BROWSER')
-        if not await self.store.mark_used(key=f'state:{stateJwt.tokenId}', lifetime=self.stateTokenLifetime):
+        if not await self.store.invalidate(key=f'state:{stateJwt.tokenId}', lifetime=self.stateTokenLifetime):
             raise BadRequestException(message='STATE_ALREADY_USED')
         request = self._request_from_jwt(jwt=stateJwt)
         if not providerCode:
@@ -204,7 +204,7 @@ class McpOAuthServer:
             raise UnauthorizedException(message='INVALID_GRANT')
         if not self._is_valid_resource(resource=resource):
             raise UnauthorizedException(message='INVALID_TARGET')
-        if not await self.store.mark_used(key=f'code:{codeJwt.tokenId}', lifetime=self.codeTokenLifetime):
+        if not await self.store.invalidate(key=f'code:{codeJwt.tokenId}', lifetime=self.codeTokenLifetime):
             raise UnauthorizedException(message='CODE_ALREADY_USED')
         grantExpiryDate = date_util.datetime_from_now(seconds=self.grantLifetime.total_seconds())
         return self._create_token_pair(user=self._user_from_jwt(jwt=codeJwt), clientId=clientId, grantId=str(uuid.uuid4()), grantExpiryTimestamp=int(grantExpiryDate.timestamp()))
@@ -217,13 +217,13 @@ class McpOAuthServer:
             raise UnauthorizedException(message='INVALID_GRANT')
         if not self._is_valid_resource(resource=resource):
             raise UnauthorizedException(message='INVALID_TARGET')
-        if await self.store.is_used(key=f'revoked:{grantId}'):
+        if await self.store.is_invalidated(key=f'revoked:{grantId}'):
             raise UnauthorizedException(message='TOKEN_REVOKED')
         user = self._user_from_jwt(jwt=refreshJwt)
         await self.identityProvider.ensure_user_allowed(user=user)
-        if not await self.store.mark_used(key=f'refresh:{refreshJwt.tokenId}', lifetime=self.refreshTokenLifetime):
+        if not await self.store.invalidate(key=f'refresh:{refreshJwt.tokenId}', lifetime=self.refreshTokenLifetime):
             # NOTE(krishan711): a refresh token used twice has leaked, so the whole grant is revoked
-            await self.store.mark_used(key=f'revoked:{grantId}', lifetime=self.grantLifetime)
+            await self.store.invalidate(key=f'revoked:{grantId}', lifetime=self.grantLifetime)
             raise UnauthorizedException(message='REFRESH_TOKEN_REUSED')
         return self._create_token_pair(user=user, clientId=tokenClientId, grantId=grantId, grantExpiryTimestamp=typing.cast(int, refreshJwt.payloadDict[GRANT_EXPIRY_KEY]))
 
@@ -233,14 +233,14 @@ class McpOAuthServer:
                 tokenJwt = self.tokenManager.validate_token(tokenString=token, tokenType=tokenType)
             except UnauthorizedException:
                 continue
-            await self.store.mark_used(key=f'revoked:{tokenJwt.payloadDict[GRANT_ID_KEY]}', lifetime=self.grantLifetime)
+            await self.store.invalidate(key=f'revoked:{tokenJwt.payloadDict[GRANT_ID_KEY]}', lifetime=self.grantLifetime)
             return
 
     async def validate_access_token(self, accessToken: str) -> McpUser:
         accessJwt = self.tokenManager.validate_token(tokenString=accessToken, tokenType='mcpAccess')
         if accessJwt.payloadDict.get(AUDIENCE_KEY) != self.resourceUrl:
             raise UnauthorizedException(message='INVALID_AUDIENCE')
-        if await self.store.is_used(key=f'revoked:{accessJwt.payloadDict[GRANT_ID_KEY]}'):
+        if await self.store.is_invalidated(key=f'revoked:{accessJwt.payloadDict[GRANT_ID_KEY]}'):
             raise UnauthorizedException(message='TOKEN_REVOKED')
         return self._user_from_jwt(jwt=accessJwt)
 

@@ -12,7 +12,7 @@ TOKEN_TYPE_KEY = 'tty'
 
 
 # NOTE(krishan711): HS256 JWTs typed by tokenType so a token issued for one purpose can't be used for another. Each token
-# has a tokenId, so pair it with an AuthUsedTokenStore to make a token single-use
+# has a tokenId, so pair it with an AuthTokenInvalidationStore to make a token single-use
 class SignedTokenManager:
     def __init__(self, secret: str, keyId: str) -> None:
         self._secret = secret.encode('utf-8')
