@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12, <4"
 dependencies = [
     "aiofiles>=25.1.0",
-    "pydantic>=2.14.1",
+    "pydantic>=2.14.2",
     "orjson>=3.13.0",
 ]
 
@@ -18,7 +18,7 @@ api = [
 core-api = [
     "starlette>=1.10.0",
     "uvicorn[standard]>=0.54.0",
-    "python-multipart>=0.0.32",
+    "python-multipart>=0.0.33",
 ]
 storage = [
     "aiobotocore>=3.10.0",
@@ -31,7 +31,7 @@ queue-sqs = [
     "aiobotocore>=3.10.0",
 ]
 queue-aqs = [
-    "azure-storage-queue[aio]>=12.18.0",
+    "azure-storage-queue[aio]>=12.18.1",
 ]
 queue-cosmos = [
     "azure-cosmos>=4.17.1",
@@ -60,7 +60,7 @@ types = [
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev23",
+    "kiba-build==0.1.11.dev25",
 ]
 
 [project.urls]
