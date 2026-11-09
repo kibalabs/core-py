@@ -182,6 +182,24 @@ class TestRestEthClient:
         assert result['extraData'].hex() == '00'
 
     @pytest.mark.asyncio
+    async def test_get_block_uncle_count_success(self, client, mock_requester):
+        mock_requester.responses['eth_getUncleCountByBlockNumber'] = {
+            'jsonrpc': '2.0',
+            'result': hex(2),
+            'id': None
+        }
+        result = await client.get_block_uncle_count(blockNumber=100)
+        assert result == 2
+        request = mock_requester.requests_made[0]['dataDict']
+        assert request['method'] == 'eth_getUncleCountByBlockNumber'
+        assert request['params'] == [hex(100)]
+
+    @pytest.mark.asyncio
+    async def test_get_block_uncle_count_not_found(self, client, mock_requester):
+        with pytest.raises(NotFoundException):
+            await client.get_block_uncle_count(blockNumber=100)
+
+    @pytest.mark.asyncio
     async def test_get_transaction_count_success(self, client, mock_requester):
         mock_requester.responses['eth_getTransactionCount'] = {
             'jsonrpc': '2.0',
