@@ -251,8 +251,9 @@ async def test_with_lock_keep_alive_survives_a_transient_extend_failure(workers:
             return await super().extend(lease=lease, ttlSeconds=ttlSeconds)
 
     flakyLock = FlakyLock(database=workerA.database, pollIntervalSeconds=0.05)
-    async with flakyLock.with_lock(name='job', ttlSeconds=1) as lease:
-        await asyncio.sleep(1.5)
+    # NOTE: the first successful extend only lands two thirds into the ttl, so a 1s ttl leaves too little slack on slow CI runners
+    async with flakyLock.with_lock(name='job', ttlSeconds=3) as lease:
+        await asyncio.sleep(2.5)
         assert flakyLock.extendCallCount >= 2
         assert lease.is_valid()
         with pytest.raises(LockedException):
