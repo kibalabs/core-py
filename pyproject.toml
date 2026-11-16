@@ -6,13 +6,13 @@ readme = "README.md"
 requires-python = ">=3.12, <4"
 dependencies = [
     "aiofiles>=25.1.0",
-    "pydantic>=2.14.2",
+    "pydantic>=2.14.3",
     "orjson>=3.13.0",
 ]
 
 [project.optional-dependencies]
 api = [
-    "fastapi>=0.162.0",
+    "fastapi>=0.162.2",
     "uvicorn[standard]>=0.54.0",
 ]
 core-api = [
@@ -37,11 +37,11 @@ queue-cosmos = [
     "azure-cosmos>=4.17.1",
 ]
 database-psql = [
-    "sqlalchemy[asyncio]>=2.1.6",
+    "sqlalchemy[asyncio]>=2.1.8",
     "asyncpg>=0.32.0",
 ]
 database-sqlite = [
-    "sqlalchemy[asyncio]>=2.1.6",
+    "sqlalchemy[asyncio]>=2.1.8",
     "aiosqlite>=0.22.1",
 ]
 requester = [
@@ -55,12 +55,12 @@ cron = [
 ]
 types = [
     "types-aiobotocore[essential]>=3.10.0",
-    "types-aiofiles>=25.1.0.20260518",
+    "types-aiofiles>=25.1.0.20261107",
 ]
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev25",
+    "kiba-build==0.1.11.dev26",
 ]
 
 [project.urls]
