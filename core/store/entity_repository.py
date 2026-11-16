@@ -196,7 +196,7 @@ class EntityRepository(typing.Generic[EntityType]):  # noqa: UP046
 
     async def get_first(self, database: Database, fieldFilters: Sequence[FieldFilter] | None = None, orders: Sequence[Order] | None = None, connection: DatabaseConnection | None = None) -> EntityType | None:
         entities = await self.list_many(database=database, fieldFilters=fieldFilters, orders=orders, limit=1, connection=connection)
-        return next(iter(entities), None)
+        return entities[0] if entities else None
 
     async def get(self, database: Database, idValue: typing.Any, connection: DatabaseConnection | None = None) -> EntityType:  # type: ignore[explicit-any]
         query = self.build_select().where(self.idColumn == self._convert_value_to_db(column=self.idColumn, value=idValue))
