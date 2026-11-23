@@ -12,13 +12,13 @@ dependencies = [
 
 [project.optional-dependencies]
 api = [
-    "fastapi>=0.162.2",
+    "fastapi>=0.163.1",
     "uvicorn[standard]>=0.54.0",
 ]
 core-api = [
     "starlette>=1.10.0",
     "uvicorn[standard]>=0.54.0",
-    "python-multipart>=0.0.33",
+    "python-multipart>=0.0.34",
 ]
 storage = [
     "aiobotocore>=3.10.0",
@@ -37,15 +37,15 @@ queue-cosmos = [
     "azure-cosmos>=4.17.1",
 ]
 database-psql = [
-    "sqlalchemy[asyncio]>=2.1.8",
+    "sqlalchemy[asyncio]>=2.1.9",
     "asyncpg>=0.32.0",
 ]
 database-sqlite = [
-    "sqlalchemy[asyncio]>=2.1.8",
+    "sqlalchemy[asyncio]>=2.1.9",
     "aiosqlite>=0.22.1",
 ]
 requester = [
-    "httpx2>=2.16.0",
+    "httpx2>=2.16.2",
 ]
 web3 = [
     "web3>=8.0.0,<9.0.0",
@@ -60,7 +60,7 @@ types = [
 
 [dependency-groups]
 dev = [
-    "kiba-build==0.1.11.dev26",
+    "kiba-build==0.1.11.dev27",
 ]
 
 [project.urls]
