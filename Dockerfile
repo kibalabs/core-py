@@ -10,3 +10,5 @@ COPY uv.lock .
 RUN make install
 
 COPY . .
+# NOTE(krishan711): make install ran before core/ was copied in, so reinstall the package itself to make it importable
+RUN uv sync --all-extras --reinstall-package kiba-core
