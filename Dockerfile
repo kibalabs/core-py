@@ -10,3 +10,4 @@ COPY uv.lock .
 RUN make install
 
 COPY . .
+RUN uv sync --all-extras --reinstall-package kiba-core
