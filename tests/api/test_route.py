@@ -57,6 +57,11 @@ class ExampleRouteAuthResolver(RouteAuthResolver):
         raise ValueError(f'Unknown auth policy: {auth}')
 
 
+class SignedInExemptionResolver:
+    async def is_rate_limit_exempt(self, *, exemption: str, request: KibaApiRequest[BaseModel]) -> bool:
+        return exemption == 'signed_in' and request.authBasic is not None
+
+
 def _build_client(
     *,
     isStreaming: bool,
@@ -64,7 +69,7 @@ def _build_client(
     auth: str | None = None,
     endpointCalls: list[str] | None = None,
 ) -> TestClient:
-    route = functools.partial(api_route, authResolver=ExampleRouteAuthResolver())
+    route = functools.partial(api_route, authResolver=ExampleRouteAuthResolver(), rateLimitExemptionResolver=SignedInExemptionResolver())
     if isStreaming:
 
         @route(requestType=ExampleRequest, responseType=ExampleResponse, isStreaming=True, operationId='streamExample', tags=['Examples'], auth=auth, rateLimit=rateLimit)
@@ -130,6 +135,14 @@ def test_route_authenticates_before_rate_limiting() -> None:
 
     assert first.status_code == 200
     assert second.status_code == 429
+
+
+def test_route_checks_rate_limit_exemptions_after_authenticating() -> None:
+    client = _build_client(isStreaming=False, auth='signature', rateLimit={'perMinute': 1, 'exemption': 'signed_in'})
+
+    responses = [client.post('/example', json={'value': 'x'}, headers={'Authorization': f'Signature {VALID_SIGNATURE}'}) for _ in range(3)]
+
+    assert [response.status_code for response in responses] == [200, 200, 200]
 
 
 def test_route_rejects_unauthenticated_requests_before_calling_endpoint() -> None:

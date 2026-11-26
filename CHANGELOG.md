@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Added
+- [MINOR] Added rate limit exemptions: a `RateLimitConfig` can name an `exemption`, and `route` (`rateLimitExemptionResolver`) and `rate_limit` (`exemptionResolver`) skip the limit for requests the `RateLimitExemptionResolver` says are exempt (asked after authentication, so it can use what auth set). Exempt requests aren't counted. Naming an exemption without a resolver raises a `ValueError`
 - [MINOR] Added `core.api.middleware.blocked_ip_middleware.BlockedIpMiddleware` to answer 403 to requests from `blockedNetworks` (CIDRs) or a loaded `TorExitList`, checking every hop in `trustedProxyHeaders` and the socket peer
 - [MINOR] Added `core.api.middleware.public_cors_middleware.PublicCorsMiddleware` to let any origin call the given `paths` (add it after starlette's `CORSMiddleware` so it answers their preflights first)
 - [MINOR] Added `core.api.middleware.security_headers_middleware.SecurityHeadersMiddleware` to add fixed headers to every response

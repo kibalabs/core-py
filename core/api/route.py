@@ -10,6 +10,7 @@ from starlette.responses import StreamingResponse
 from core.api.api_request import KibaApiRequest
 from core.api.api_response import KibaJSONResponse
 from core.api.json_route import json_route
+from core.api.rate_limit import RateLimitExemptionResolver
 from core.api.rate_limit import rate_limit
 from core.api.route_auth import RouteAuthResolver
 from core.api.route_metadata import RateLimitConfig
@@ -50,12 +51,13 @@ def route[ApiRequest: BaseModel, ApiResponse: BaseModel](  # type: ignore[explic
     tags: list[str] | None = None,
     auth: str | None = None,
     rateLimit: RateLimitConfig | None = None,
+    rateLimitExemptionResolver: RateLimitExemptionResolver | None = None,
     extensions: Mapping[str, object] | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]], typing.Callable[[Request], typing.Awaitable[KibaJSONResponse | StreamingResponse]]]:
     def decorator(func: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn]) -> typing.Callable[[Request], typing.Awaitable[KibaJSONResponse | StreamingResponse]]:  # type: ignore[explicit-any]
         handler: typing.Callable[[KibaApiRequest[ApiRequest]], _AnyReturn] = func
         if rateLimit is not None:
-            handler = rate_limit(rateLimit)(handler)
+            handler = rate_limit(rateLimit, exemptionResolver=rateLimitExemptionResolver)(handler)
         securitySchemeNames: list[str] = []
         if auth is not None:
             if authResolver is None:
