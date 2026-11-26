@@ -20,6 +20,10 @@ class _WindowConfig(typing.NamedTuple):
     windowSeconds: int
 
 
+class RateLimitExemptionResolver(typing.Protocol):
+    async def is_rate_limit_exempt(self, *, exemption: str, request: KibaApiRequest[typing.Any]) -> bool: ...  # type: ignore[explicit-any]
+
+
 class _WindowState:
     __slots__ = ('count', 'windowStart')
 
@@ -92,14 +96,25 @@ def check_rate_limit(*, request: KibaApiRequest[typing.Any], routeKey: str, rate
 
 def rate_limit(  # type: ignore[explicit-any]
     rateLimit: RateLimitConfig,
+    exemptionResolver: RateLimitExemptionResolver | None = None,
 ) -> typing.Callable[[typing.Callable[[KibaApiRequest[typing.Any]], _AnyReturn]], typing.Callable[[KibaApiRequest[typing.Any]], typing.Any]]:
+    exemption = rateLimit.get('exemption')
+    if exemption is not None and exemptionResolver is None:
+        raise ValueError(f'Rate limit exemption {exemption} requires an exemptionResolver')
+
+    async def is_exempt(request: KibaApiRequest[typing.Any]) -> bool:  # type: ignore[explicit-any]
+        if exemption is None or exemptionResolver is None:
+            return False
+        return await exemptionResolver.is_rate_limit_exempt(exemption=exemption, request=request)
+
     def decorator(func: typing.Callable[[KibaApiRequest[typing.Any]], _AnyReturn]) -> typing.Callable[[KibaApiRequest[typing.Any]], typing.Any]:  # type: ignore[explicit-any]
         update_route_metadata(func, {'rateLimit': rateLimit})
         routeKey = getattr(func, '__qualname__', type(func).__name__)
 
         @functools.wraps(func)
         async def async_wrapper(request: KibaApiRequest[typing.Any]) -> typing.Any:  # type: ignore[explicit-any, misc]
-            check_rate_limit(request=request, routeKey=routeKey, rateLimit=rateLimit)
+            if not await is_exempt(request=request):
+                check_rate_limit(request=request, routeKey=routeKey, rateLimit=rateLimit)
             result = func(request)
             if hasattr(result, '__aiter__'):
                 return result

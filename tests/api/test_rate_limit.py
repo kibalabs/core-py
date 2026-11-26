@@ -1,3 +1,5 @@
+import typing
+
 import pytest
 from pydantic import BaseModel
 from starlette.applications import Starlette
@@ -31,10 +33,19 @@ async def _send(message: dict[str, object]) -> None:
     del message
 
 
-def _request() -> KibaApiRequest[ExampleRequest]:
-    request = KibaApiRequest(scope={'type': 'http', 'headers': []}, receive=_receive, send=_send)
+def _request(headers: list[tuple[bytes, bytes]] | None = None) -> KibaApiRequest[ExampleRequest]:
+    request = KibaApiRequest(scope={'type': 'http', 'headers': headers or []}, receive=_receive, send=_send)
     request.data = ExampleRequest(value='value')
     return request
+
+
+class _ApiKeyExemptionResolver:
+    def __init__(self) -> None:
+        self.exemptions: list[str] = []
+
+    async def is_rate_limit_exempt(self, *, exemption: str, request: KibaApiRequest[typing.Any]) -> bool:  # type: ignore[explicit-any]
+        self.exemptions.append(exemption)
+        return request.headers.get('x-api-key') is not None
 
 
 def test_rate_limit_publishes_metadata_on_the_route() -> None:
@@ -125,6 +136,32 @@ async def test_rate_limit_ip_key_without_origin_ip_raises_internal_error() -> No
 
     with pytest.raises(InternalServerErrorException, match='OriginIpMiddleware'):
         await endpoint(_request())
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_skips_and_does_not_count_exempt_requests() -> None:
+    resolver = _ApiKeyExemptionResolver()
+
+    @rate_limit({'perMinute': 1, 'keyBy': 'ip', 'exemption': 'integrator'}, exemptionResolver=resolver)
+    async def endpoint(request: KibaApiRequest[ExampleRequest]) -> ExampleResponse:
+        return ExampleResponse(result=request.data.value)
+
+    exemptRequests = [_request(headers=[(b'x-api-key', b'key')]) for _ in range(2)]
+    directRequests = [_request() for _ in range(2)]
+    for request in [*exemptRequests, *directRequests]:
+        request.originIp = '1.2.3.4'
+
+    for request in exemptRequests:
+        assert (await endpoint(request)).result == 'value'
+    assert (await endpoint(directRequests[0])).result == 'value'
+    with pytest.raises(Exception, match='RATE_LIMITED'):
+        await endpoint(directRequests[1])
+    assert resolver.exemptions == ['integrator'] * 4
+
+
+def test_rate_limit_with_an_exemption_requires_an_exemption_resolver() -> None:
+    with pytest.raises(ValueError, match='exemptionResolver'):
+        rate_limit({'perMinute': 1, 'exemption': 'integrator'})
 
 
 def test_rate_limit_ip_key_through_origin_ip_middleware_trusts_configured_header() -> None:
